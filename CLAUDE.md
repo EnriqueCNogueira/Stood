@@ -9,7 +9,7 @@ O Stood é um site para organizar estudos. Cada estudo é um quadro em que o usu
 - **Home e Biblioteca**: Busca de vídeos do YouTube que cria um estudo, botão "Novo Stood", "Continuar de onde parou" e a árvore de repositórios, pastas e arquivos.
 - **Quadro**: Abre vazio a cada visita. A aba lateral lista os arquivos do repositório e os tipos novos, e arrastar abre a janela. Até 10 janelas abertas, no máximo 2 de vídeo. Posição e tamanho das janelas não são salvos; o conteúdo dos arquivos é salvo sozinho.
 - **Arquivos**: A captura de tela do vídeo vira imagem no repositório. Importa imagem, PDF, slides, nota, Excalidraw e link do YouTube; exporta um arquivo, o estudo inteiro em `.zip` ou uma versão no GitHub.
-- **Conta**: Login por Google, GitHub ou e-mail e senha, com os papéis `dev` e `client`.
+- **Conta**: Login por Google, GitHub ou e-mail e senha.
 - **Fora do escopo inicial**: Pomodoro, agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, sugestões de estudos predefinidos na home, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
 
 ## Mentalidade
@@ -46,8 +46,15 @@ O Stood é um site para organizar estudos. Cada estudo é um quadro em que o usu
 
 ## Anti-patterns
 
-1. Aceitar `ownerId`, `userId` ou `role` de query, corpo, cookie ou form: dono e papel vêm só da sessão.
+1. Aceitar `ownerId` ou `userId` de query, corpo, cookie ou form: o dono vem só da sessão.
 2. Gravar dado senvíveis, como senha ou token do GitHub em texto puro.
 3. Logar dado sensível: senha, token, dado pessoal ou texto de nota.
 4. Garantir só na tela uma regra que nunca pode quebrar, como "arquivo pertence ao repositório do dono": ela fica no banco (constraint) e em `src/lib/`.
-5. `db:push` ou editar migration que já chegou em `main`: correção é migration nova.
+5. `drizzle-kit push` ou editar migration que já chegou em `main`: correção é migration nova.
+
+## Onde está o resto
+
+- [.claude/rules/architecture.md](.claude/rules/architecture.md): Carrega em qualquer `.ts` e nos `.tsx` de `src/`.
+- [.claude/rules/code-style.md](.claude/rules/code-style.md): Carrega em `.ts`, `.tsx` e `.mjs`.
+- [.claude/rules/database-migrations.md](.claude/rules/database-migrations.md): Carrega em `src/db/`, `drizzle/` e `drizzle.config.ts`.
+- [.claude/rules/testing-strategy.md](.claude/rules/testing-strategy.md): Carrega em `*.test.ts`, `src/test/` e `vitest.config.ts`.
