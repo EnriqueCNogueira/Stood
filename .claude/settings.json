@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./node_modules/**)",
+      "Read(./.next/**)",
+      "Read(./drizzle/meta/*_snapshot.json)"
+    ]
+  }
+}
