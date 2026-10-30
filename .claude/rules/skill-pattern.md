@@ -13,7 +13,7 @@ Procedimento com passos fixos que o usuário aciona por `/<nome>`. Diferente da 
 
 ## Quando criar
 
-- **Sim**: Tarefa que se repete, com passos fixos e entrega definida, como issue, review e PR.
+- **Sim**: Tarefa que se repete, com passos fixos e entrega definida, como spec, review e PR.
 - **Não, vira rule**: Regra de como escrever código numa área.
 - **Não, vai no `CLAUDE.md`**: Instrução que vale em toda sessão.
 - **Não, fica no pedido**: Tarefa feita uma vez só.
@@ -46,6 +46,7 @@ description: <O que faz e o que entrega.>
 ```
 
 - **`name`**: Igual ao nome da pasta.
+- **`disable-model-invocation`**: Opcional. `true` quando a skill só deve rodar por `/<nome>`, nunca acionada sozinha pelo agente.
 - **Limite em negrito**: A frase de abertura diz o que a skill nunca faz, como commitar, abrir PR ou alterar código antes da resposta.
 - **Passos**: Uma seção `## N. <Verbo>` por etapa, na ordem em que roda.
 - **Modelo de saída**: Opcional. Quando a skill entrega texto, o formato vai num bloco de código markdown.

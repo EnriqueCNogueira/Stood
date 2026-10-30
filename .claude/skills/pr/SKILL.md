@@ -37,7 +37,7 @@ Título em uma linha curta, no formato de commit do `CLAUDE.md`. Texto em markdo
 - **Só duas partes**: O texto tem apenas o Contexto e os blocos das principais mudanças, sem outra seção.
 - **Um bloco por mudança principal**: Uma subseção por grupo de alterações relacionadas, não por arquivo, quantas o PR tiver.
 - **Efeito, não arquivo**: Cada parágrafo diz o que muda no sistema, não o que foi mexido nem o que foi combinado na conversa.
-- **Referências**: Citar a issue no Contexto, quando houver.
+- **Referências**: Citar a spec da etapa em `_spec/` no Contexto, quando houver.
 - **Frontend**: Quando a mudança é visual, pedir um print do antes e depois, com legenda curta para adicionar no PR.
 
 ## Regras de texto

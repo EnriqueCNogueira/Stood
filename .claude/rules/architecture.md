@@ -19,6 +19,8 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 ```
 .
 ├── .claude/                       rules e skills do agente de código
+├── _spec/                         spec de cada etapa, criada por /to-spec
+├── docs/                          GLOSSARY.md e adr/, criados por /grill-me
 ├── drizzle/                       migrations versionadas e meta/ do drizzle-kit
 ├── scripts/                       scripts rodados por pnpm
 ├── src/
