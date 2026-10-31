@@ -44,6 +44,7 @@ paths: ["src/**/*.test.ts", "scripts/**/*.test.ts", "vitest.config.ts"]
 
 - **Banco real**: O Postgres nunca é mockado: FK, `CHECK`, índice parcial e `ON CONFLICT` só existem nele.
 - **Dados do caso**: Cada teste cria o que usa com `db.insert(...)`. Factory só quando o mesmo insert se repete em 2 arquivos ou mais.
+- **Dado único**: Os arquivos rodam em paralelo contra o mesmo banco, então valor com `UNIQUE` (e-mail, nome) é gerado único por caso.
 - **Serviço externo**: Fora do teste de integração, stub do `fetch` com `vi.stubGlobal`, devolvendo `new Response(...)` com um payload copiado do serviço real, para o Zod validar de verdade.
 - **Env**: `vi.stubEnv`, no `beforeEach` ou no próprio caso.
 - **Mock**: Só quando a chamada é o comportamento testado, como o corpo enviado ao GitHub, conferido com `toHaveBeenCalledWith`.

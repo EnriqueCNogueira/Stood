@@ -38,7 +38,7 @@ O Stood é um site para organizar estudos. Cada estudo é um quadro em que o usu
 
 ## Convenções
 
-- **Idioma**: O que o usuário vê (rota, texto de tela e mensagem ao usuário) em português; código, nomes e log em inglês.
+- **Idioma**: O que o usuário vê (rota, texto de tela e mensagem ao usuário), comentários e descrições de testes em português; código, nomes e log em inglês.
 - **Arquivos e imports**: Nome em `kebab-case`, import interno sempre por `@/` e teste `*.test.ts` ao lado do arquivo testado.
 - **Server e client**: Server Component por padrão; `"use client"` só no componente interativo (janela, player, canvas).
 - **Result para falha esperada**: Função que pode falhar sem exceção devolve `{ ok: true, ... } | { ok: false, reason }`.

@@ -60,6 +60,12 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 - **Route handler**: Em `route.ts`, junto da rota que o usa, como export e callback de OAuth.
 - **Para o client**: A página passa ao `"use client"` só os campos que a tela usa.
 
+## Server e client
+
+- **Importa `server-only`**: `src/db/index.ts`, o módulo de env com segredo e todo arquivo de `src/lib/` que faz query, lê segredo ou usa token começam com `import "server-only";`, para o build falhar se um `"use client"` importar o arquivo, mesmo indiretamente.
+- **Não importa**: `src/db/schema.ts`, tipos e funções puras que o client também usa (schema Zod, `build*`, `is*`), e a View, que o Next já separa.
+- **Fronteira**: O `"use client"` não importa de `src/db/` nem de Service marcado; recebe dado por props, como em [Leitura e escrita](##leitura-e-escrita), e grava por Server Action (`"use server"`), que chama o Service.
+
 ## Isolamento por dono
 
 - **Filtro obrigatório**: Toda query de dado do usuário filtra pelo `user.id` de `requireSession()`: `where(eq(t.ownerId, user.id))`.
@@ -81,4 +87,5 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 - [ ] Toda query de dado do usuário filtra pelo dono da sessão.
 - [ ] Busca por id combina id e dono e responde `notFound()` quando não acha.
 - [ ] O `"use client"` recebe só os campos que usa.
+- [ ] Arquivo com query, segredo ou token começa com `import "server-only";`.
 - [ ] Nenhuma query dentro de laço.
