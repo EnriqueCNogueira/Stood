@@ -43,3 +43,9 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 - **Publicação no GitHub**: Seu repositório vai inteiro para o GitHub com um clique, e cada publicação guarda uma versão do estudo.
 - **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, PDFs, Anotações e links do Youtube). E pode exportar para o Github ou Arquivo compactado (`.zip` ou `.rar`).
 - **Conta**: Entrada por Google, GitHub ou e-mail e senha, com nome, apelido, foto e descrição no perfil.
+
+## Como rodar
+
+- **Requisitos**: Node 24, pnpm 12 (`npm install -g pnpm`) e Docker.
+- **Instalar**: `pnpm install`.
+- **Desenvolver**: `pnpm dev` e abrir `http://localhost:3000`.
