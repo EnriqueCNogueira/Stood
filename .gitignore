@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+next-env.d.ts
+
+# typescript
+*.tsbuildinfo
+
+# env files (only the example is versioned)
+.env*
+!.env.example
