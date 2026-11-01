@@ -46,7 +46,6 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 ├── README.md
 ├── package.json
 ├── Dockerfile
-├── compose.yaml                   Postgres local para dev e teste
 ├── drizzle.config.ts
 ├── next.config.ts
 ├── tsconfig.json
