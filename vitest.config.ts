@@ -19,5 +19,8 @@ export default defineConfig({
     restoreMocks: true,
     unstubEnvs: true,
     unstubGlobals: true,
+
+    // Sem arquivos de teste ainda, a suíte vazia passa em vez de reprovar o CI
+    passWithNoTests: true,
   },
 });
