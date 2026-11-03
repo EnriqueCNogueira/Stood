@@ -19,6 +19,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 ```
 .
 ├── .claude/                       rules e skills do agente de código
+├── .github/workflows/             CI em todo PR e CD em push para main
 ├── _spec/                         spec de cada etapa, criada por /to-spec
 ├── docs/                          GLOSSARY.md e adr/, criados por /grill-me
 ├── drizzle/                       migrations versionadas e meta/ do drizzle-kit
@@ -58,6 +59,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 - **Leitura**: No Server Component que usa o dado, chamando o Service direto. Sem endpoint interno.
 - **Route handler**: Em `route.ts`, junto da rota que o usa, como export e callback de OAuth.
 - **Para o client**: A página passa ao `"use client"` só os campos que a tela usa.
+- **Exceção `/ready`**: `src/app/ready/route.ts` faz `SELECT 1` direto e não chama `requireSession()`, porque é a checagem pública do CD; não serve de modelo para outra rota.
 
 ## Server e client
 
