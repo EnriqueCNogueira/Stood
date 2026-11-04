@@ -1,0 +1,93 @@
+# CD: publica cada merge em main no Cloud Run
+name: CD
+
+# Aciona CD em todo push para main
+on:
+  push:
+    branches: [main]
+
+# Novo push não cancela CD
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    environment: production
+
+    env:
+      REGION: ${{ vars.GCP_REGION }}
+      APP_IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/stood/app:${{ github.sha }}
+      MIGRATE_IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/stood/migrate:${{ github.sha }}
+      RUNTIME_SERVICE_ACCOUNT: stood-runtime@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+      MIGRATOR_SERVICE_ACCOUNT: stood-migrator@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Docker no Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      - name: Build & Push
+        run: |
+          docker build --target runner --tag "$APP_IMAGE" .
+          docker build --target migrate --tag "$MIGRATE_IMAGE" .
+          docker push "$APP_IMAGE"
+          docker push "$MIGRATE_IMAGE"
+
+      - name: Migration
+        run: |
+          gcloud run jobs deploy stood-migrate \
+            --region "$REGION" \
+            --image "$MIGRATE_IMAGE" \
+            --service-account "$MIGRATOR_SERVICE_ACCOUNT" \
+            --set-secrets DATABASE_URL=database-url-migrate:latest \
+            --max-retries 0 \
+            --task-timeout 5m \
+            --memory 512Mi \
+            --cpu 1 \
+            --quiet
+          gcloud run jobs execute stood-migrate --region "$REGION" --wait --quiet
+
+      - name: Deploy
+        run: |
+          gcloud run deploy stood \
+            --region "$REGION" \
+            --image "$APP_IMAGE" \
+            --service-account "$RUNTIME_SERVICE_ACCOUNT" \
+            --set-secrets DATABASE_URL=database-url:latest \
+            --memory 512Mi \
+            --cpu 1 \
+            --cpu-throttling \
+            --min 0 \
+            --max 2 \
+            --no-traffic \
+            --tag candidate \
+            --quiet
+
+      - name: Smoke test
+        run: |
+          url=$(gcloud run services describe stood --region "$REGION" --format json \
+            | jq -r '.status.traffic[] | select(.tag == "candidate") | .url')
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --max-time 30 --retry 2 --retry-all-errors "$url/ready")
+          echo "GET $url/ready -> $status"
+          test "$status" = 200
+
+      - name: Update app version
+        run: gcloud run services update-traffic stood --region "$REGION" --to-latest --quiet

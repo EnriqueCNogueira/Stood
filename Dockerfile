@@ -8,6 +8,13 @@ RUN corepack enable pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
+# Migrate: Aplica as migrations no Cloud Run Job stood-migrate
+FROM deps AS migrate
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
+USER node
+CMD ["node_modules/.bin/drizzle-kit", "migrate"]
+
 # Build: Compila o Next standalone
 FROM node:24-slim AS build
 WORKDIR /app
