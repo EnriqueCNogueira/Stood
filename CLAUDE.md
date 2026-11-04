@@ -57,4 +57,5 @@ O Stood é um site para organizar estudos. Cada estudo é um quadro em que o usu
 - [.claude/rules/architecture.md](.claude/rules/architecture.md): Carrega em qualquer `.ts` e nos `.tsx` de `src/`.
 - [.claude/rules/code-style.md](.claude/rules/code-style.md): Carrega em `.ts`, `.tsx` e `.mjs`.
 - [.claude/rules/database-migrations.md](.claude/rules/database-migrations.md): Carrega em `src/db/`, `drizzle/` e `drizzle.config.ts`.
+- [.claude/rules/design.md](.claude/rules/design.md): Carrega em qualquer `.tsx`.
 - [.claude/rules/testing-strategy.md](.claude/rules/testing-strategy.md): Carrega em `*.test.ts`, `src/test/` e `vitest.config.ts`.
