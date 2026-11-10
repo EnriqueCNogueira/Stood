@@ -1,31 +1,11 @@
+import { BADGE, BUTTON, CARD, FIELD, FIELD_LABEL, INPUT, MENU_ITEM, MENU_SEPARATOR, SEGMENTED, SEGMENTED_OPTION } from "@/components/ui";
+
 // Página provisória: vitrine dos tokens e componentes base da identidade visual.
 // Será trocada pela landing; os componentes estão escritos direto na marcação de propósito.
 
 export default function HomePage() {
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-bg/80 px-3 backdrop-blur-md sm:gap-6 sm:px-5">
-        <a href="/" className="inline-flex items-center gap-2.5 text-base font-semibold">
-          <img src="/icon.svg" width={28} height={28} alt="" />
-          <span className="hidden sm:inline">Stood</span>
-        </a>
-        <nav className="flex gap-1" aria-label="Principal">
-          <a href="/" aria-current="page" className={NAV_LINK}>
-            Início
-          </a>
-          <a className={NAV_LINK}>Biblioteca</a>
-        </nav>
-        <div className="ml-auto flex items-center gap-2">
-          <button type="button" data-theme-toggle aria-label="Alternar tema" className={`${BUTTON.base} ${BUTTON.sm} ${BUTTON.ghost}`}>
-            <span className="dark:hidden">Escuro</span>
-            <span className="hidden dark:inline">Claro</span>
-          </button>
-          <span title="Visitante" className="grid size-8 place-items-center rounded-full border border-border bg-surface-2 text-[13px] font-semibold">
-            V
-          </span>
-        </div>
-      </header>
-
       <main className="mx-auto max-w-[1180px] px-4 pt-7 pb-30 md:px-12 md:pt-10">
         <h1 className="mb-1.5 text-[32px] font-medium tracking-tight">Componentes base</h1>
         <p className="mb-10 text-text-muted">Tokens, ícone e componentes da etapa. Use o botão de tema no cabeçalho para comparar.</p>
@@ -36,7 +16,7 @@ export default function HomePage() {
             {[128, 64, 32, 16].map((size, index) => (
               // Alterna fundo da página e fundo invertido: escuro e claro nos dois temas.
               <div key={size} className={`${CARD} grid min-w-30 place-items-center gap-3 p-5 ${index % 2 ? "bg-text text-bg" : "bg-bg text-text-muted"}`}>
-                <img src="/icon.svg" width={size} height={size} alt="" />
+                <img src="/icon.png" width={size} height={size} alt="" />
                 <span className="font-mono text-xs">{size}</span>
               </div>
             ))}
@@ -197,31 +177,3 @@ const TYPE_SAMPLES = [
 
 const SECTION = "mb-12";
 const SECTION_TITLE = "mb-4 font-mono text-[13px] font-medium tracking-widest text-text-muted uppercase";
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-
-const NAV_LINK = "inline-flex h-8 items-center rounded-md px-3 font-medium text-text-muted hover:bg-surface-2 hover:text-text aria-[current=page]:bg-surface-2 aria-[current=page]:text-text";
-
-const BUTTON = {
-  base: `inline-flex cursor-pointer items-center justify-center gap-2 border font-medium whitespace-nowrap transition disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS}`,
-  xs: "h-6.5 rounded-sm px-2 text-xs",
-  sm: "h-7.5 rounded-md px-2.5 text-[13px]",
-  md: "h-9 rounded-md px-3.5 text-sm",
-  lg: "h-11 rounded-lg px-5 text-[15px]",
-  primary: "border-transparent bg-accent text-on-accent shadow-glow hover:not-disabled:brightness-110",
-  secondary: "border-border bg-surface text-text hover:not-disabled:bg-surface-2",
-  ghost: "border-transparent text-text-muted hover:not-disabled:bg-surface-2 hover:not-disabled:text-text",
-  danger: "border-transparent bg-danger/12 text-danger hover:not-disabled:bg-danger/20",
-};
-
-const FIELD = "grid gap-1.5";
-const FIELD_LABEL = "text-[13px] font-medium text-text-muted";
-const INPUT = "h-9 w-full rounded-md border border-border bg-surface px-3 transition placeholder:text-text-muted focus:border-accent focus:ring-3 focus:ring-accent/12 focus:outline-none aria-invalid:border-danger aria-invalid:ring-3 aria-invalid:ring-danger/12";
-
-const CARD = "rounded-lg border border-border shadow-card transition";
-const BADGE = "inline-flex h-5.5 items-center rounded-full px-2 font-mono text-[11px] font-medium whitespace-nowrap";
-
-const MENU_SEPARATOR = "my-1 h-px bg-border";
-const MENU_ITEM = "flex h-8 w-full items-center rounded-sm px-2.5 text-left text-[13px] disabled:cursor-not-allowed disabled:text-text-muted";
-
-const SEGMENTED = "inline-flex gap-0.5 rounded-md bg-surface-2 p-0.5";
-const SEGMENTED_OPTION = `inline-flex h-6 cursor-pointer items-center rounded-sm px-2.5 text-xs text-text-muted aria-pressed:bg-surface aria-pressed:text-text ${FOCUS}`;
