@@ -28,6 +28,10 @@ jobs:
       MIGRATE_IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/stood/migrate:${{ github.sha }}
       RUNTIME_SERVICE_ACCOUNT: stood-runtime@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
       MIGRATOR_SERVICE_ACCOUNT: stood-migrator@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+      # Configuração pública de auth
+      BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
+      OAUTH_GOOGLE_CLIENT_ID: ${{ vars.OAUTH_GOOGLE_CLIENT_ID }}
+      OAUTH_GITHUB_CLIENT_ID: ${{ vars.OAUTH_GITHUB_CLIENT_ID }}
 
     steps:
       - name: Checkout
@@ -70,7 +74,8 @@ jobs:
             --region "$REGION" \
             --image "$APP_IMAGE" \
             --service-account "$RUNTIME_SERVICE_ACCOUNT" \
-            --set-secrets DATABASE_URL=database-url:latest \
+            --set-secrets DATABASE_URL=database-url:latest,BETTER_AUTH_SECRET=better-auth-secret:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest,GITHUB_CLIENT_SECRET=github-client-secret:latest,RESEND_API_KEY=resend-api-key:latest \
+            --set-env-vars "BETTER_AUTH_URL=$BETTER_AUTH_URL,GOOGLE_CLIENT_ID=$OAUTH_GOOGLE_CLIENT_ID,GITHUB_CLIENT_ID=$OAUTH_GITHUB_CLIENT_ID" \
             --memory 512Mi \
             --cpu 1 \
             --cpu-throttling \
@@ -84,10 +89,13 @@ jobs:
         run: |
           url=$(gcloud run services describe stood --region "$REGION" --format json \
             | jq -r '.status.traffic[] | select(.tag == "candidate") | .url')
-          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            --max-time 30 --retry 2 --retry-all-errors "$url/ready")
-          echo "GET $url/ready -> $status"
-          test "$status" = 200
+          # /ready confere o banco; /auth/get-session obriga a validar a env da auth, que só é lida no uso
+          for path in /ready /auth/get-session; do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --max-time 30 --retry 2 --retry-all-errors "$url$path")
+            echo "GET $url$path -> $status"
+            test "$status" = 200
+          done
 
       - name: Update app version
         run: gcloud run services update-traffic stood --region "$REGION" --to-latest --quiet
