@@ -21,6 +21,7 @@ Vocabulário fechado. Operação que não cabe usa um verbo novo, que entra nest
 | `get` | Lê e sempre devolve |
 | `find` | Pode não achar e devolve `undefined` |
 | `fetch` | Chama serviço externo por HTTP (YouTube, GitHub) e devolve o dado lido |
+| `send` | Envia por serviço externo sem devolver dado (`sendEmail`) |
 | `require` | Garante o valor ou interrompe com redirect ou exceção (`requireSession`) |
 | `create` | Insere |
 | `update` | Altera o que já existe |
@@ -33,6 +34,14 @@ Vocabulário fechado. Operação que não cabe usa um verbo novo, que entra nest
 | `is`, `has`, `can` | Devolvem booleano |
 | `filter` | Devolve o subconjunto que passa na regra |
 | `search` | Devolve o que casa com o texto buscado |
+| `sign` | Entra ou sai pela biblioteca de auth (`signOut`) |
+| `request` | Pede ao serviço uma ação que conclui depois, por link (`requestPasswordReset`) |
+| `reset` | Troca um valor pelo fluxo de recuperação (`resetPassword`) |
+| `enforce` | Recusa com exceção o que fere a regra (`enforceSignUpAndPasswordRules`) |
+| `handle` | Recebe a requisição e repassa ao handler (`handleAuthRequest`) |
+| `close` | Fecha um elemento da tela (`closeOnEscape`) |
+| `set` | Grava um valor fixo, só em teste (`setSessionsExpiresAt`) |
+| `warm`, `stub`, `expect` | Só em teste: aquece a lib, troca serviço externo, confere efeito |
 
 ## Resultados
 

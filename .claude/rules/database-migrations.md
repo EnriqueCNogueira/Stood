@@ -1,5 +1,5 @@
 ---
-description: Schema Drizzle, migrations versionadas, conta do usuário e constraints de dono
+description: Schema Drizzle, migrations versionadas, tabelas de Usuário e constraints de dono
 paths: ["src/db/**", "drizzle/**", "drizzle.config.ts"]
 ---
 
@@ -19,9 +19,14 @@ paths: ["src/db/**", "drizzle/**", "drizzle.config.ts"]
 - **`drizzle/meta/`**: Snapshots e journal são do drizzle-kit. A leitura dos snapshots é bloqueada em `.claude/settings.json`; o `_journal.json` pode ser lido.
 - **Conflito de numeração**: Duas branches com o mesmo `000N` colidem no journal. Depois do rebase, desfaça a sua com `pnpm exec drizzle-kit drop` e gere de novo.
 
-## Conta
+## Colunas
 
-- **Usuário**: E-mail único. Senha só como hash e opcional, porque login por Google ou GitHub não tem senha. O formato final depende da biblioteca de auth.
+- **Datas**: Toda coluna de data é `timestamp` com `withTimezone: true`, em qualquer tabela, para o `defaultNow()` não depender do fuso do servidor.
+
+## Usuário
+
+- **Tabelas da Better Auth**: `users`, `sessions`, `accounts` e `verifications`, no plural e com id uuid, saíram do gerador da lib e são conferidas à mão; coluna nova nelas segue o formato que a lib espera.
+- **Usuário e Conta**: `users` tem o e-mail único; cada Conta (Google, GitHub ou e-mail e senha) é uma linha de `accounts`, e o hash da senha mora na Conta `credential`, nunca em `users`.
 
 ## Dono
 
@@ -41,3 +46,4 @@ paths: ["src/db/**", "drizzle/**", "drizzle.config.ts"]
 - [ ] Migration nova vem depois da última do journal, sem número repetido e com `when` maior?
 - [ ] O `.sql` tem `DROP`? Se sim, é intencional e não rename respondido errado?
 - [ ] Tabela nova de dado do usuário tem `owner_id` e FK composta com o pai?
+- [ ] Coluna de data nova usa `withTimezone: true`?

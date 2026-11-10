@@ -28,7 +28,7 @@ paths: ["src/**/*.test.ts", "scripts/**/*.test.ts", "vitest.config.ts"]
 
 ## Como roda
 
-- **Banco**: Postgres real de `DATABASE_URL` com `pnpm exec drizzle-kit migrate` aplicado. Sem a env, a primeira query falha: é env faltando, não bug.
+- **Banco**: Postgres real de `DATABASE_URL` com `pnpm exec drizzle-kit migrate` aplicado. Em dev é o mesmo banco do `.env.local`; no CI, o Postgres de serviço do `ci.yml`. Sem a env, a primeira query falha: é env faltando, não bug.
 - **Comando**: `pnpm test` roda tudo; `pnpm exec vitest run <arquivo>` roda um; `-t "<nome>"` filtra.
 - **Limpeza**: A config do Vitest desfaz mock, spy, env e global antes de cada caso (`restoreMocks`, `unstubEnvs`, `unstubGlobals`).
 
