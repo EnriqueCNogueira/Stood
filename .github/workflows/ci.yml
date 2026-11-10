@@ -34,8 +34,15 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+    # Simula a env de produção
     env:
       DATABASE_URL: postgres://stood:stood@localhost:5432/stood
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0000
+      BETTER_AUTH_URL: http://localhost:3000
+      GOOGLE_CLIENT_ID: ci-google-client-id
+      GOOGLE_CLIENT_SECRET: ci-google-client-secret
+      GITHUB_CLIENT_ID: ci-github-client-id
+      GITHUB_CLIENT_SECRET: ci-github-client-secret
 
     steps:
       - name: Checkout
