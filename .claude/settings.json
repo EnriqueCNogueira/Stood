@@ -3,7 +3,8 @@
     "deny": [
       "Read(./node_modules/**)",
       "Read(./.next/**)",
-      "Read(./drizzle/meta/*_snapshot.json)"
+      "Read(./drizzle/meta/*_snapshot.json)",
+      "Read(.env.local)"
     ]
   }
 }

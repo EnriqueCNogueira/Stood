@@ -33,6 +33,8 @@ O Stood é um site para organizar estudos. Cada estudo é um quadro em que o usu
 | UI | React, Tailwind CSS |
 | Linguagem | TypeScript |
 | Banco | PostgreSQL, Drizzle ORM |
+| Auth | Better Auth, sessão no banco |
+| E-mail | Resend pela API HTTP |
 | Validação | Zod |
 | Teste | Vitest |
 

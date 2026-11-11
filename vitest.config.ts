@@ -1,5 +1,9 @@
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+
+// O Vitest não lê o .env.local sozinho
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 export default defineConfig({
   resolve: {
@@ -20,7 +24,10 @@ export default defineConfig({
     unstubEnvs: true,
     unstubGlobals: true,
 
-    // Sem arquivos de teste ainda, a suíte vazia passa em vez de reprovar o CI
-    passWithNoTests: true,
+    // Define a chave da API do Resend para os testes
+    env: { RESEND_API_KEY: "" },
+
+    // Esconde os logs de testes que enviam emails
+    onConsoleLog: (log) => !log.startsWith("email not sent"),
   },
 });

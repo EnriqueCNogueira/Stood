@@ -35,13 +35,16 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 │   │   ├── entrar/                login
 │   │   ├── globals.css
 │   │   └── layout.tsx
+│   ├── components/                View compartilhada: classes de ui.ts, cabeçalho
 │   ├── db/                        Model
 │   │   ├── index.ts               conexão
 │   │   └── schema.ts
 │   ├── lib/                       Service
-│   │   └── <tema>/
-│   │       ├── <arquivo>.ts       backend
-│   │       └── <arquivo>.test.ts
+│   │   ├── <tema>/
+│   │   │   ├── <arquivo>.ts       backend
+│   │   │   └── <arquivo>.test.ts
+│   │   └── env.ts                 env validada com Zod na primeira leitura
+│   ├── test/                      helpers usados por mais de um teste
 │   └── middleware.ts              confere se há cookie de sessão
 ├── CLAUDE.md
 ├── README.md
@@ -52,7 +55,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 ├── tsconfig.json
 └── vitest.config.ts
 ```
-- **Rota**: Em português, sob `(protected)/` quando exige login.
+- **Rota**: Em português, sob `(protected)/` quando exige login; rota nova do grupo entra no `matcher` de `src/middleware.ts`, porque o grupo não aparece na URL.
 
 ## Leitura e escrita
 
@@ -60,10 +63,11 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 - **Route handler**: Em `route.ts`, junto da rota que o usa, como export e callback de OAuth.
 - **Para o client**: A página passa ao `"use client"` só os campos que a tela usa.
 - **Exceção `/ready`**: `src/app/ready/route.ts` faz `SELECT 1` direto e não chama `requireSession()`, porque é a checagem pública do CD; não serve de modelo para outra rota.
+- **Exceção auth**: As telas de entrar, cadastro e senha chamam `/auth/*` pelo client da Better Auth (`src/lib/auth/client.ts`), porque o rate limit da lib só vale por HTTP; as regras do Stood ficam na config de `src/lib/auth/auth.ts`.
 
 ## Server e client
 
-- **Importa `server-only`**: `src/db/index.ts`, o módulo de env com segredo e todo arquivo de `src/lib/` que faz query, lê segredo ou usa token começam com `import "server-only";`, para o build falhar se um `"use client"` importar o arquivo, mesmo indiretamente.
+- **Importa `server-only`**: `src/db/index.ts`, `src/lib/env.ts` e todo arquivo de `src/lib/` que faz query, lê segredo ou usa token começam com `import "server-only";`, para o build falhar se um `"use client"` importar o arquivo, mesmo indiretamente.
 - **Não importa**: `src/db/schema.ts`, tipos e funções puras que o client também usa (schema Zod, `build*`, `is*`), e a View, que o Next já separa.
 - **Fronteira**: O `"use client"` não importa de `src/db/` nem de Service marcado; recebe dado por props, como em [Leitura e escrita](##leitura-e-escrita), e grava por Server Action (`"use server"`), que chama o Service.
 
@@ -90,3 +94,4 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 - [ ] O `"use client"` recebe só os campos que usa.
 - [ ] Arquivo com query, segredo ou token começa com `import "server-only";`.
 - [ ] Nenhuma query dentro de laço.
+- [ ] Rota nova de `(protected)/` está no `matcher` do middleware.
