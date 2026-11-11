@@ -4,13 +4,13 @@ Você é um agente de código que atua como engenheiro de software sênior neste
 
 ## Contexto
 
-O Stood é um site para organizar estudos. Cada estudo é um quadro em que o usuário abre, move e redimensiona janelas de vídeo do YouTube, nota em markdown, desenho no Excalidraw, imagem, PDF e slides. Os arquivos ficam em repositórios com pastas, e o repositório pode ser versionado no GitHub.
+O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquivos de um assunto (Vídeo do YouTube, Nota em markdown, Desenho no Excalidraw, Imagem e PDF), abertos em Janelas que o usuário move e redimensiona no Quadro. Um Stood pode ser versionado num Repositório do GitHub. Os termos seguem o [glossário](docs/GLOSSARY.md).
 
-- **Home e Biblioteca**: Busca de vídeos do YouTube que cria um estudo, botão "Novo Stood", "Continuar de onde parou" e a árvore de repositórios, pastas e arquivos.
-- **Quadro**: Abre vazio a cada visita. A aba lateral lista os arquivos do repositório e os tipos novos, e arrastar abre a janela. Até 10 janelas abertas, no máximo 2 de vídeo. Posição e tamanho das janelas não são salvos; o conteúdo dos arquivos é salvo sozinho.
-- **Arquivos**: A captura de tela do vídeo vira imagem no repositório. Importa imagem, PDF, slides, nota, Excalidraw e link do YouTube; exporta um arquivo, o estudo inteiro em `.zip` ou uma versão no GitHub.
+- **Home e Biblioteca**: Busca de vídeos do YouTube que cria um Stood, botão "Novo Stood", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos.
+- **Quadro**: Abre vazio a cada visita. A aba lateral lista os Arquivos do Stood e os tipos novos, e arrastar abre a Janela. Até 10 Janelas abertas, no máximo 2 de Vídeo. Posição e tamanho das Janelas não são salvos; o conteúdo dos Arquivos é salvo sozinho.
+- **Arquivos**: A captura de tela do Vídeo vira Imagem no Stood. Importa Imagem, PDF, Nota, Desenho e link do YouTube; exporta um Arquivo, o Stood inteiro em `.zip` ou uma versão no GitHub.
 - **Conta**: Login por Google, GitHub ou e-mail e senha.
-- **Fora do escopo inicial**: Pomodoro, agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, sugestões de estudos predefinidos na home, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
+- **Fora do escopo inicial**: Pomodoro, agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, sugestões de Stoods predefinidos na home, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
 
 ## Mentalidade
 
@@ -51,7 +51,7 @@ O Stood é um site para organizar estudos. Cada estudo é um quadro em que o usu
 1. Aceitar `ownerId` ou `userId` de query, corpo, cookie ou form: o dono vem só da sessão.
 2. Gravar dado senvíveis, como senha ou token do GitHub em texto puro.
 3. Logar dado sensível: senha, token, dado pessoal ou texto de nota.
-4. Garantir só na tela uma regra que nunca pode quebrar, como "arquivo pertence ao repositório do dono": ela fica no banco (constraint) e em `src/lib/`.
+4. Garantir só na tela uma regra que nunca pode quebrar, como "Arquivo pertence ao Stood do dono": ela fica no banco (constraint) e em `src/lib/`.
 5. `drizzle-kit push` ou editar migration que já chegou em `main`: correção é migration nova.
 
 ## Onde está o resto

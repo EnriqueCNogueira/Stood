@@ -32,20 +32,21 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 | Nota | Arquivos `.md` para fazer suas anotações |
 | Desenho | Excalidraw para rabiscar fluxos, mapas mentais, cálculos ou desenhos |
 | Imagem | Fotos e Prints que complementam seus estudos |
-| PDF | Apostilas, livros e artigos para ler ao lado das suas anotações |
-| Slides | Apresentações da aula para guiar seu estudo |
+| PDF | Apostilas, livros, artigos, etc para ler ao lado das suas anotações |
 
 ### Funcionalidades
 
-- **Biblioteca**: Todos os seus estudos organizados em pastas num lugar só. Você organiza seu Stood da forma que quiser.
+- **Biblioteca**: Todos os seus Stoods num lugar só, numa lista sem pastas. Dentro de cada Stood, você organiza os arquivos em Pastas da forma que quiser.
 - **Salvamento automático**: Notas e desenhos são salvos enquanto você escreve, sem botão de salvar.
 - **Captura de tela**: Um clique no vídeo guarda aquele momento da aula como imagem, junto dos outros arquivos do estudo.
-- **Publicação no GitHub**: Seu repositório vai inteiro para o GitHub com um clique, e cada publicação guarda uma versão do estudo.
-- **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, PDFs, Anotações e links do Youtube). E pode exportar para o Github ou Arquivo compactado (`.zip` ou `.rar`).
-- **Conta**: Entrada por Google, GitHub ou e-mail e senha, com nome, apelido, foto e descrição no perfil.
+- **Publicação no GitHub**: Seu Stood vai inteiro para o GitHub com um clique, e cada publicação guarda uma versão dele.
+- **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, PDFs, Anotações e links do Youtube). E pode exportar para o Github ou Arquivo compactado (`.zip`).
+- **Conta**: Entrada por Google, GitHub ou e-mail e senha. O perfil tem só nome, e-mail e o avatar do provedor.
 
 ## Como rodar
 
-- **Requisitos**: Node 24, pnpm 12 (`npm install -g pnpm`) e Docker.
+- **Requisitos**: Node 24, pnpm 12 (`npm install -g pnpm`) e PostgreSQL 18, instalado na máquina ou num container Docker.
 - **Instalar**: `pnpm install`.
+- **Configurar**: Copiar o `.env.example` para `.env.local` e preencher. A `DATABASE_URL` aponta para o seu Postgres e o `BETTER_AUTH_SECRET` precisa de 32 caracteres ou mais. Sem a `RESEND_API_KEY`, o link do e-mail de verificação sai no terminal.
+- **Banco**: `pnpm exec drizzle-kit migrate` cria as tabelas no banco da `DATABASE_URL`.
 - **Desenvolver**: `pnpm dev` e abrir `http://localhost:3000`.
