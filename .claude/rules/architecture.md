@@ -75,7 +75,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 
 - **Filtro obrigatório**: Toda query de dado do usuário filtra pelo `user.id` de `requireSession()`: `where(eq(t.ownerId, user.id))`.
 - **Busca por id**: `and(eq(t.id, id), eq(t.ownerId, user.id))`. Não achou, `notFound()`: a resposta não revela que o registro existe para outro dono.
-- **Id de pai**: Repositório, pasta, estudo ou arquivo recebido na entrada é conferido contra o dono antes de gravar.
+- **Id de pai**: Stood, Pasta ou Arquivo recebido na entrada é conferido contra o dono antes de gravar.
 - **Sessão inválida**: Sessão ilegível ou expirada redireciona para `/entrar`, nunca segue como anônima.
 
 ## ORM

@@ -9,7 +9,7 @@ paths: ["**/*.ts", "**/*.tsx", "**/*.mjs"]
 
 ## Nomes
 
-- **Entidade**: Vai para o inglês mesmo quando a tela fala português: estudo é `study`, repositório é `repository`, arquivo é `file`.
+- **Entidade**: Vai para o inglês mesmo quando a tela fala português: Stood é `stood`, Pasta é `folder`, Arquivo é `file`, como no [glossário](../../docs/GLOSSARY.md).
 - **Arquivo**: Substantivo do conteúdo, sem sufixo técnico, como `session.ts`.
 
 ## Verbos de função
@@ -41,7 +41,7 @@ Vocabulário fechado. Operação que não cabe usa um verbo novo, que entra nest
 | `handle` | Recebe a requisição e repassa ao handler (`handleAuthRequest`) |
 | `close` | Fecha um elemento da tela (`closeOnEscape`) |
 | `set` | Grava um valor fixo, só em teste (`setSessionsExpiresAt`) |
-| `warm`, `stub`, `expect` | Só em teste: aquece a lib, troca serviço externo, confere efeito |
+| `warm`, `stub`, `expect`, `track`, `wait` | Só em teste: aquece a lib, troca serviço externo, confere efeito, acompanha uma promessa sem rejeitar, espera um estado do banco |
 
 ## Resultados
 
