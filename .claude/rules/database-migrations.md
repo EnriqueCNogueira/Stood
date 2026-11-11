@@ -14,6 +14,11 @@ paths: ["src/db/**", "drizzle/**", "drizzle.config.ts"]
 3. Leia o `.sql` gerado. Em rename de coluna ou tabela o drizzle-kit pergunta se é rename ou criação: o agente não responde, para e pede para a pessoa rodar o comando, porque a resposta errada vira `DROP` com perda de dado.
 4. `pnpm exec drizzle-kit migrate` aplica as migrations no banco de `DATABASE_URL`.
 
+## Fora do drizzle-kit
+
+- **SQL à mão**: O que o drizzle-kit não gera, como trigger e função PL/pgSQL, vai no fim do `.sql` gerado, depois de um `--> statement-breakpoint` e com comentário dizendo que foi escrito à mão, antes de a migration chegar em `main`. O snapshot não acompanha: mudar depois é migration nova escrita à mão.
+- **Único com coluna nula**: O drizzle-orm não gera `NULLS NOT DISTINCT` em índice com expressão. Para a unicidade valer também com a coluna nula (raiz do Stood), o `uniqueIndex` do schema usa `coalesce(coluna, NIL_UUID)`, e tudo sai do `generate`.
+
 ## Journal e numeração
 
 - **`drizzle/meta/`**: Snapshots e journal são do drizzle-kit. A leitura dos snapshots é bloqueada em `.claude/settings.json`; o `_journal.json` pode ser lido.
@@ -30,8 +35,8 @@ paths: ["src/db/**", "drizzle/**", "drizzle.config.ts"]
 
 ## Dono
 
-- **Coluna**: Tabela de dado do usuário tem `owner_id NOT NULL` referenciando `users.id` com `onDelete: "cascade"`. É a coluna do filtro de [architecture.md](architecture.md#isolamento-por-dono).
-- **Filha**: Repete `owner_id` e referencia o pai por FK composta `(parent_id, owner_id)` para `(id, owner_id)`, com `UNIQUE (id, owner_id)` no pai.
+- **Coluna**: Tabela raiz de dado do usuário, como `stoods`, tem `owner_id NOT NULL` referenciando `users.id` com `onDelete: "cascade"`. É a coluna do filtro de [architecture.md](architecture.md#isolamento-por-dono).
+- **Filha**: Repete `owner_id NOT NULL` e amarra o dono só pela FK composta `(parent_id, owner_id)` para `(id, owner_id)` do pai, com `UNIQUE (id, owner_id)` no pai e cascade; o cascade a partir de `users` chega pelo pai, sem FK direta.
 - **Global**: Conteúdo igual para todos não tem `owner_id`.
 
 ## Anti-patterns
@@ -45,5 +50,6 @@ paths: ["src/db/**", "drizzle/**", "drizzle.config.ts"]
 - [ ] A última entrada de `drizzle/meta/_journal.json` aponta para um `.sql` que existe?
 - [ ] Migration nova vem depois da última do journal, sem número repetido e com `when` maior?
 - [ ] O `.sql` tem `DROP`? Se sim, é intencional e não rename respondido errado?
+- [ ] O SQL escrito à mão está no fim do `.sql`, com comentário, e a migration nunca esteve em `main`?
 - [ ] Tabela nova de dado do usuário tem `owner_id` e FK composta com o pai?
 - [ ] Coluna de data nova usa `withTimezone: true`?
