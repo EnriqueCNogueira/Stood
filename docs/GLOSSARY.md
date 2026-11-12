@@ -20,6 +20,10 @@ _Evitar_: Login, provedor, credencial
 A unidade de estudo do Usuário: um conjunto de Pastas e Arquivos sobre um assunto. O plural é Stoods.
 _Evitar_: Estudo, repositório, projeto
 
+**Biblioteca**:
+A tela que lista os Stoods do Usuário, aberta depois de entrar.
+_Evitar_: Home, workspace, início
+
 **Quadro**:
 A tela que abre um Stood, em que os Arquivos aparecem em Janelas. 
 _Evitar_: Board, canvas, workspace
