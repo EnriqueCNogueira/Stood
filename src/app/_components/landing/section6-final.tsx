@@ -1,6 +1,7 @@
 import { ArrowRight, ShieldCheck } from "lucide-react";
+import { Footer } from "@/app/_components/footer";
 import { CONTAINER } from "@/app/_components/landing/sections";
-import { BUTTON, FOCUS, TEXT_LINK } from "@/app/_components/ui";
+import { BUTTON, FOCUS } from "@/app/_components/ui";
 
 // Última tela da landing page: chamada final e rodapé
 export function FinalSection({ isSignedIn }: { isSignedIn: boolean }) {
@@ -43,19 +44,7 @@ export function FinalSection({ isSignedIn }: { isSignedIn: boolean }) {
       </div>
 
       {/* No desktop o rodapé sai do fluxo, para a chamada ficar no centro da tela inteira */}
-      <footer className="relative border-t border-border lg:absolute lg:inset-x-0 lg:bottom-0">
-        <div className={`${CONTAINER} flex flex-col items-center gap-3 py-6 text-ui text-text-muted sm:flex-row sm:justify-between 2xl:text-sm`}>
-          <p>© 2026 Stood. Projeto acadêmico da UNIFESP.</p>
-          <nav aria-label="Legal" className="flex gap-5">
-            <a href="/privacidade" className={TEXT_LINK}>
-              Privacidade
-            </a>
-            <a href="/termos" className={TEXT_LINK}>
-              Termos
-            </a>
-          </nav>
-        </div>
-      </footer>
+      <Footer className="lg:absolute lg:inset-x-0 lg:bottom-0" />
     </section>
   );
 }

@@ -77,6 +77,11 @@
   }
 }
 
+/* Na landing o rodapé fica dentro da última tela, então o do layout raiz some */
+body:has([data-landing]) > [data-site-footer] {
+  display: none;
+}
+
 /* Rolagem suave nos cliques em âncora, desligada para quem pede menos movimento */
 @media (prefers-reduced-motion: no-preference) {
   html:has([data-landing]) {

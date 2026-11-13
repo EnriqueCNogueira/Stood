@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
+import { Footer } from "@/app/_components/footer";
 import { Header } from "@/app/_components/header/header";
 import { THEME_STORAGE_KEY, buildTheme } from "@/lib/theme/theme";
 import "./globals.css";
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans">
         <Header />
         {children}
+        <Footer />
       </body>
     </html>
   );
