@@ -14,7 +14,7 @@ export function SamePageLinks() {
     function scrollToLinkTarget(event: MouseEvent) {
       const isPlainClick = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
       if (event.defaultPrevented || !isPlainClick) return;
-      const link = (event.target as Element).closest("a");
+      const link = (event.target as Element).closest<HTMLAnchorElement>("a[href]");
       if (!link || link.target) return;
 
       const url = new URL(link.href);

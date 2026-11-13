@@ -78,8 +78,8 @@ export default function PrivacyPage() {
 
       <LegalSection title="Seus direitos">
         <p>
-          Pela LGPD (art. 18), você pode pedir a confirmação de que tratamos seus dados, o acesso a eles, a correção, a portabilidade, a eliminação, a informação sobre com quem compartilhamos e
-          a revogação do consentimento. Faça o pedido pelo e-mail <ContactEmail />.
+          Pela LGPD (art. 18), você pode pedir a confirmação de que tratamos seus dados, o acesso a eles, a correção, a portabilidade, a eliminação e a
+          informação sobre com quem compartilhamos. Faça o pedido pelo e-mail <ContactEmail />.
         </p>
       </LegalSection>
 

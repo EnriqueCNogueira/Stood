@@ -1,4 +1,4 @@
-import { File, FileArchive, FileText, Image, LayoutDashboard, PenTool } from "lucide-react";
+import { File, FileText, Image, LayoutDashboard, PenTool } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { GithubLogo, YoutubeIcon } from "@/app/_components/brand-icons";
 import { CARD_GRID, CONTAINER, EYEBROW, SECTION, SECTION_LEAD, SECTION_TITLE } from "@/app/_components/landing/sections";

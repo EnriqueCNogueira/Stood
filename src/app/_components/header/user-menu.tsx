@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useDismiss } from "@/app/_components/header/dismiss";
 import { signOut } from "@/app/_components/header/sign-out";
 import { FOCUS, MENU_ITEM, MENU_SEPARATOR } from "@/app/_components/ui";
 
@@ -9,23 +10,8 @@ type UserMenuProps = { name: string; email: string; image: string | null };
 export function UserMenu({ name, email, image }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Fecha com clique fora ou Esc
-  useEffect(() => {
-    if (!isOpen) return;
-    function closeOnOutsideClick(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
-    }
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setIsOpen(false);
-    }
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [isOpen]);
+  const close = useCallback(() => setIsOpen(false), []);
+  useDismiss(containerRef, isOpen, close);
 
   return (
     <div ref={containerRef} className="relative">

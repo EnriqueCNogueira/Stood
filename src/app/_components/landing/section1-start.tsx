@@ -19,7 +19,7 @@ export function HeroSection({ isSignedIn }: { isSignedIn: boolean }) {
         </div>
         <p className="mt-2 text-2xl font-light tracking-tight sm:text-3xl lg:text-4xl 2xl:text-5xl">Seu estudo inteiro em uma tela só</p>
         <p className="mt-4 max-w-xl text-base text-text-muted xl:text-lg 2xl:max-w-2xl 2xl:text-xl">
-          Abra o Vídeo do YouTube, escreva a Nota em markdown, faça o Desenho e consulte o PDF lado a lado. Você organiza o quadro e os arquivos do seu jeito
+          Abra o Vídeo do YouTube, escreva a Nota em markdown, faça o Desenho e consulte o PDF lado a lado. Você organiza o Quadro e os Arquivos do seu jeito
         </p>
         <div className="mt-8 flex flex-wrap gap-3 2xl:mt-10 2xl:gap-4">
           <a href={isSignedIn ? "/biblioteca" : "/entrar"} className={`${BUTTON.base} ${BUTTON.lg} ${BUTTON.primary}`}>

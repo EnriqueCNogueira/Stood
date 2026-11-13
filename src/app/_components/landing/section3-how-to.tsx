@@ -2,7 +2,7 @@ import { CARD_GRID, CONTAINER, EYEBROW, SECTION, SECTION_LEAD, SECTION_TITLE } f
 import { CARD } from "@/app/_components/ui";
 
 const STEPS = [
-  { title: "Crie um Stood", text: "Busque um Vídeo do YouTube na Biblioteca ou comece um Stood vazio com o botão Novo Stood." },
+  { title: "Crie um Stood", text: "Na Biblioteca, clique em Novo Stood e dê ao Stood o nome do assunto que vai estudar." },
   { title: "Organize Pastas e Arquivos", text: "Separe o assunto em Pastas e importe Notas, Desenhos, Imagens e PDFs para dentro delas." },
   { title: "Abra no Quadro", text: "Arraste os Arquivos da aba lateral para o Quadro e estude com até 10 Janelas abertas." },
 ];

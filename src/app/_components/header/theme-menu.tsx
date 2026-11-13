@@ -1,7 +1,8 @@
 "use client";
 
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useDismiss } from "@/app/_components/header/dismiss";
 import { BUTTON, FOCUS, MENU_ITEM } from "@/app/_components/ui";
 import { THEME_STORAGE_KEY, type ThemePreference, buildTheme, parseThemePreference } from "@/lib/theme/theme";
 
@@ -19,23 +20,8 @@ export function ThemeMenu() {
   const containerRef = useRef<HTMLDivElement>(null);
   const preference = useSyncExternalStore(subscribeToPreference, readPreference, () => "system" as const);
   const current = OPTIONS.find((option) => option.value === preference) ?? OPTIONS[0];
-
-  // Fecha com clique fora ou Esc
-  useEffect(() => {
-    if (!isOpen) return;
-    function closeOnOutsideClick(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
-    }
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setIsOpen(false);
-    }
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [isOpen]);
+  const close = useCallback(() => setIsOpen(false), []);
+  useDismiss(containerRef, isOpen, close);
 
   function selectPreference(next: ThemePreference) {
     try {
