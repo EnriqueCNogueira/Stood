@@ -5,29 +5,48 @@
 
 /* Tema escuro, o padrão. Os resets deixam só estes tokens virarem classe. */
 @theme {
+
+  /* --- Cores --- */
   --color-*: initial;
-  --color-bg: #0B0B0C; /* quase preto: fundo da página */
+  --color-text: #F4F4F5; /* texto principal: branco suave */
+  --color-logo-backdrop: #FFFFFF; /* cartão de logo de terceiros: branco puro, igual nos dois temas */
+  --color-bg: #0B0B0C; /* fundo da página: quase preto */
+  --color-on-accent: #0B0B0C; /* texto sobre laranja: quase preto, escuro nos dois temas */
   --color-surface: #141416; /* grafite: cartão, campo, menu */
   --color-surface-2: #242428; /* cinza: hover, selo, trilho */
   --color-border: #2A2A2E; /* cinza escuro: bordas e divisórias */
-  --color-text: #F4F4F5; /* branco: texto principal */
   --color-text-muted: #A1A1AA; /* cinza claro: texto secundário */
   --color-accent: #FF6A1A; /* laranja: botão primário, foco */
   --color-accent-text: #FF8A47; /* laranja claro: laranja como texto */
-  --color-on-accent: #0B0B0C; /* quase preto: texto sobre laranja */
+  --color-accent-deep: #D6246A; /* magenta: profundidade do cérebro e brilho do Início */
   --color-danger: #F87171; /* vermelho: erro e excluir */
+  --color-link: #60A5FA; /* azul claro: link de texto */
 
+
+  /* --- Raios --- */
   --radius-*: initial;
   --radius-sm: 6px; /* pequeno: item de menu */
   --radius-md: 10px; /* padrão: botão, campo, menu */
   --radius-lg: 12px; /* grande: cartão */
 
+  /* --- Sombras --- */
   --shadow-*: initial;
   --shadow-card: 0 1px 2px rgba(40, 24, 8, 0.06), 0 6px 18px -8px rgba(40, 24, 8, 0.14); /* sombra quente: cartão no claro */
   --shadow-glow: 0 8px 24px -10px rgba(255, 106, 26, 0.7); /* brilho laranja: botão primário */
 
+  /* --- Fontes --- */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; /* Geist: todo o texto */
   --font-mono: var(--font-geist-mono), ui-monospace, monospace; /* Geist Mono: metadados */
+
+  /* --- Tamanhos --- */
+  --container-8xl: 90rem; /* 1440px */
+
+  --text-meta: 11px; /* metadado em mono: selo, contagem */
+  --text-meta--line-height: 1.4;
+  --text-ui: 13px; /* botão pequeno, rótulo, menu, link */
+  --text-ui--line-height: 1.45;
+  --text-display: clamp(60px, 14vw, 240px); /* logo do Início, que mede 0.8em */
+  --text-display--line-height: 0.9;
 }
 
 :root {
@@ -38,14 +57,36 @@
 [data-theme="light"] {
   color-scheme: light;
   --color-bg: #F7F6F3; /* areia: fundo da página */
-  --color-surface: #FFFFFF; /* branco: cartão, campo, menu */
+  --color-surface: #FFFFFF; /* cartão, campo, menu: branco */
   --color-surface-2: #E9E6E0; /* bege: hover, selo, trilho */
   --color-border: #E7E3DC; /* bege claro: bordas e divisórias */
-  --color-text: #161412; /* quase preto: texto principal */
+  --color-text: #161412; /* texto principal: quase preto */
   --color-text-muted: #57534E; /* cinza quente: texto secundário */
   --color-accent-text: #C2410C; /* laranja escuro: laranja como texto */
+  --color-accent-deep: #B0154F; /* magenta escuro: profundidade do cérebro e brilho do Início */
   --color-on-accent: #1A0A00; /* marrom escuro: texto sobre laranja */
   --color-danger: #DC2626; /* vermelho: erro e excluir */
+  --color-link: #2563EB; /* azul: link de texto */
+}
+
+/* Landing page: snap de uma seção por tela só a partir de lg, descontando o cabeçalho de 3.5rem */
+@media (min-width: 64rem) {
+  html:has([data-landing]) {
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: 3.5rem;
+  }
+}
+
+/* Na landing o rodapé fica dentro da última tela, então o do layout raiz some */
+body:has([data-landing]) > [data-site-footer] {
+  display: none;
+}
+
+/* Rolagem suave nos cliques em âncora, desligada para quem pede menos movimento */
+@media (prefers-reduced-motion: no-preference) {
+  html:has([data-landing]) {
+    scroll-behavior: smooth;
+  }
 }
 
 body {

@@ -26,16 +26,18 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 ├── scripts/                       scripts rodados por pnpm
 ├── src/
 │   ├── app/                       View
+│   │   ├── (auth)/                entrar, cadastro e senha
 │   │   ├── (protected)/           rotas que exigem login
 │   │   │   ├── <rota>/
 │   │   │   │   ├── page.tsx       frontend
 │   │   │   │   └── route.ts       route handler, quando a rota precisa de HTTP
 │   │   │   └── layout.tsx         layout do sistema, que chama requireSession()
+│   │   ├── _components/           View compartilhada fora das rotas
 │   │   ├── auth/                  rotas que a biblioteca de auth exigir
-│   │   ├── entrar/                login
-│   │   ├── globals.css
-│   │   └── layout.tsx
-│   ├── components/                View compartilhada: classes de ui.ts, cabeçalho
+│   │   ├── layout.tsx             requireSession(), header e footer
+│   │   ├── globals.css            Tailwind: tokens de cor, fontes, tamanhos
+
+│   │   └── page.tsx               landing page pública
 │   ├── db/                        Model
 │   │   ├── index.ts               conexão
 │   │   └── schema.ts
@@ -55,6 +57,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 ├── tsconfig.json
 └── vitest.config.ts
 ```
+- **Componente**: O compartilhado fica em `src/app/_components/`, importado por `@/app/_components/`: o de um tema (uma tela, um layout) numa subpasta como `header/`, o de vários temas, como `ui.ts`, na raiz. O de uma rota só fica na pasta dela, como `sign-in-form.tsx` em `(auth)/entrar/`.
 - **Rota**: Em português, sob `(protected)/` quando exige login; rota nova do grupo entra no `matcher` de `src/middleware.ts`, porque o grupo não aparece na URL.
 
 ## Leitura e escrita
@@ -62,8 +65,10 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 - **Leitura**: No Server Component que usa o dado, chamando o Service direto. Sem endpoint interno.
 - **Route handler**: Em `route.ts`, junto da rota que o usa, como export e callback de OAuth.
 - **Para o client**: A página passa ao `"use client"` só os campos que a tela usa.
-- **Exceção `/ready`**: `src/app/ready/route.ts` faz `SELECT 1` direto e não chama `requireSession()`, porque é a checagem pública do CD; não serve de modelo para outra rota.
-- **Exceção auth**: As telas de entrar, cadastro e senha chamam `/auth/*` pelo client da Better Auth (`src/lib/auth/client.ts`), porque o rate limit da lib só vale por HTTP; as regras do Stood ficam na config de `src/lib/auth/auth.ts`.
+- **Exceções**: Não chamam `requireSession()`.
+  - **`/ready`**: Checagem pública do CD, faz `SELECT 1` direto; não serve de modelo.
+  - **Páginas públicas**: Landing, `/privacidade` e `/termos` ficam fora do `matcher`, usam `findCurrentSessionUser()`, que não redireciona, e nunca leem dado do Usuário.
+  - **Auth**: Telas de entrar, cadastro e senha chamam `/auth/*` pelo client da Better Auth, porque o rate limit só vale por HTTP; as regras do Stood ficam em `src/lib/auth/auth.ts`.
 
 ## Server e client
 
