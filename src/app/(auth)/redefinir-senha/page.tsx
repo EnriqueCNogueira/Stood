@@ -1,5 +1,5 @@
-import { AuthCard, FormMessage } from "@/components/auth-card";
-import { TEXT_LINK } from "@/components/ui";
+import { AuthCard, FormMessage } from "@/app/_components/auth-card";
+import { TEXT_LINK } from "@/app/_components/ui";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 import { ResetPasswordForm } from "./reset-password-form";
 

@@ -1,8 +1,9 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { FormMessage } from "@/components/auth-card";
-import { BUTTON, FIELD, FIELD_LABEL, INPUT, TEXT_LINK } from "@/components/ui";
+import { FormMessage } from "@/app/_components/auth-card";
+import { GithubLogo, GoogleLogo } from "@/app/_components/brand-icons";
+import { BUTTON, FIELD, FIELD_LABEL, INPUT, TEXT_LINK } from "@/app/_components/ui";
 import { authClient } from "@/lib/auth/client";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 
@@ -51,9 +52,11 @@ export function SignInForm({ initialError }: { initialError?: string }) {
 
       <div className="grid gap-2">
         <button type="button" disabled={isPending} onClick={() => signInWithProvider("google")} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.secondary}`}>
+          <GoogleLogo />
           Entrar com Google
         </button>
         <button type="button" disabled={isPending} onClick={() => signInWithProvider("github")} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.secondary}`}>
+          <GithubLogo />
           Entrar com GitHub
         </button>
       </div>

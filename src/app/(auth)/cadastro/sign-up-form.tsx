@@ -1,8 +1,8 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { FormMessage, NewPasswordField } from "@/components/auth-card";
-import { BUTTON, FIELD, FIELD_LABEL, INPUT, TEXT_LINK } from "@/components/ui";
+import { FormMessage, NewPasswordField } from "@/app/_components/auth-card";
+import { BUTTON, FIELD, FIELD_LABEL, INPUT, TEXT_LINK } from "@/app/_components/ui";
 import { authClient } from "@/lib/auth/client";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 import { isStrongPassword } from "@/lib/auth/password";

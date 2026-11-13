@@ -1,4 +1,4 @@
-import { AuthCard } from "@/components/auth-card";
+import { AuthCard } from "@/app/_components/auth-card";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 import { SignInForm } from "./sign-in-form";
 

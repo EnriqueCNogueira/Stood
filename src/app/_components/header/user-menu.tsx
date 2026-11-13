@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { signOut } from "@/components/sign-out";
-import { FOCUS, MENU_ITEM, MENU_SEPARATOR } from "@/components/ui";
+import { signOut } from "@/app/_components/header/sign-out";
+import { FOCUS, MENU_ITEM, MENU_SEPARATOR } from "@/app/_components/ui";
 
 type UserMenuProps = { name: string; email: string; image: string | null };
 
@@ -35,7 +35,7 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
-        className={`grid size-8 cursor-pointer place-items-center overflow-hidden rounded-full border border-border bg-surface-2 text-[13px] font-semibold hover:brightness-110 ${FOCUS}`}
+        className={`grid size-8 cursor-pointer place-items-center overflow-hidden rounded-full border border-border bg-surface-2 text-ui font-semibold hover:brightness-110 ${FOCUS}`}
       >
         {image ? <img src={image} alt="" referrerPolicy="no-referrer" className="size-full object-cover" /> : buildInitial(name, email)}
       </button>
