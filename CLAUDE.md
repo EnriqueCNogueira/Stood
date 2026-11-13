@@ -6,20 +6,21 @@ Você é um agente de código que atua como engenheiro de software sênior neste
 
 O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquivos de um assunto (Vídeo do YouTube, Nota em markdown, Desenho no Excalidraw, Imagem e PDF), abertos em Janelas que o usuário move e redimensiona no Quadro. Um Stood pode ser versionado num Repositório do GitHub. Os termos seguem o [glossário](docs/GLOSSARY.md).
 
-- **Home e Biblioteca**: Busca de vídeos do YouTube que cria um Stood, botão "Novo Stood", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos.
+- **Landing page**: Página pública em `/`, que apresenta o Stood, quem faz e as Perguntas Frequentes, com Privacidade e Termos em `/privacidade` e `/termos`.
+- **Biblioteca**: Painel de Stoods, botão "Novo Stood", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos.
 - **Quadro**: Abre vazio a cada visita. A aba lateral lista os Arquivos do Stood e os tipos novos, e arrastar abre a Janela. Até 10 Janelas abertas, no máximo 2 de Vídeo. Posição e tamanho das Janelas não são salvos; o conteúdo dos Arquivos é salvo sozinho.
 - **Arquivos**: A captura de tela do Vídeo vira Imagem no Stood. Importa Imagem, PDF, Nota, Desenho e link do YouTube; exporta um Arquivo, o Stood inteiro em `.zip` ou uma versão no GitHub.
 - **Conta**: Login por Google, GitHub ou e-mail e senha.
-- **Fora do escopo inicial**: Pomodoro, agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, sugestões de Stoods predefinidos na home, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
+- **Fora do escopo inicial**: Pomodoro, agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, sugestões de Stoods predefinidos na Biblioteca, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
 
 ## Mentalidade
 
 - **Entenda antes de mexer**: Leia a rule que casa com o arquivo antes de editar.
-- **Reutilizar > Evoluir > Criar**: Antes de criar, procure em `src/lib/` e nos componentes existentes.
+- **Reutilizar > Evoluir > Criar**: Antes de criar, procure em `src/lib/` e nos componentes de `src/app/_components/`.
 - **Mudança focada**: Mexa só no que o pedido toca. Refatoração ou melhoria fora dele vira sugestão, não diff.
 - **Dependência só com aprovação**: Biblioteca ou serviço novo se decide na etapa que precisa dele. Pergunte antes de adicionar e nunca escolha sozinho.
 - **Regra de negócio fora da camada HTTP**: Página, route handler e Server Action validam entrada e montam resposta; a regra de negócio fica isolada em `src/lib/`, testável.
-- **Sessão em toda View**: Página, route handler e Server Action chamam `requireSession()`, que identifica o usuário, antes de ler ou gravar.
+- **Sessão em toda View**: Página, route handler e Server Action chamam `requireSession()`, que identifica o usuário, antes de ler ou gravar. As páginas públicas são a exceção, descrita na [architecture.md](.claude/rules/architecture.md#leitura-e-escrita).
 - **Bug começa por teste**: Para resolver um bug, primeiro escreva um teste do bug que falha, depois faça passar.
 - **Pronto é passar no portão**: `pnpm run typecheck` e `pnpm test`, nesta ordem. Tarefa pronta é a que passa nos dois.
 - **Doc no fim da tarefa**: Ao fim da tarefa você analisa as docs. Se a mudança deixou algum documento (comentários, rules, skills, CLAUDE.md, README.md) desatualizado, liste o que mudaria e pergunte antes de editar.
@@ -60,4 +61,5 @@ O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquiv
 - [.claude/rules/code-style.md](.claude/rules/code-style.md): Carrega em `.ts`, `.tsx` e `.mjs`.
 - [.claude/rules/database-migrations.md](.claude/rules/database-migrations.md): Carrega em `src/db/`, `drizzle/` e `drizzle.config.ts`.
 - [.claude/rules/design.md](.claude/rules/design.md): Carrega em qualquer `.tsx`.
+- [.claude/rules/lgpd.md](.claude/rules/lgpd.md): Carrega em `src/lib/`, `src/db/`, `drizzle/` e nas páginas legais.
 - [.claude/rules/testing-strategy.md](.claude/rules/testing-strategy.md): Carrega em `*.test.ts`, `src/test/` e `vitest.config.ts`.

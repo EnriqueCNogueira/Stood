@@ -40,6 +40,7 @@ Vocabulário fechado. Operação que não cabe usa um verbo novo, que entra nest
 | `enforce` | Recusa com exceção o que fere a regra (`enforceSignUpAndPasswordRules`) |
 | `handle` | Recebe a requisição e repassa ao handler (`handleAuthRequest`) |
 | `close` | Fecha um elemento da tela (`closeOnEscape`) |
+| `scroll` | Rola a página até um ponto dela (`scrollToLinkTarget`) |
 | `set` | Grava um valor fixo, só em teste (`setSessionsExpiresAt`) |
 | `warm`, `stub`, `expect`, `track`, `wait` | Só em teste: aquece a lib, troca serviço externo, confere efeito, acompanha uma promessa sem rejeitar, espera um estado do banco |
 
