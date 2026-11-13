@@ -1,7 +1,7 @@
 import { LinkedinLogo } from "@/app/_components/brand-icons";
 import { CONTAINER, EYEBROW, SECTION, SECTION_LEAD, SECTION_TITLE } from "@/app/_components/landing/sections";
 import { TEAM, type TeamMember } from "@/app/_components/landing/team";
-import { CARD, TEXT_LINK } from "@/app/_components/ui";
+import { TEXT_LINK } from "@/app/_components/ui";
 
 export function AboutSection() {
   return (
@@ -25,9 +25,9 @@ export function AboutSection() {
 
         <ul className="mt-10 grid grid-cols-3 gap-3 sm:gap-5 2xl:mt-14 2xl:gap-8">
           {TEAM.map((member) => (
-            <li key={member.name} className={`${CARD} flex flex-col items-center bg-surface px-2 py-6 text-center sm:px-4 2xl:py-10`}>
+            <li key={member.name} className="flex flex-col items-center text-center">
               <MemberAvatar member={member} />
-              <h3 className="mt-4 text-base font-medium 2xl:text-xl">{member.name}</h3>
+              <h3 className="mt-4 text-base font-medium sm:text-lg 2xl:mt-5 2xl:text-2xl">{member.name}</h3>
               {member.linkedin && (
                 <a
                   href={member.linkedin}
@@ -48,12 +48,15 @@ export function AboutSection() {
   );
 }
 
+// As fotos de public/equipe/ têm 384px, 2x o maior tamanho exibido
+const AVATAR_SIZE = "size-24 sm:size-32 lg:size-40 2xl:size-48";
+
 function MemberAvatar({ member }: { member: TeamMember }) {
   if (member.photo) {
-    return <img src={member.photo} alt="" width={144} height={144} className="size-20 rounded-full border border-border object-cover sm:size-24 2xl:size-36" />;
+    return <img src={member.photo} alt="" width={192} height={192} className={`${AVATAR_SIZE} rounded-full object-cover`} />;
   }
   return (
-    <span aria-hidden className="grid size-20 place-items-center rounded-full border border-border bg-surface-2 text-2xl font-semibold sm:size-24 2xl:size-36 2xl:text-4xl">
+    <span aria-hidden className={`${AVATAR_SIZE} grid place-items-center rounded-full bg-surface-2 text-2xl font-semibold sm:text-4xl 2xl:text-5xl`}>
       {member.name.charAt(0)}
     </span>
   );
