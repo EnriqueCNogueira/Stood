@@ -14,7 +14,7 @@ type SidebarProps = {
   children: ReactNode;
 };
 
-// Barra lateral da Biblioteca: a alça da borda direita muda a largura, salva no navegador, a partir de md.
+// Barra lateral da Biblioteca e do Quadro: a alça da borda direita muda a largura, salva no navegador, a partir de md.
 // Quem usa só diz a posição de fora (sticky, fixed, gaveta); o invólucro de dentro ancora a alça.
 export function Sidebar({ label, widthStorageKey, defaultWidth, className = "", children }: SidebarProps) {
   const [stored, setStored] = useStoredValue(widthStorageKey);
