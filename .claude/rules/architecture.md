@@ -32,7 +32,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 │   │   │   │   ├── page.tsx       frontend
 │   │   │   │   └── route.ts       route handler, quando a rota precisa de HTTP
 │   │   │   └── layout.tsx         layout do sistema, que chama requireSession()
-│   │   ├── _components/           View compartilhada fora das rotas
+│   │   ├── _components/           componentes das telas, por tema
 │   │   ├── auth/                  rotas que a biblioteca de auth exigir
 │   │   ├── layout.tsx             requireSession(), header e footer
 │   │   ├── globals.css            Tailwind: tokens de cor, fontes, tamanhos
@@ -57,7 +57,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 ├── tsconfig.json
 └── vitest.config.ts
 ```
-- **Componente**: O compartilhado fica em `src/app/_components/`, importado por `@/app/_components/`: o de um tema (uma tela, um layout) numa subpasta como `header/`, o de vários temas, como `ui.ts`, na raiz. O de uma rota só fica na pasta dela, como `sign-in-form.tsx` em `(auth)/entrar/`.
+- **Componente**: Fica em `src/app/_components/`, importado por `@/app/_components/`: o de um tema numa subpasta, como `auth/`, `header/` ou `landing/`; o da Biblioteca em `workspace/`, com o de uma tela só em `workspace/library/`; o de vários temas, como `ui.ts`, na raiz. A pasta de rota só tem `page.tsx`, `route.ts` e `layout.tsx`.
 - **Rota**: Em português, sob `(protected)/` quando exige login; rota nova do grupo entra no `matcher` de `src/middleware.ts`, porque o grupo não aparece na URL.
 
 ## Leitura e escrita
