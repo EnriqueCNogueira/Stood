@@ -18,11 +18,24 @@ export const BUTTON = {
   ghost: "border-transparent text-text-muted hover:not-disabled:bg-surface-2 hover:not-disabled:text-text",
 };
 
+// Botão só de ícone, quadrado, como o do tema no cabeçalho
+export const ICON_BUTTON = `${BUTTON.base} ${BUTTON.ghost} size-7.5 rounded-md`;
+
 export const FIELD = "grid gap-1.5";
 export const FIELD_LABEL = "text-ui font-medium text-text-muted 2xl:text-sm";
 export const INPUT = "h-9 w-full rounded-md border border-border bg-surface px-3 transition placeholder:text-text-muted focus:border-accent focus:ring-3 focus:ring-accent/12 focus:outline-none aria-invalid:border-danger aria-invalid:ring-3 aria-invalid:ring-danger/12 2xl:h-10.5 2xl:text-base";
 
 export const CARD = "rounded-lg border border-border shadow-card transition";
+
+// Caixa flutuante de menu e dica; a posição fica em quem usa
+export const POPOVER = "rounded-md border border-border bg-surface shadow-card";
+
+// Altura da tela abaixo do cabeçalho h-14 (3.5rem), nos degraus usados pelas telas
+export const BELOW_HEADER = {
+  minHeight: "min-h-[calc(100dvh-3.5rem)]",
+  mdMinHeight: "md:min-h-[calc(100dvh-3.5rem)]",
+  mdHeight: "md:h-[calc(100dvh-3.5rem)]",
+};
 
 export const MENU_SEPARATOR = "my-1 h-px bg-border";
 export const MENU_ITEM = "flex h-8 w-full items-center rounded-sm px-2.5 text-left text-ui disabled:cursor-not-allowed disabled:text-text-muted";
