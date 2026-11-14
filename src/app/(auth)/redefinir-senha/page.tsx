@@ -1,7 +1,7 @@
-import { AuthCard, FormMessage } from "@/app/_components/auth-card";
+import { AuthCard, FormMessage } from "@/app/_components/auth/auth-card";
+import { ResetPasswordForm } from "@/app/_components/auth/reset-password-form";
 import { TEXT_LINK } from "@/app/_components/ui";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
-import { ResetPasswordForm } from "./reset-password-form";
 
 // O link do e-mail passa por /auth/reset-password e chega aqui com ?token=, ou com ?error= se expirou
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string; error?: string }> }) {
