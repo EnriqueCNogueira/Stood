@@ -2,7 +2,14 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { stoods } from "@/db/schema";
-import { createStood, getLibraryStoods, getRecentStoods } from "@/lib/stood/stood";
+import {
+  createStood,
+  findBoardStood,
+  getLibraryStoods,
+  getRecentStoods,
+  updateStood,
+  updateStoodLastOpenedAt,
+} from "@/lib/stood/stood";
 import { buildStoodTree } from "@/lib/stood/tree";
 import { createFile, createFolder, createStood as createStoodRow, createUser } from "@/test/db";
 
@@ -66,6 +73,77 @@ describe("createStood", () => {
     const ownerId = await createUser();
 
     await expect(createStood(ownerId, { name: "Cálculo I", description: "a".repeat(201) })).resolves.toEqual({
+      ok: false,
+      reason: "descricao-longa",
+    });
+  });
+});
+
+describe("updateStood", () => {
+  it("troca o nome e a descrição", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+
+    await updateStood(ownerId, stoodId, { name: "Cálculo II", description: "Integrais" });
+
+    expect(await getStoodRow(stoodId)).toMatchObject({ name: "Cálculo II", description: "Integrais" });
+  });
+
+  it("não muda a hora em que o Stood foi aberto", async () => {
+    const ownerId = await createUser();
+    const openedAt = new Date(Date.now() - 3 * MS_PER_DAY);
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I", { lastOpenedAt: openedAt })).id;
+
+    await updateStood(ownerId, stoodId, { name: "Cálculo II", description: "" });
+
+    expect((await getStoodRow(stoodId)).lastOpenedAt).toEqual(openedAt);
+  });
+
+  it("aceita manter o próprio nome mudando só as maiúsculas", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+
+    await expect(updateStood(ownerId, stoodId, { name: "CÁLCULO I", description: "" })).resolves.toEqual({ ok: true });
+  });
+
+  it("recusa o nome de outro Stood do mesmo dono", async () => {
+    const ownerId = await createUser();
+    await createStoodRow(ownerId, "Física");
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+
+    await expect(updateStood(ownerId, stoodId, { name: "física", description: "" })).resolves.toEqual({
+      ok: false,
+      reason: "nome-repetido",
+    });
+  });
+
+  it("trata o Stood de outro Usuário como inexistente e não o altera", async () => {
+    const otherId = await createUser();
+    const stoodId = (await createStoodRow(otherId, "Cálculo I")).id;
+    const ownerId = await createUser();
+
+    const result = await updateStood(ownerId, stoodId, { name: "Invadido", description: "" });
+
+    expect({ result, name: (await getStoodRow(stoodId)).name }).toEqual({
+      result: { ok: false, reason: "stood-nao-encontrado" },
+      name: "Cálculo I",
+    });
+  });
+
+  it("recusa id que não é uuid como Stood inexistente", async () => {
+    const ownerId = await createUser();
+
+    await expect(updateStood(ownerId, "nao-e-uuid", { name: "Cálculo", description: "" })).resolves.toEqual({
+      ok: false,
+      reason: "stood-nao-encontrado",
+    });
+  });
+
+  it("recusa descrição longa com as mesmas regras da criação", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+
+    await expect(updateStood(ownerId, stoodId, { name: "Cálculo I", description: "a".repeat(201) })).resolves.toEqual({
       ok: false,
       reason: "descricao-longa",
     });
@@ -155,6 +233,57 @@ describe("getRecentStoods", () => {
     const ownerId = await createUser();
 
     await expect(getRecentStoods(ownerId)).resolves.toEqual([]);
+  });
+});
+
+describe("findBoardStood", () => {
+  it("devolve nome, descrição e a árvore do Stood", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I", { description: "Limites" })).id;
+    await createFile(ownerId, stoodId, { name: "Lista 1", type: "pdf" });
+
+    await expect(findBoardStood(ownerId, stoodId)).resolves.toMatchObject({
+      id: stoodId,
+      name: "Cálculo I",
+      description: "Limites",
+      tree: [{ kind: "file", name: "Lista 1", type: "pdf" }],
+    });
+  });
+
+  it("não devolve o Stood de outro Usuário", async () => {
+    const otherId = await createUser();
+    const stoodId = (await createStoodRow(otherId, "Cálculo I")).id;
+    const ownerId = await createUser();
+
+    await expect(findBoardStood(ownerId, stoodId)).resolves.toBeUndefined();
+  });
+
+  it("não acha id que não é uuid", async () => {
+    const ownerId = await createUser();
+
+    await expect(findBoardStood(ownerId, "nao-e-uuid")).resolves.toBeUndefined();
+  });
+});
+
+describe("updateStoodLastOpenedAt", () => {
+  it("grava a hora de abertura", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I", { lastOpenedAt: buildDaysAgo(3) })).id;
+
+    await updateStoodLastOpenedAt(ownerId, stoodId);
+
+    expect((await getStoodRow(stoodId)).lastOpenedAt.getTime()).toBeGreaterThan(buildDaysAgo(1).getTime());
+  });
+
+  it("não grava no Stood de outro Usuário", async () => {
+    const otherId = await createUser();
+    const openedAt = buildDaysAgo(3);
+    const stoodId = (await createStoodRow(otherId, "Cálculo I", { lastOpenedAt: openedAt })).id;
+    const ownerId = await createUser();
+
+    await updateStoodLastOpenedAt(ownerId, stoodId);
+
+    expect((await getStoodRow(stoodId)).lastOpenedAt).toEqual(openedAt);
   });
 });
 

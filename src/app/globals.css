@@ -79,6 +79,41 @@
   --color-type-pdf: #EA580C;
 }
 
+/* Tema escuro de novo, para um elemento escuro dentro do site claro (o Quadro com tema próprio).
+   Repete os valores do @theme: mudou lá, muda aqui. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0B0B0C;
+  --color-surface: #141416;
+  --color-surface-2: #242428;
+  --color-border: #2A2A2E;
+  --color-text: #F4F4F5;
+  --color-text-muted: #A1A1AA;
+  --color-accent-text: #FF8A47;
+  --color-accent-deep: #D6246A;
+  --color-on-accent: #0B0B0C;
+  --color-danger: #F87171;
+  --color-link: #60A5FA;
+  --color-type-video: #F87171;
+  --color-type-note: #60A5FA;
+  --color-type-drawing: #C084FC;
+  --color-type-image: #34D399;
+  --color-type-pdf: #FB923C;
+}
+
+/* Fundos do Quadro: o espaçamento vem do style do elemento em --board-spacing */
+.board-grid {
+  background-image:
+    linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
+  background-size: var(--board-spacing) var(--board-spacing);
+}
+
+.board-dots {
+  background-image: radial-gradient(color-mix(in srgb, var(--color-text-muted) 45%, transparent) 1px, transparent 1px);
+  background-size: var(--board-spacing) var(--board-spacing);
+}
+
 /* Landing page: snap de uma seção por tela só a partir de lg, descontando o cabeçalho de 3.5rem */
 @media (min-width: 64rem) {
   html:has([data-landing]) {

@@ -27,7 +27,7 @@ export const INPUT = "h-9 w-full rounded-md border border-border bg-surface px-3
 
 export const CARD = "rounded-lg border border-border shadow-card transition";
 
-// Caixa flutuante de menu e dica; a posição fica em quem usa
+// Caixa flutuante de menu, engrenagem, dica e aviso; a posição fica em quem usa
 export const POPOVER = "rounded-md border border-border bg-surface shadow-card";
 
 // Altura da tela abaixo do cabeçalho h-14 (3.5rem), nos degraus usados pelas telas
