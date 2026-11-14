@@ -2,7 +2,7 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
-import { useDismiss } from "@/app/_components/header/dismiss";
+import { useDismiss } from "@/app/_components/dismiss";
 import { FOCUS, ICON_BUTTON, MENU_ITEM, POPOVER } from "@/app/_components/ui";
 import { THEME_STORAGE_KEY, type ThemePreference, buildTheme, parseThemePreference } from "@/lib/theme/theme";
 

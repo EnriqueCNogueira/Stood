@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useDismiss } from "@/app/_components/header/dismiss";
+import { useDismiss } from "@/app/_components/dismiss";
 import { signOut } from "@/app/_components/header/sign-out";
-import { FOCUS, MENU_ITEM, MENU_SEPARATOR } from "@/app/_components/ui";
+import { FOCUS, MENU_ITEM, MENU_SEPARATOR, POPOVER } from "@/app/_components/ui";
 
 type UserMenuProps = { name: string; email: string; image: string | null };
 
@@ -27,7 +27,7 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
       </button>
 
       {isOpen && (
-        <div role="menu" className="absolute top-10 right-0 w-64 max-w-[calc(100vw-1.5rem)] rounded-md border border-border bg-surface p-1 shadow-card">
+        <div role="menu" className={`absolute top-10 right-0 w-64 max-w-[calc(100vw-1.5rem)] p-1 ${POPOVER}`}>
           <div className="grid px-2.5 py-2">
             <strong className="truncate font-medium">{name}</strong>
             <span className="truncate text-xs text-text-muted">{email}</span>
