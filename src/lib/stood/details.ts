@@ -16,7 +16,7 @@ export type StoodDetailsReason =
   | "nome-com-espaco-nas-pontas"
   | "descricao-longa";
 
-type StoodDetails = { name: string; description: string | null };
+export type StoodDetails = { name: string; description: string | null };
 
 type ValidateStoodDetailsResult = { ok: true; details: StoodDetails } | { ok: false; reason: StoodDetailsReason };
 

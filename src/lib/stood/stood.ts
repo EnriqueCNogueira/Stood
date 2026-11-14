@@ -1,6 +1,7 @@
 import "server-only";
 
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
 import { FILE_TYPES, type FileType, files, folders, stoods } from "@/db/schema";
 import { type StoodDetailsReason, validateStoodDetails } from "@/lib/stood/details";
@@ -15,12 +16,16 @@ type RecentStood = {
 };
 
 export type CreateStoodResult = { ok: true; id: string } | { ok: false; reason: StoodDetailsReason | "nome-repetido" };
+export type UpdateStoodResult =
+  | { ok: true }
+  | { ok: false; reason: StoodDetailsReason | "nome-repetido" | "stood-nao-encontrado" };
 
 type StoodDetailsInput = { name: string; description: string };
 
 const UNIQUE_VIOLATION = "23505";
 const NAME_UNIQUE_CONSTRAINT = "stoods_owner_id_name_unique";
 const RECENT_STOODS_LIMIT = 3;
+const uuidSchema = z.uuid();
 
 export async function createStood(ownerId: string, input: StoodDetailsInput): Promise<CreateStoodResult> {
   const validation = validateStoodDetails(input);
@@ -32,6 +37,25 @@ export async function createStood(ownerId: string, input: StoodDetailsInput): Pr
       .values({ ownerId, ...validation.details })
       .returning({ id: stoods.id });
     return { ok: true, id: stood.id };
+  } catch (error) {
+    if (isNameUniqueViolation(error)) return { ok: false, reason: "nome-repetido" };
+    throw error;
+  }
+}
+
+// Editar não mexe em last_opened_at: só abrir o Quadro sobe o Stood em "Continuar de onde parou"
+export async function updateStood(ownerId: string, stoodId: string, input: StoodDetailsInput): Promise<UpdateStoodResult> {
+  if (!isUuid(stoodId)) return { ok: false, reason: "stood-nao-encontrado" };
+  const validation = validateStoodDetails(input);
+  if (!validation.ok) return validation;
+
+  try {
+    const updated = await db
+      .update(stoods)
+      .set(validation.details)
+      .where(and(eq(stoods.id, stoodId), eq(stoods.ownerId, ownerId)))
+      .returning({ id: stoods.id });
+    return updated.length > 0 ? { ok: true } : { ok: false, reason: "stood-nao-encontrado" };
   } catch (error) {
     if (isNameUniqueViolation(error)) return { ok: false, reason: "nome-repetido" };
     throw error;
@@ -80,6 +104,32 @@ export async function getRecentStoods(ownerId: string): Promise<RecentStood[]> {
   return recentStoods.map((stood) => ({ ...stood, fileCounts: buildFileCounts(countsByStoodId.get(stood.id) ?? []) }));
 }
 
+// Stood de outro dono ou id inválido devolvem undefined, para a página responder "não encontrado".
+// As três consultas rodam juntas: Pastas e Arquivos também filtram pelo dono, então nada de outro Usuário vaza.
+export async function findBoardStood(ownerId: string, stoodId: string): Promise<StoodWithTree | undefined> {
+  if (!isUuid(stoodId)) return undefined;
+
+  const [[stood], { folderRows, fileRows }] = await Promise.all([
+    db
+      .select({ id: stoods.id, name: stoods.name, description: stoods.description })
+      .from(stoods)
+      .where(and(eq(stoods.id, stoodId), eq(stoods.ownerId, ownerId)))
+      .limit(1),
+    getTreeRows(ownerId, [stoodId]),
+  ]);
+  if (!stood) return undefined;
+
+  return { ...stood, tree: buildStoodTree(folderRows, fileRows) };
+}
+
+export async function updateStoodLastOpenedAt(ownerId: string, stoodId: string): Promise<void> {
+  if (!isUuid(stoodId)) return;
+  await db
+    .update(stoods)
+    .set({ lastOpenedAt: sql`now()` })
+    .where(and(eq(stoods.id, stoodId), eq(stoods.ownerId, ownerId)));
+}
+
 async function getTreeRows(ownerId: string, stoodIds: string[]) {
   const [folderRows, fileRows] = await Promise.all([
     db
@@ -98,6 +148,10 @@ function buildFileCounts(rows: { type: FileType; total: number }[]): Record<File
   const counts = Object.fromEntries(FILE_TYPES.map((type) => [type, 0])) as Record<FileType, number>;
   for (const row of rows) counts[row.type] = row.total;
   return counts;
+}
+
+function isUuid(value: string) {
+  return uuidSchema.safeParse(value).success;
 }
 
 // O Drizzle embrulha o erro do pg em cause; só a violação do nome único vira Result

@@ -1,16 +1,27 @@
 "use client";
 
 import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { type FormEvent, type ReactNode, useId, useRef, useState, useTransition } from "react";
 import { FormMessage } from "@/app/_components/auth/auth-card";
 import { BUTTON, FIELD, FIELD_LABEL, ICON_BUTTON, INPUT } from "@/app/_components/ui";
-import { type CreateStoodActionResult, createStoodAction } from "@/app/_components/workspace/stood-actions";
-import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, validateStoodDetails } from "@/lib/stood/details";
+import {
+  type CreateStoodActionResult,
+  type UpdateStoodActionResult,
+  createStoodAction,
+  updateStoodAction,
+} from "@/app/_components/workspace/stood-actions";
+import {
+  MAX_DESCRIPTION_LENGTH,
+  MAX_NAME_LENGTH,
+  type StoodDetails,
+  validateStoodDetails,
+} from "@/lib/stood/details";
 
 const UNEXPECTED_MESSAGE = "Não foi possível salvar. Tente de novo.";
 
 // Toda recusa possível do diálogo tem mensagem: um reason novo sem texto não compila
-type DialogReason = Exclude<CreateStoodActionResult, { ok: true }>["reason"] | "inesperado";
+type DialogReason = Exclude<CreateStoodActionResult | UpdateStoodActionResult, { ok: true }>["reason"] | "inesperado";
 
 const REASON_MESSAGES: Record<DialogReason, string> = {
   "nome-vazio": "Dê um nome ao Stood.",
@@ -19,27 +30,38 @@ const REASON_MESSAGES: Record<DialogReason, string> = {
   "nome-com-espaco-nas-pontas": "Tire o espaço do começo ou do fim do nome.",
   "nome-repetido": "Você já tem um Stood com esse nome.",
   "descricao-longa": `A descrição pode ter até ${MAX_DESCRIPTION_LENGTH} caracteres.`,
+  "stood-nao-encontrado": "Este Stood não existe mais.",
   "entrada-invalida": UNEXPECTED_MESSAGE,
   inesperado: UNEXPECTED_MESSAGE,
 };
 
-type StoodDialogProps = { triggerClassName: string; children: ReactNode };
+type StoodDialogProps = {
+  triggerClassName: string;
+  triggerLabel?: string;
+  children: ReactNode;
+} & (
+  | { mode: "create" }
+  | { mode: "edit"; stoodId: string; details: StoodDetails; onSaved: (details: StoodDetails) => void }
+);
 
-// Diálogo "Novo Stood" com nome e descrição; mantém o que foi digitado quando há erro
-export function StoodDialog({ triggerClassName, children }: StoodDialogProps) {
+// Diálogo de nome e descrição: "Novo Stood" na Biblioteca e "Editar" no Quadro; mantém o que foi digitado quando há erro
+export function StoodDialog(props: StoodDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const errorId = useId();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const initial = props.mode === "edit" ? props.details : { name: "", description: null };
+  const [name, setName] = useState(initial.name);
+  const [description, setDescription] = useState(initial.description ?? "");
   const [reason, setReason] = useState<DialogReason | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const title = props.mode === "create" ? "Novo Stood" : "Editar Stood";
   const isNameError = reason !== null && reason.startsWith("nome");
   const isDescriptionError = reason === "descricao-longa";
 
   function open() {
-    setName("");
-    setDescription("");
+    setName(initial.name);
+    setDescription(initial.description ?? "");
     setReason(null);
     dialogRef.current?.showModal();
   }
@@ -54,11 +76,18 @@ export function StoodDialog({ triggerClassName, children }: StoodDialogProps) {
 
     startTransition(async () => {
       try {
-        const result = await createStoodAction({ name, description });
+        if (props.mode === "create") {
+          const result = await createStoodAction({ name, description });
+          if (result.ok) router.push(`/stood/${result.id}`);
+          else setReason(result.reason);
+          return;
+        }
+        const result = await updateStoodAction({ stoodId: props.stoodId, name, description });
         if (!result.ok) {
           setReason(result.reason);
           return;
         }
+        props.onSaved(validation.details);
         dialogRef.current?.close();
       } catch {
         setReason("inesperado");
@@ -68,8 +97,8 @@ export function StoodDialog({ triggerClassName, children }: StoodDialogProps) {
 
   return (
     <>
-      <button type="button" onClick={open} className={triggerClassName}>
-        {children}
+      <button type="button" aria-label={props.triggerLabel} onClick={open} className={props.triggerClassName}>
+        {props.children}
       </button>
 
       <dialog
@@ -80,7 +109,7 @@ export function StoodDialog({ triggerClassName, children }: StoodDialogProps) {
         <form onSubmit={submit} noValidate className="grid w-md max-w-full gap-4 p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 id={titleId} className="text-lg font-medium tracking-tight">
-              Novo Stood
+              {title}
             </h2>
             <button
               type="button"
@@ -135,7 +164,7 @@ export function StoodDialog({ triggerClassName, children }: StoodDialogProps) {
               Cancelar
             </button>
             <button type="submit" disabled={isPending} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
-              Criar Stood
+              {props.mode === "create" ? "Criar Stood" : "Salvar"}
             </button>
           </div>
         </form>
