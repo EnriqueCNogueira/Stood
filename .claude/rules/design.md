@@ -10,7 +10,7 @@ paths: ["**/*.tsx"]
 ## Princípio
 
 - **Siga o que já existe**: Antes de escrever classe nova, olhe uma tela parecida e repita o padrão dela: largura, margem, espaçamento, títulos e degraus de tela grande.
-- **Reutilize**: As classes base ficam em `src/app/_components/ui.ts` (`BUTTON`, `CARD`, `FOCUS`, `TEXT_LINK`); padrão que se repete em duas telas vai para lá.
+- **Reutilize**: As classes base ficam em `src/app/_components/ui.ts`; padrão que se repete em duas telas vai para lá.
 
 ## Tokens
 

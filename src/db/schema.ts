@@ -12,6 +12,13 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+// Caminho relativo com extensão, porque o seed de dev roda este arquivo direto no Node
+import {
+  EDGE_WHITESPACE_PATTERN,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_NAME_LENGTH,
+  PATH_SEPARATOR_PATTERN,
+} from "../lib/stood/details.ts";
 
 // --- Autenticação (Better Auth) ---
 
@@ -100,9 +107,6 @@ export const verifications = pgTable(
 export const FILE_TYPES = ["note", "drawing", "image", "pdf", "video"] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 const TYPES_WITH_CONTENT: FileType[] = ["note", "drawing", "video"];
-const MAX_NAME_LENGTH = 50;
-const PATH_SEPARATOR_PATTERN = String.raw`'[/\\]'`;
-const EDGE_WHITESPACE_PATTERN = String.raw`'^\s|\s$'`;
 const YOUTUBE_VIDEO_ID_PATTERN = "^[A-Za-z0-9_-]{11}$";
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -115,6 +119,8 @@ export const stoods = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    // Nula quando o Usuário não escreve nada
+    description: text("description"),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }).defaultNow().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -129,6 +135,10 @@ export const stoods = pgTable(
     // "Continuar de onde parou": Stoods do Usuário do último aberto para o mais antigo
     index("stoods_owner_id_last_opened_at_idx").on(table.ownerId, table.lastOpenedAt.desc()),
     buildNameCheck("stoods", table.name),
+    check(
+      "stoods_description_check",
+      sql`char_length(${table.description}) <= ${sql.raw(String(MAX_DESCRIPTION_LENGTH))}`,
+    ),
   ],
 );
 
@@ -227,7 +237,7 @@ export const files = pgTable(
 function buildNameCheck(tableName: string, name: AnyPgColumn) {
   return check(
     `${tableName}_name_check`,
-    sql`char_length(${name}) between 1 and ${sql.raw(String(MAX_NAME_LENGTH))} and ${name} !~ ${sql.raw(PATH_SEPARATOR_PATTERN)} and ${name} !~ ${sql.raw(EDGE_WHITESPACE_PATTERN)}`,
+    sql`char_length(${name}) between 1 and ${sql.raw(String(MAX_NAME_LENGTH))} and ${name} !~ ${sql.raw(`'${PATH_SEPARATOR_PATTERN}'`)} and ${name} !~ ${sql.raw(`'${EDGE_WHITESPACE_PATTERN}'`)}`,
   );
 }
 
