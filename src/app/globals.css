@@ -21,6 +21,11 @@
   --color-accent-deep: #D6246A; /* magenta: profundidade do cérebro e brilho do Início */
   --color-danger: #F87171; /* vermelho: erro e excluir */
   --color-link: #60A5FA; /* azul claro: link de texto */
+  --color-type-video: #F87171; /* vermelho: ícone de Vídeo */
+  --color-type-note: #60A5FA; /* azul: ícone de Nota */
+  --color-type-drawing: #C084FC; /* roxo: ícone de Desenho */
+  --color-type-image: #34D399; /* verde: ícone de Imagem */
+  --color-type-pdf: #FB923C; /* laranja: ícone de PDF */
 
 
   /* --- Raios --- */
@@ -67,6 +72,11 @@
   --color-on-accent: #1A0A00; /* marrom escuro: texto sobre laranja */
   --color-danger: #DC2626; /* vermelho: erro e excluir */
   --color-link: #2563EB; /* azul: link de texto */
+  --color-type-video: #DC2626;
+  --color-type-note: #2563EB;
+  --color-type-drawing: #9333EA;
+  --color-type-image: #059669;
+  --color-type-pdf: #EA580C;
 }
 
 /* Landing page: snap de uma seção por tela só a partir de lg, descontando o cabeçalho de 3.5rem */
