@@ -10,5 +10,5 @@ export function middleware(request: NextRequest) {
 
 // O grupo (protected) não aparece na URL: toda rota nova do grupo entra nesta lista
 export const config = {
-  matcher: ["/biblioteca/:path*"],
+  matcher: ["/biblioteca/:path*", "/stood/:path*"],
 };
