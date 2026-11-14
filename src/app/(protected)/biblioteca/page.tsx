@@ -32,6 +32,7 @@ export default async function LibraryPage() {
               {recent.map((stood) => (
                 <StoodCard
                   key={stood.id}
+                  id={stood.id}
                   name={stood.name}
                   description={stood.description}
                   fileCounts={stood.fileCounts}
@@ -43,7 +44,7 @@ export default async function LibraryPage() {
             <div className="grid justify-items-start gap-3 rounded-lg border border-dashed border-border p-6">
               <p className="font-medium">Você ainda não tem nenhum Stood.</p>
               <p className="text-text-muted">Crie o primeiro para reunir as Pastas e os Arquivos de um assunto.</p>
-              <StoodDialog triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
+              <StoodDialog mode="create" triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
                 <Plus size={16} aria-hidden />
                 Criar o primeiro Stood
               </StoodDialog>

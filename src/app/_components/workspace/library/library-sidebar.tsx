@@ -24,7 +24,7 @@ export function LibrarySidebar({ stoods }: { stoods: StoodWithTree[] }) {
       className={`border-b md:sticky md:top-14 md:border-b-0 ${BELOW_HEADER.mdHeight}`}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
-        <StoodDialog triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary} w-full`}>
+        <StoodDialog mode="create" triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary} w-full`}>
           <Plus size={16} aria-hidden />
           Novo Stood
         </StoodDialog>
@@ -50,13 +50,13 @@ export function LibrarySidebar({ stoods }: { stoods: StoodWithTree[] }) {
   );
 }
 
-// A seta abre e fecha a árvore do Stood
+// A seta só abre e fecha a árvore; o resto da linha abre o Quadro
 function StoodItem({ stood }: { stood: StoodWithTree }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      <div className={`${TREE_ROW} gap-0 px-0`}>
+      <div className={`${TREE_ROW} group gap-0 px-0 hover:bg-surface-2`}>
         <button
           type="button"
           aria-expanded={isOpen}
@@ -66,10 +66,13 @@ function StoodItem({ stood }: { stood: StoodWithTree }) {
         >
           <TreeChevron isOpen={isOpen} />
         </button>
-        <span className="flex h-full min-w-0 flex-1 items-center gap-2 pr-2">
+        <a
+          href={`/stood/${stood.id}`}
+          className={`flex h-full min-w-0 flex-1 items-center gap-2 rounded-sm pr-2 group-hover:text-text ${FOCUS}`}
+        >
           <Brain size={16} strokeWidth={1.75} aria-hidden className="flex-none text-accent-text" />
           <span className="truncate">{stood.name}</span>
-        </span>
+        </a>
         {stood.description && <DescriptionHint name={stood.name} description={stood.description} />}
       </div>
       {isOpen && (
