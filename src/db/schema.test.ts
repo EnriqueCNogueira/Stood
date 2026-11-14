@@ -3,8 +3,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { type FileType, files, folders, type NewFile, type NewFolder, stoods, users } from "@/db/schema";
-import { buildUniqueEmail } from "@/test/auth";
+import { type FileType, files, folders, stoods, users } from "@/db/schema";
+import { createFile, createFolder, createStood, createUser } from "@/test/db";
 
 // Códigos de erro do Postgres conferidos nas recusas
 const FOREIGN_KEY_VIOLATION = "23503";
@@ -13,6 +13,7 @@ const CHECK_VIOLATION = "23514";
 const INVALID_TRANSACTION_STATE = "25000";
 
 const MAX_NAME_LENGTH = 50;
+const MAX_DESCRIPTION_LENGTH = 200;
 const VALID_VIDEO_ID = "dQw4w9WgXcQ";
 
 describe("isolamento por dono", () => {
@@ -197,6 +198,26 @@ describe("nome válido", () => {
   });
 });
 
+describe("descrição do Stood", () => {
+  it("aceita descrição de 200 caracteres", async () => {
+    const userId = await createUser();
+
+    await expect(
+      db.insert(stoods).values({ ownerId: userId, name: "Cálculo", description: "a".repeat(MAX_DESCRIPTION_LENGTH) }),
+    ).resolves.toBeDefined();
+  });
+
+  it("recusa descrição de 201 caracteres", async () => {
+    const userId = await createUser();
+
+    await expectViolation(
+      db.insert(stoods).values({ ownerId: userId, name: "Cálculo", description: "a".repeat(MAX_DESCRIPTION_LENGTH + 1) }),
+      CHECK_VIOLATION,
+      "stoods_description_check",
+    );
+  });
+});
+
 describe("tipo e conteúdo do Arquivo", () => {
   it("recusa tipo fora da lista", async () => {
     const { userId, stood } = await createUserWithStood();
@@ -377,39 +398,6 @@ async function createUserWithStood() {
   const userId = await createUser();
   const stood = await createStood(userId, "Cálculo");
   return { userId, stood };
-}
-
-async function createUser() {
-  const [user] = await db
-    .insert(users)
-    .values({ name: "Ana Souza", email: buildUniqueEmail() })
-    .returning({ id: users.id });
-  return user.id;
-}
-
-async function createStood(ownerId: string, name: string) {
-  const [stood] = await db.insert(stoods).values({ ownerId, name }).returning({ id: stoods.id });
-  return stood;
-}
-
-async function createFolder(
-  ownerId: string,
-  stoodId: string,
-  folder: Partial<Omit<NewFolder, "ownerId" | "stoodId">> = {},
-) {
-  const [created] = await db
-    .insert(folders)
-    .values({ name: "Limites", ...folder, ownerId, stoodId })
-    .returning({ id: folders.id });
-  return created;
-}
-
-async function createFile(ownerId: string, stoodId: string, file: Omit<NewFile, "ownerId" | "stoodId">) {
-  const [created] = await db
-    .insert(files)
-    .values({ ...file, ownerId, stoodId })
-    .returning({ id: files.id });
-  return created;
 }
 
 // Árvore Aulas > Limites > Derivadas na raiz do Stood
