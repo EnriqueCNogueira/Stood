@@ -3,7 +3,7 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { useDismiss } from "@/app/_components/header/dismiss";
-import { BUTTON, FOCUS, MENU_ITEM } from "@/app/_components/ui";
+import { FOCUS, ICON_BUTTON, MENU_ITEM, POPOVER } from "@/app/_components/ui";
 import { THEME_STORAGE_KEY, type ThemePreference, buildTheme, parseThemePreference } from "@/lib/theme/theme";
 
 const OPTIONS = [
@@ -42,13 +42,13 @@ export function ThemeMenu() {
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
-        className={`${BUTTON.base} ${BUTTON.ghost} size-7.5 rounded-md`}
+        className={ICON_BUTTON}
       >
         <current.Icon size={24} strokeWidth={1.5} aria-hidden />
       </button>
 
       {isOpen && (
-        <div role="menu" aria-label="Tema" className="absolute top-10 right-0 w-40 rounded-md border border-border bg-surface p-1 shadow-card">
+        <div role="menu" aria-label="Tema" className={`absolute top-10 right-0 w-40 p-1 ${POPOVER}`}>
           {OPTIONS.map(({ value, label, Icon }) => (
             <button
               key={value}
