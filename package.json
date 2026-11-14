@@ -11,7 +11,8 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:dev": "node scripts/seed-dev.ts"
   },
   "dependencies": {
     "better-auth": "1.7.15",
