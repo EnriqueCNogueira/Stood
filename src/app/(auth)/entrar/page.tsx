@@ -1,6 +1,6 @@
-import { AuthCard } from "@/app/_components/auth-card";
+import { AuthCard } from "@/app/_components/auth/auth-card";
+import { SignInForm } from "@/app/_components/auth/sign-in-form";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
-import { SignInForm } from "./sign-in-form";
 
 // Página de login, com o formulário de login e os botões de login social
 export default async function SignInPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

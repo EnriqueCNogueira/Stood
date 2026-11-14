@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { FormMessage, NewPasswordField } from "@/app/_components/auth-card";
+import { FormMessage, NewPasswordField } from "@/app/_components/auth/auth-card";
 import { BUTTON } from "@/app/_components/ui";
 import { authClient } from "@/lib/auth/client";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
