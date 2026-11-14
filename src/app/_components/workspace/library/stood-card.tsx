@@ -1,9 +1,10 @@
 import { Brain } from "lucide-react";
-import { CARD } from "@/app/_components/ui";
+import { CARD, FOCUS } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FILE_TYPE_ORDER, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
 import type { FileType } from "@/lib/stood/tree";
 
 type StoodCardProps = {
+  id: string;
   name: string;
   description: string | null;
   fileCounts: Record<FileType, number>;
@@ -11,11 +12,11 @@ type StoodCardProps = {
 };
 
 // Cartão de "Continuar de onde parou": ícone, nome, descrição em 2 linhas, Arquivos por tipo e há quanto tempo abriu
-export function StoodCard({ name, description, fileCounts, openedAgo }: StoodCardProps) {
+export function StoodCard({ id, name, description, fileCounts, openedAgo }: StoodCardProps) {
   const typesWithFiles = FILE_TYPE_ORDER.filter((type) => fileCounts[type] > 0);
 
   return (
-    <article className={`${CARD} flex flex-col gap-3 bg-surface p-4`}>
+    <a href={`/stood/${id}`} className={`${CARD} ${FOCUS} flex flex-col gap-3 bg-surface p-4 hover:bg-surface-2`}>
       <div className="flex items-center gap-3">
         <span className="grid size-9 flex-none place-items-center rounded-md bg-accent/12">
           <Brain size={18} strokeWidth={1.75} aria-hidden className="text-accent-text" />
@@ -43,6 +44,6 @@ export function StoodCard({ name, description, fileCounts, openedAgo }: StoodCar
         )}
         <span className="ml-auto">{openedAgo}</span>
       </div>
-    </article>
+    </a>
   );
 }
