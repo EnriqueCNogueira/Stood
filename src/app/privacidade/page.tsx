@@ -35,7 +35,7 @@ export default function PrivacyPage() {
             <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa.
           </li>
           <li>
-            <strong>Preferências da tela:</strong> o tema do site e a largura da barra lateral ficam só no seu navegador (localStorage) e não são enviados para nós.
+            <strong>Preferências da tela:</strong> o tema do site, a largura e o estado das barras laterais e as opções do Quadro (fundo, grade e tema) ficam só no seu navegador (localStorage) e não são enviados para nós.
           </li>
         </LegalList>
         <p>Não usamos ferramentas de análise, rastreamento ou publicidade.</p>
