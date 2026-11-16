@@ -250,6 +250,21 @@ describe("findBoardStood", () => {
     });
   });
 
+  // O player da Janela precisa do id; o texto da Nota não vai para a árvore, que chega inteira ao navegador
+  it("leva o id do YouTube só nos Vídeos", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+    await createFile(ownerId, stoodId, { name: "Aula 1", type: "video", content: VALID_VIDEO_ID });
+    await createFile(ownerId, stoodId, { name: "Resumo", type: "note", content: "# Limites" });
+
+    const stood = await findBoardStood(ownerId, stoodId);
+
+    expect(stood?.tree).toStrictEqual([
+      { kind: "file", id: expect.any(String), name: "Aula 1", type: "video", videoId: VALID_VIDEO_ID },
+      { kind: "file", id: expect.any(String), name: "Resumo", type: "note" },
+    ]);
+  });
+
   it("não devolve o Stood de outro Usuário", async () => {
     const otherId = await createUser();
     const stoodId = (await createStoodRow(otherId, "Cálculo I")).id;

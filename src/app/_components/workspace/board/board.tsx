@@ -35,7 +35,7 @@ import {
   isSameRect,
 } from "@/lib/board/windows";
 import type { StoodDetails } from "@/lib/stood/details";
-import type { StoodTreeFile, StoodWithTree } from "@/lib/stood/tree";
+import { type StoodTreeFile, type StoodWithTree, buildTreeWithFile } from "@/lib/stood/tree";
 
 // Distância mínima, em pixels, para um clique virar arrasto
 const DRAG_THRESHOLD = 4;
@@ -60,6 +60,8 @@ type DragArea = { left: number; top: number; context: BoardContext; liveContext:
 // Raiz do Quadro: guarda as Janelas, que não são salvas, e liga a barra, a lateral e a área
 export function Board({ stood }: { stood: StoodWithTree }) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
+  // O Arquivo criado entra direto na árvore, sem renderizar a página de novo
+  const [tree, setTree] = useState(stood.tree);
   const [state, setState] = useState<BoardState>({ windows: [] });
   const stateRef = useRef(state);
   const [outline, setOutline] = useState<Rect | null>(null);
@@ -184,11 +186,13 @@ export function Board({ stood }: { stood: StoodWithTree }) {
       window.removeEventListener("pointercancel", stop);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      delete document.body.dataset.boardDragging;
       stopDragRef.current = null;
       setOutline(null);
     }
 
     document.body.style.userSelect = "none";
+    document.body.dataset.boardDragging = "";
     if (drag.kind === "resize") document.body.style.cursor = "nwse-resize";
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
@@ -243,13 +247,15 @@ export function Board({ stood }: { stood: StoodWithTree }) {
   return (
     <div className={`flex ${BELOW_HEADER.mdHeight}`}>
       <BoardSidebar
-        tree={stood.tree}
+        stoodId={stood.id}
+        tree={tree}
         isCollapsed={storedCollapsed === "true"}
         isDrawerOpen={isDrawerOpen}
         onToggleCollapsed={() => setStoredCollapsed(String(storedCollapsed !== "true"))}
         onCloseDrawer={() => setIsDrawerOpen(false)}
         onFilePointerDown={startOpenDrag}
         onOpenFile={openFile}
+        onFileCreated={(file) => setTree((current) => buildTreeWithFile(current, file))}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -292,7 +298,7 @@ export function Board({ stood }: { stood: StoodWithTree }) {
 }
 
 function buildBoardFile(file: StoodTreeFile): BoardFile {
-  return { id: file.id, type: file.type, name: file.name };
+  return { id: file.id, type: file.type, name: file.name, videoId: file.videoId };
 }
 
 function isCompactScreen() {

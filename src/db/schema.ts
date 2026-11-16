@@ -19,6 +19,7 @@ import {
   MAX_NAME_LENGTH,
   PATH_SEPARATOR_PATTERN,
 } from "../lib/stood/details.ts";
+import { YOUTUBE_VIDEO_ID_PATTERN } from "../lib/video/link.ts";
 
 // --- Autenticação (Better Auth) ---
 
@@ -107,7 +108,6 @@ export const verifications = pgTable(
 export const FILE_TYPES = ["note", "drawing", "image", "pdf", "video"] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 const TYPES_WITH_CONTENT: FileType[] = ["note", "drawing", "video"];
-const YOUTUBE_VIDEO_ID_PATTERN = "^[A-Za-z0-9_-]{11}$";
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
 // Stood: o estudo do Usuário, com Pastas e Arquivos sobre um assunto

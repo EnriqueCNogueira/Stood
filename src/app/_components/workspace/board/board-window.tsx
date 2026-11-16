@@ -4,7 +4,8 @@ import { Maximize2, Minimize2, X } from "lucide-react";
 import type { PointerEvent } from "react";
 import { ICON_BUTTON } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
-import { type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
+import { type BoardFile, type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
+import { buildYouTubeEmbedUrl } from "@/lib/video/link";
 
 const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-75" };
 
@@ -20,7 +21,7 @@ type BoardWindowProps = {
   onClose: () => void;
 };
 
-// Janela com barra, botões de maximizar e fechar e canto de redimensionar; o conteúdo é um placeholder do tipo
+// Janela com barra, botões de maximizar e fechar e canto de redimensionar; o Vídeo toca, os outros tipos ainda são placeholder
 export function BoardWindow({
   window,
   zIndex,
@@ -73,11 +74,7 @@ export function BoardWindow({
         </button>
       </header>
 
-      <div className="grid min-h-0 flex-1 place-content-center justify-items-center gap-2 p-4 text-center">
-        <FileTypeIcon type={file.type} size={32} />
-        <strong className="max-w-full truncate font-medium">{file.name}</strong>
-        <span className="font-mono text-meta text-text-muted">{FILE_TYPE_LABELS[file.type]}</span>
-      </div>
+      <WindowContent file={file} />
 
       {!isCompact && !maximized && (
         <div
@@ -89,6 +86,31 @@ export function BoardWindow({
         </div>
       )}
     </section>
+  );
+}
+
+// O iframe fica montado enquanto a Janela está aberta: mover, redimensionar e maximizar não param o vídeo
+function WindowContent({ file }: { file: BoardFile }) {
+  if (file.type === "video" && file.videoId) {
+    return (
+      <iframe
+        src={buildYouTubeEmbedUrl(file.videoId)}
+        title={file.name}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        // O YouTube recusa o player sem a origem do site que o incorpora
+        referrerPolicy="strict-origin-when-cross-origin"
+        className="min-h-0 w-full flex-1 bg-bg"
+      />
+    );
+  }
+
+  return (
+    <div className="grid min-h-0 flex-1 place-content-center justify-items-center gap-2 p-4 text-center">
+      <FileTypeIcon type={file.type} size={32} />
+      <strong className="max-w-full truncate font-medium">{file.name}</strong>
+      <span className="font-mono text-meta text-text-muted">{FILE_TYPE_LABELS[file.type]}</span>
+    </div>
   );
 }
 

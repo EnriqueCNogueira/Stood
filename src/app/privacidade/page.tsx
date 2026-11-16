@@ -66,6 +66,9 @@ export default function PrivacyPage() {
           <li>
             <strong>Google e GitHub:</strong> quando você escolhe entrar por eles.
           </li>
+          <li>
+            <strong>YouTube:</strong> ao adicionar um Vídeo, o Stood envia ao YouTube só o link do vídeo para mostrar o título, o canal e a miniatura. A miniatura e o player do Vídeo aberto no Quadro, no modo de privacidade aprimorada (youtube-nocookie.com), carregam direto do YouTube no seu navegador, e o YouTube recebe o seu endereço IP e trata o que você assiste pela política de privacidade dele.
+          </li>
         </LegalList>
         <p>O site e o banco de dados ficam em servidores nos Estados Unidos, então os seus dados são transferidos para fora do Brasil, como permite o art. 33 da LGPD.</p>
       </LegalSection>

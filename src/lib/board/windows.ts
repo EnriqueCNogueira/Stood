@@ -19,7 +19,7 @@ export const DEFAULT_WINDOW_SIZES: Record<FileType, Size> = {
 export type Point = { x: number; y: number };
 export type Size = { width: number; height: number };
 export type Rect = Point & Size;
-export type BoardFile = { id: string; type: FileType; name: string };
+export type BoardFile = { id: string; type: FileType; name: string; videoId?: string };
 
 // restoreRect guarda posição e tamanho enquanto a Janela está maximizada; z é a ordem de empilhamento, maior na frente
 export type BoardWindow = { file: BoardFile; rect: Rect; restoreRect: Rect | null; z: number };

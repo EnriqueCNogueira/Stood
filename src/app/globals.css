@@ -114,6 +114,11 @@
   background-size: var(--board-spacing) var(--board-spacing);
 }
 
+/* O player do YouTube engole o ponteiro: durante o arrasto, o movimento precisa chegar ao Quadro */
+body[data-board-dragging] iframe {
+  pointer-events: none;
+}
+
 /* Landing page: snap de uma seção por tela só a partir de lg, descontando o cabeçalho de 3.5rem */
 @media (min-width: 64rem) {
   html:has([data-landing]) {

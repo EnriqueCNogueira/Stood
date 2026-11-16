@@ -3,13 +3,14 @@ import type { FileType } from "@/db/schema";
 // Árvore de Pastas e Arquivos de um Stood, sem I/O: o client também usa estes tipos
 export type { FileType };
 
-export type StoodTreeFile = { kind: "file"; id: string; name: string; type: FileType };
+// videoId só existe no Vídeo: é o que o player da Janela toca
+export type StoodTreeFile = { kind: "file"; id: string; name: string; type: FileType; videoId?: string };
 export type StoodTreeFolder = { kind: "folder"; id: string; name: string; children: StoodTreeNode[] };
 export type StoodTreeNode = StoodTreeFolder | StoodTreeFile;
 export type StoodWithTree = { id: string; name: string; description: string | null; tree: StoodTreeNode[] };
 
 type FolderRow = { id: string; name: string; parentId: string | null };
-type FileRow = { id: string; name: string; type: FileType; folderId: string | null };
+type FileRow = { id: string; name: string; type: FileType; folderId: string | null; videoId?: string | null };
 
 const NAME_COLLATOR = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
@@ -22,7 +23,13 @@ export function buildStoodTree(folderRows: FolderRow[], fileRows: FileRow[]): St
     ...folderRows.map((folder) => ({ parentId: folder.parentId, node: folderNodes.get(folder.id) as StoodTreeNode })),
     ...fileRows.map((file) => ({
       parentId: file.folderId,
-      node: { kind: "file", id: file.id, name: file.name, type: file.type } as StoodTreeNode,
+      node: {
+        kind: "file",
+        id: file.id,
+        name: file.name,
+        type: file.type,
+        ...(file.videoId ? { videoId: file.videoId } : {}),
+      } as StoodTreeNode,
     })),
   ];
   const childrenByParentId = Map.groupBy(entries, (entry) => entry.parentId);
@@ -33,15 +40,20 @@ export function buildStoodTree(folderRows: FolderRow[], fileRows: FileRow[]): St
   return buildSortedNodes(childrenByParentId.get(null) ?? []);
 }
 
+// Árvore nova com o Arquivo recém-criado na raiz, na mesma ordem que o servidor montaria
+export function buildTreeWithFile(tree: StoodTreeNode[], file: StoodTreeFile): StoodTreeNode[] {
+  return [...tree, file].sort(compareNodes);
+}
+
 export function buildSortedByName<T extends { name: string }>(items: T[]) {
   return items.sort((a, b) => NAME_COLLATOR.compare(a.name, b.name));
 }
 
 function buildSortedNodes(entries: { node: StoodTreeNode }[]) {
-  return entries
-    .map((entry) => entry.node)
-    .sort((a, b) => {
-      if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
-      return NAME_COLLATOR.compare(a.name, b.name);
-    });
+  return entries.map((entry) => entry.node).sort(compareNodes);
+}
+
+function compareNodes(a: StoodTreeNode, b: StoodTreeNode) {
+  if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
+  return NAME_COLLATOR.compare(a.name, b.name);
 }

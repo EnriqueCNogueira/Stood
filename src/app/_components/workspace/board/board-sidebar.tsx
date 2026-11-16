@@ -5,6 +5,7 @@ import { type KeyboardEvent, type PointerEvent, useCallback, useRef, useState } 
 import { useDismiss } from "@/app/_components/dismiss";
 import { BUTTON, FOCUS, ICON_BUTTON, MENU_ITEM, POPOVER } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FILE_TYPE_ORDER, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
+import { VideoDialog } from "@/app/_components/workspace/board/video-dialog";
 import { Sidebar } from "@/app/_components/workspace/sidebar";
 import { FileLabel, TREE_ROW, TREE_ROW_HOVER, TreeList } from "@/app/_components/workspace/tree";
 import { SIDEBAR_WIDTH_STORAGE_KEYS } from "@/lib/board/preferences";
@@ -13,6 +14,7 @@ import type { StoodTreeFile, StoodTreeNode } from "@/lib/stood/tree";
 const DEFAULT_WIDTH = 248;
 
 type BoardSidebarProps = {
+  stoodId: string;
   tree: StoodTreeNode[];
   isCollapsed: boolean;
   isDrawerOpen: boolean;
@@ -20,10 +22,12 @@ type BoardSidebarProps = {
   onCloseDrawer: () => void;
   onFilePointerDown: (file: StoodTreeFile, event: PointerEvent<HTMLElement>) => void;
   onOpenFile: (file: StoodTreeFile) => void;
+  onFileCreated: (file: StoodTreeFile) => void;
 };
 
 // Barra lateral do Quadro: recolhe no computador e vira gaveta no celular
 export function BoardSidebar({
+  stoodId,
   tree,
   isCollapsed,
   isDrawerOpen,
@@ -31,6 +35,7 @@ export function BoardSidebar({
   onCloseDrawer,
   onFilePointerDown,
   onOpenFile,
+  onFileCreated,
 }: BoardSidebarProps) {
   function openWithKeyboard(file: StoodTreeFile, event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key !== "Enter" && event.key !== " ") return;
@@ -65,7 +70,7 @@ export function BoardSidebar({
             Voltar
           </a>
           <div className="flex items-center gap-1">
-            <NewFileMenu />
+            <NewFileMenu stoodId={stoodId} onFileCreated={onFileCreated} />
             <button type="button" aria-label="Recolher a barra lateral" onClick={onToggleCollapsed} className={`${ICON_BUTTON} hidden md:inline-flex`}>
               <PanelLeftClose size={18} strokeWidth={1.75} aria-hidden />
             </button>
@@ -104,9 +109,10 @@ export function BoardSidebar({
   );
 }
 
-// Os 5 tipos aparecem desabilitados até a etapa de cada um
-function NewFileMenu() {
+// Só o Vídeo já cria; os outros tipos aparecem desabilitados até a etapa de cada um
+function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreated: (file: StoodTreeFile) => void }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setIsOpen(false), []);
   useDismiss(containerRef, isOpen, close);
@@ -126,14 +132,31 @@ function NewFileMenu() {
       </button>
       {isOpen && (
         <div role="menu" aria-label="Novo Arquivo" className={`absolute top-11 right-0 left-0 z-10 p-1 ${POPOVER}`}>
-          {FILE_TYPE_ORDER.map((type) => (
-            <button key={type} type="button" role="menuitem" disabled className={`${MENU_ITEM} gap-2`}>
-              <FileTypeIcon type={type} className="opacity-45" />
-              {FILE_TYPE_LABELS[type]}
-            </button>
-          ))}
-          <p className="px-2.5 pt-1 pb-1.5 text-xs text-text-muted">Chega nas próximas versões.</p>
+          {FILE_TYPE_ORDER.map((type) => {
+            const isEnabled = type === "video";
+            return (
+              <button
+                key={type}
+                type="button"
+                role="menuitem"
+                disabled={!isEnabled}
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsVideoDialogOpen(true);
+                }}
+                className={`${MENU_ITEM} cursor-pointer gap-2 hover:not-disabled:bg-surface-2 ${FOCUS}`}
+              >
+                <FileTypeIcon type={type} className={isEnabled ? "" : "opacity-45"} />
+                {FILE_TYPE_LABELS[type]}
+              </button>
+            );
+          })}
+          <p className="px-2.5 pt-1 pb-1.5 text-xs text-text-muted">Os outros tipos chegam nas próximas versões.</p>
         </div>
+      )}
+      {/* Fora do menu, que desmonta ao fechar */}
+      {isVideoDialogOpen && (
+        <VideoDialog stoodId={stoodId} onAdded={onFileCreated} onClose={() => setIsVideoDialogOpen(false)} />
       )}
     </div>
   );

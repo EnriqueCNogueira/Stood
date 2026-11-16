@@ -4,6 +4,7 @@ import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { FILE_TYPES, type FileType, files, folders, stoods } from "@/db/schema";
+import { isConstraintViolation } from "@/lib/constraint";
 import { type StoodDetailsReason, validateStoodDetails } from "@/lib/stood/details";
 import { type StoodWithTree, buildSortedByName, buildStoodTree } from "@/lib/stood/tree";
 
@@ -22,7 +23,6 @@ export type UpdateStoodResult =
 
 type StoodDetailsInput = { name: string; description: string };
 
-const UNIQUE_VIOLATION = "23505";
 const NAME_UNIQUE_CONSTRAINT = "stoods_owner_id_name_unique";
 const RECENT_STOODS_LIMIT = 3;
 const uuidSchema = z.uuid();
@@ -38,7 +38,7 @@ export async function createStood(ownerId: string, input: StoodDetailsInput): Pr
       .returning({ id: stoods.id });
     return { ok: true, id: stood.id };
   } catch (error) {
-    if (isNameUniqueViolation(error)) return { ok: false, reason: "nome-repetido" };
+    if (isConstraintViolation(error, NAME_UNIQUE_CONSTRAINT)) return { ok: false, reason: "nome-repetido" };
     throw error;
   }
 }
@@ -57,7 +57,7 @@ export async function updateStood(ownerId: string, stoodId: string, input: Stood
       .returning({ id: stoods.id });
     return updated.length > 0 ? { ok: true } : { ok: false, reason: "stood-nao-encontrado" };
   } catch (error) {
-    if (isNameUniqueViolation(error)) return { ok: false, reason: "nome-repetido" };
+    if (isConstraintViolation(error, NAME_UNIQUE_CONSTRAINT)) return { ok: false, reason: "nome-repetido" };
     throw error;
   }
 }
@@ -137,7 +137,15 @@ async function getTreeRows(ownerId: string, stoodIds: string[]) {
       .from(folders)
       .where(and(eq(folders.ownerId, ownerId), inArray(folders.stoodId, stoodIds))),
     db
-      .select({ id: files.id, stoodId: files.stoodId, name: files.name, type: files.type, folderId: files.folderId })
+      .select({
+        id: files.id,
+        stoodId: files.stoodId,
+        name: files.name,
+        type: files.type,
+        folderId: files.folderId,
+        // Só o id do Vídeo: o conteúdo de Nota e Desenho pode ser grande e não é usado na árvore
+        videoId: sql<string | null>`case when ${files.type} = 'video' then ${files.content} end`,
+      })
       .from(files)
       .where(and(eq(files.ownerId, ownerId), inArray(files.stoodId, stoodIds))),
   ]);
@@ -152,17 +160,4 @@ function buildFileCounts(rows: { type: FileType; total: number }[]): Record<File
 
 function isUuid(value: string) {
   return uuidSchema.safeParse(value).success;
-}
-
-// O Drizzle embrulha o erro do pg em cause; só a violação do nome único vira Result
-function isNameUniqueViolation(error: unknown) {
-  const cause = error instanceof Error ? error.cause : undefined;
-  return (
-    typeof cause === "object" &&
-    cause !== null &&
-    "code" in cause &&
-    cause.code === UNIQUE_VIOLATION &&
-    "constraint" in cause &&
-    cause.constraint === NAME_UNIQUE_CONSTRAINT
-  );
 }
