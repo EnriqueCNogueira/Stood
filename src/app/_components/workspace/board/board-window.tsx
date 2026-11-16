@@ -1,11 +1,12 @@
 "use client";
 
 import { Maximize2, Minimize2, X } from "lucide-react";
-import type { PointerEvent } from "react";
+import { type PointerEvent, useState } from "react";
 import { ICON_BUTTON } from "@/app/_components/ui";
 import { NoteEditor } from "@/app/_components/workspace/board/note-editor";
 import { FILE_TYPE_LABELS, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
 import { type BoardFile, type BoardNotes, type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
+import { buildImageUrl } from "@/lib/file/image";
 import { buildYouTubeEmbedUrl } from "@/lib/video/link";
 
 const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-75" };
@@ -23,7 +24,7 @@ type BoardWindowProps = {
   onClose: () => void;
 };
 
-// Janela com barra, botões de maximizar e fechar e canto de redimensionar; Vídeo e Nota funcionam, os outros tipos ainda são placeholder
+// Janela com barra, botões de maximizar e fechar e canto de redimensionar; Vídeo, Nota e Imagem funcionam, os outros tipos ainda são placeholder
 export function BoardWindow({
   window,
   zIndex,
@@ -106,6 +107,7 @@ function WindowContent({ file, notes }: { file: BoardFile; notes: BoardNotes }) 
       />
     );
   }
+  if (file.type === "image") return <ImageView file={file} />;
   if (file.type === "video" && file.videoId) {
     return (
       <iframe
@@ -126,6 +128,27 @@ function WindowContent({ file, notes }: { file: BoardFile; notes: BoardNotes }) 
       <strong className="max-w-full truncate font-medium">{file.name}</strong>
       <span className="font-mono text-meta text-text-muted">{FILE_TYPE_LABELS[file.type]}</span>
     </div>
+  );
+}
+
+// A Imagem cabe inteira na Janela, sem cortar; draggable desligado para não brigar com o arrasto do Quadro
+function ImageView({ file }: { file: BoardFile }) {
+  const [hasFailed, setHasFailed] = useState(false);
+  if (hasFailed) {
+    return (
+      <p role="alert" className="grid min-h-0 flex-1 place-content-center p-4 text-center text-ui text-danger">
+        Não foi possível carregar a Imagem.
+      </p>
+    );
+  }
+  return (
+    <img
+      src={buildImageUrl(file.id)}
+      alt={file.name}
+      draggable={false}
+      onError={() => setHasFailed(true)}
+      className="min-h-0 w-full flex-1 bg-bg object-contain select-none"
+    />
   );
 }
 

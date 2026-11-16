@@ -32,7 +32,7 @@ export default function PrivacyPage() {
             <strong>Sessão:</strong> um cookie de sessão que mantém você conectado por até 30 dias, com o endereço IP e o navegador (user agent) de cada sessão.
           </li>
           <li>
-            <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa, e as Janelas abertas no Quadro de cada Stood, com posição e tamanho, para ele abrir como você deixou.
+            <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa, e as Janelas abertas no Quadro de cada Stood, com posição e tamanho, para ele abrir como você deixou. As Imagens são guardadas como você envia, junto com os metadados que a câmera ou o celular gravou nelas, como a data e, se estava ligada, a localização.
           </li>
           <li>
             <strong>Preferências da tela:</strong> o tema do site, a largura e o estado das barras laterais e as opções do Quadro (fundo, grade e tema) ficam só no seu navegador (localStorage) e não são enviados para nós.

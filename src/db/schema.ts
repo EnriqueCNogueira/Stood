@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  customType,
   foreignKey,
   index,
   jsonb,
@@ -15,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 // Caminho relativo com extensão, porque o seed de dev roda este arquivo direto no Node
 import { MAX_WINDOWS, type StoredBoardWindow } from "../lib/board/windows.ts";
+import { IMAGE_TYPES, MAX_IMAGE_BYTES } from "../lib/file/image.ts";
 import {
   EDGE_WHITESPACE_PATTERN,
   MAX_DESCRIPTION_LENGTH,
@@ -221,6 +223,8 @@ export const files = pgTable(
       columns: [table.folderId, table.stoodId, table.ownerId],
       foreignColumns: [folders.id, folders.stoodId, folders.ownerId],
     }).onDelete("cascade"),
+    // Alvo da FK de file_blobs, que amarra o dono
+    unique("files_id_owner_id_unique").on(table.id, table.ownerId),
     // Busca dos Arquivos no cascade de apagar Pasta
     index("files_folder_id_idx").on(table.folderId),
     check("files_type_check", sql`${table.type} in (${buildSqlList(FILE_TYPES)})`),
@@ -240,6 +244,35 @@ export const files = pgTable(
       sql`lower(${table.name})`,
     ),
     buildNameCheck("files", table.name),
+  ],
+);
+
+// O pg devolve bytea como Buffer e aceita Buffer na escrita
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+
+// Bytes de um Arquivo enviado pelo Usuário, hoje só de Imagem; fora de files para a árvore nunca ler os bytes
+export const fileBlobs = pgTable(
+  "file_blobs",
+  {
+    fileId: uuid("file_id").primaryKey(),
+    ownerId: uuid("owner_id").notNull(),
+    // Conferido pelos primeiros bytes no Service, e não pelo que o navegador informa
+    mimeType: text("mime_type").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // Apagar o Arquivo, o Stood ou o Usuário apaga os bytes
+    foreignKey({
+      name: "file_blobs_file_id_owner_id_files_fk",
+      columns: [table.fileId, table.ownerId],
+      foreignColumns: [files.id, files.ownerId],
+    }).onDelete("cascade"),
+    check("file_blobs_mime_type_check", sql`${table.mimeType} in (${buildSqlList(IMAGE_TYPES)})`),
+    check(
+      "file_blobs_data_check",
+      sql`octet_length(${table.data}) between 1 and ${sql.raw(String(MAX_IMAGE_BYTES))}`,
+    ),
   ],
 );
 

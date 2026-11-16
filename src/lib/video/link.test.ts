@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildVideoFileName, parseYouTubeVideoId } from "@/lib/video/link";
+import { parseYouTubeVideoId } from "@/lib/video/link";
 
 const VIDEO_ID = "dQw4w9WgXcQ";
 
@@ -36,35 +36,5 @@ describe("parseYouTubeVideoId", () => {
     ["que não é link", "Never Gonna Give You Up"],
   ])("recusa link %s", (_case, url) => {
     expect(parseYouTubeVideoId(url)).toBeUndefined();
-  });
-});
-
-describe("buildVideoFileName", () => {
-  it("mantém o título que já cabe no nome", () => {
-    expect(buildVideoFileName("Limites e derivadas")).toBe("Limites e derivadas");
-  });
-
-  it("corta o título longo em 50 caracteres com reticências", () => {
-    const name = buildVideoFileName("Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)");
-
-    expect(name).toBe("Rick Astley - Never Gonna Give You Up (Official V…");
-  });
-
-  it("tira o espaço que sobra antes das reticências", () => {
-    expect(buildVideoFileName(`${"a".repeat(48)} bcd`)).toBe(`${"a".repeat(48)}…`);
-  });
-
-  it("não parte um emoji ao cortar", () => {
-    const name = buildVideoFileName(`${"a".repeat(48)}🎓🎓`);
-
-    expect(name).toBe(`${"a".repeat(48)}…`);
-  });
-
-  it("troca / e \\ por hífen", () => {
-    expect(buildVideoFileName("Aula 1/2 \\ Limites")).toBe("Aula 1-2 - Limites");
-  });
-
-  it("junta espaços repetidos e apara as pontas", () => {
-    expect(buildVideoFileName("  Aula   de \n Limites  ")).toBe("Aula de Limites");
   });
 });

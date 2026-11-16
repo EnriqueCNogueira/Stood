@@ -4,13 +4,16 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
 import {
+  type CreateImageFileResult,
   type CreateNoteFileResult,
   type CreateVideoFileResult,
   type UpdateNoteContentResult,
+  createImageFile,
   createNoteFile,
   createVideoFile,
   updateNoteContent,
 } from "@/lib/file/file";
+import { MAX_IMAGE_BYTES } from "@/lib/file/image";
 import { type FetchYouTubeVideoResult, fetchYouTubeVideo } from "@/lib/video/youtube";
 
 // As regras de nome e de id ficam no Service; aqui só se confere o formato da entrada
@@ -18,8 +21,10 @@ const previewInputSchema = z.object({ videoId: z.string() });
 const createVideoInputSchema = z.object({ stoodId: z.string(), videoId: z.string(), name: z.string() });
 const createNoteInputSchema = z.object({ stoodId: z.string(), name: z.string() });
 const updateNoteInputSchema = z.object({ fileId: z.string(), content: z.string() });
+const createImageInputSchema = z.object({ stoodId: z.string(), name: z.string(), image: z.instanceof(File) });
 
 type InvalidInput = { ok: false; reason: "entrada-invalida" };
+export type CreateImageFileActionResult = CreateImageFileResult | InvalidInput;
 export type FetchVideoPreviewActionResult = FetchYouTubeVideoResult | InvalidInput;
 export type CreateVideoFileActionResult = CreateVideoFileResult | InvalidInput;
 export type CreateNoteFileActionResult = CreateNoteFileResult | InvalidInput;
@@ -62,4 +67,23 @@ export async function updateNoteContentAction(input: unknown): Promise<UpdateNot
   if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
 
   return updateNoteContent(user.id, parsed.data);
+}
+
+// Recebe FormData porque o arquivo vai como multipart; o limite de corpo está em next.config.ts
+export async function createImageFileAction(formData: unknown): Promise<CreateImageFileActionResult> {
+  const user = await requireSession();
+  if (!(formData instanceof FormData)) return { ok: false, reason: "entrada-invalida" };
+  const parsed = createImageInputSchema.safeParse({
+    stoodId: formData.get("stoodId"),
+    name: formData.get("name"),
+    image: formData.get("image"),
+  });
+  if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
+
+  const { stoodId, name, image } = parsed.data;
+  // Recusa antes de ler os bytes para a memória
+  if (image.size > MAX_IMAGE_BYTES) return { ok: false, reason: "imagem-grande" };
+  const result = await createImageFile(user.id, { stoodId, name, bytes: new Uint8Array(await image.arrayBuffer()) });
+  if (result.ok) revalidatePath("/biblioteca");
+  return result;
 }

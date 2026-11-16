@@ -1,12 +1,118 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { files } from "@/db/schema";
-import { createNoteFile, createVideoFile, getStoodNoteContents, updateNoteContent } from "@/lib/file/file";
+import { fileBlobs, files } from "@/db/schema";
+import {
+  createImageFile,
+  createNoteFile,
+  createVideoFile,
+  findImage,
+  getStoodNoteContents,
+  updateNoteContent,
+} from "@/lib/file/file";
+import { MAX_IMAGE_BYTES } from "@/lib/file/image";
 import { MAX_NOTE_LENGTH } from "@/lib/file/note";
 import { createFile, createFolder, createStood, createUser } from "@/test/db";
 
 const VIDEO_ID = "dQw4w9WgXcQ";
+const PNG_HEADER = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const PNG_BYTES = Uint8Array.from([...PNG_HEADER, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52]);
+const GIF_BYTES = Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00]);
+
+describe("createImageFile", () => {
+  it("cria a Imagem na raiz do Stood e guarda os bytes com o formato", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+
+    const result = await createImageFile(ownerId, { stoodId: stood.id, name: "Gráfico", bytes: PNG_BYTES });
+
+    const fileId = result.ok ? result.file.id : "";
+    expect({ file: await getFileRow(fileId), image: await findImage(ownerId, fileId) }).toEqual({
+      file: { ownerId, stoodId: stood.id, folderId: null, type: "image", name: "Gráfico", content: null },
+      image: { mimeType: "image/png", data: Buffer.from(PNG_BYTES) },
+    });
+  });
+
+  it("devolve o Arquivo no formato da árvore da barra lateral", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+
+    await expect(createImageFile(ownerId, { stoodId: stood.id, name: "Gráfico", bytes: PNG_BYTES })).resolves.toStrictEqual({
+      ok: true,
+      file: { kind: "file", id: expect.any(String), name: "Gráfico", type: "image" },
+    });
+  });
+
+  it("aceita a Imagem no limite de tamanho", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const bytes = new Uint8Array(MAX_IMAGE_BYTES);
+    bytes.set(PNG_HEADER);
+
+    await expect(createImageFile(ownerId, { stoodId: stood.id, name: "Foto", bytes })).resolves.toMatchObject({ ok: true });
+  });
+
+  it.each([
+    ["vazia", new Uint8Array(), "imagem-vazia"],
+    ["acima de 5 MB", Uint8Array.from([...PNG_HEADER, ...new Uint8Array(MAX_IMAGE_BYTES)]), "imagem-grande"],
+    ["em formato não aceito", GIF_BYTES, "formato-nao-suportado"],
+  ])("recusa Imagem %s sem criar o Arquivo", async (_case, bytes, reason) => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+
+    const result = await createImageFile(ownerId, { stoodId: stood.id, name: "Gráfico", bytes });
+
+    expect({ result, names: await getStoodFileNames(stood.id) }).toEqual({ result: { ok: false, reason }, names: [] });
+  });
+
+  it("recusa nome de outra Imagem do Stood sem guardar os bytes", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    await createImageFile(ownerId, { stoodId: stood.id, name: "Gráfico", bytes: PNG_BYTES });
+
+    const result = await createImageFile(ownerId, { stoodId: stood.id, name: "gráfico", bytes: PNG_BYTES });
+
+    expect({ result, blobs: await countOwnerBlobs(ownerId) }).toEqual({ result: { ok: false, reason: "nome-repetido" }, blobs: 1 });
+  });
+
+  it("recusa Stood de outro Usuário sem guardar os bytes", async () => {
+    const otherId = await createUser();
+    const otherStood = await createStood(otherId, "Cálculo I");
+    const ownerId = await createUser();
+
+    const result = await createImageFile(ownerId, { stoodId: otherStood.id, name: "Gráfico", bytes: PNG_BYTES });
+
+    expect({ result, blobs: await countOwnerBlobs(ownerId) }).toEqual({
+      result: { ok: false, reason: "stood-nao-encontrado" },
+      blobs: 0,
+    });
+  });
+});
+
+describe("findImage", () => {
+  it("não acha a Imagem de outro Usuário", async () => {
+    const otherId = await createUser();
+    const otherStood = await createStood(otherId, "Cálculo I");
+    const created = await createImageFile(otherId, { stoodId: otherStood.id, name: "Gráfico", bytes: PNG_BYTES });
+    const ownerId = await createUser();
+
+    await expect(findImage(ownerId, created.ok ? created.file.id : "")).resolves.toBeUndefined();
+  });
+
+  it("não acha um Arquivo que não é Imagem", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const note = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "" });
+
+    await expect(findImage(ownerId, note.id)).resolves.toBeUndefined();
+  });
+
+  it("não acha id que não é uuid", async () => {
+    const ownerId = await createUser();
+
+    await expect(findImage(ownerId, "nao-e-uuid")).resolves.toBeUndefined();
+  });
+});
 
 describe("createVideoFile", () => {
   it("cria o Vídeo na raiz do Stood com o id do YouTube", async () => {
@@ -308,4 +414,9 @@ async function getFileRow(id: string) {
 async function getStoodFileNames(stoodId: string) {
   const rows = await db.select({ name: files.name }).from(files).where(eq(files.stoodId, stoodId));
   return rows.map((row) => row.name);
+}
+
+async function countOwnerBlobs(ownerId: string) {
+  const rows = await db.select({ fileId: fileBlobs.fileId }).from(fileBlobs).where(eq(fileBlobs.ownerId, ownerId));
+  return rows.length;
 }

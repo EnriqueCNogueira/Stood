@@ -10,9 +10,9 @@ import {
   createVideoFileAction,
   fetchVideoPreviewAction,
 } from "@/app/_components/workspace/board/file-actions";
-import { MAX_NAME_LENGTH, validateName } from "@/lib/stood/details";
+import { MAX_NAME_LENGTH, buildSuggestedName, validateName } from "@/lib/stood/details";
 import type { StoodTreeFile } from "@/lib/stood/tree";
-import { buildVideoFileName, parseYouTubeVideoId } from "@/lib/video/link";
+import { parseYouTubeVideoId } from "@/lib/video/link";
 import type { YouTubeVideo } from "@/lib/video/youtube";
 
 // Espera o Usuário parar de digitar antes de consultar o YouTube
@@ -107,7 +107,7 @@ export function VideoDialog({ stoodId, onAdded, onClose }: VideoDialogProps) {
     }
     if (requestId !== requestRef.current) return;
     setPreview(next);
-    if (next.status === "ready") setName(buildVideoFileName(next.video.title));
+    if (next.status === "ready") setName(buildSuggestedName(next.video.title));
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
