@@ -8,8 +8,11 @@ import {
   MIN_WINDOW_WIDTH,
   buildBoardState,
   buildPlacedRect,
+  buildRestoredBoardState,
+  buildStoredWindows,
   buildWindowCounts,
   findFrontWindow,
+  parseStoredWindows,
 } from "@/lib/board/windows";
 
 const AREA = { width: 1200, height: 800 };
@@ -281,6 +284,75 @@ describe("buildPlacedRect", () => {
       width: 300,
       height: 200,
     });
+  });
+});
+
+describe("buildStoredWindows", () => {
+  it("guarda só o id do Arquivo, posição, tamanho e ordem de cada Janela", () => {
+    const state = apply(open(EMPTY, buildFile("a", "note"), { x: 10, y: 20 }), { type: "toggle-maximize", fileId: "a" });
+
+    expect(buildStoredWindows(state)).toEqual([
+      {
+        fileId: "a",
+        rect: { x: 0, y: 0, ...AREA },
+        restoreRect: { x: 10, y: 20, ...DEFAULT_WINDOW_SIZES.note },
+        z: 1,
+      },
+    ]);
+  });
+});
+
+describe("buildRestoredBoardState", () => {
+  const RECT = { x: 10, y: 20, width: 300, height: 200 };
+
+  it("remonta as Janelas com o nome e o tipo atuais dos Arquivos", () => {
+    const files = [{ id: "a", type: "video" as const, name: "Aula 1 renomeada", videoId: "dQw4w9WgXcQ" }];
+
+    expect(buildRestoredBoardState([{ fileId: "a", rect: RECT, restoreRect: null, z: 3 }], files)).toEqual({
+      windows: [{ file: files[0], rect: RECT, restoreRect: null, z: 3 }],
+    });
+  });
+
+  it("descarta a Janela de um Arquivo que não existe mais", () => {
+    const stored = [
+      { fileId: "apagado", rect: RECT, restoreRect: null, z: 1 },
+      { fileId: "a", rect: RECT, restoreRect: null, z: 2 },
+    ];
+
+    const state = buildRestoredBoardState(stored, [buildFile("a", "note")]);
+
+    expect(state.windows.map((window) => window.file.id)).toEqual(["a"]);
+  });
+});
+
+describe("parseStoredWindows", () => {
+  const RECT = { x: 10, y: 20, width: 300, height: 200 };
+  const FILE_ID = "6f1c2c1e-5d0a-4d7b-9a43-1f0e8a1b2c3d";
+
+  it("aceita as Janelas no formato salvo", () => {
+    const stored = [{ fileId: FILE_ID, rect: RECT, restoreRect: { ...RECT, x: 0 }, z: 1 }];
+
+    expect(parseStoredWindows(stored)).toEqual(stored);
+  });
+
+  it.each([
+    ["que não são lista", { fileId: FILE_ID }],
+    ["com id que não é uuid", [{ fileId: "a", rect: RECT, restoreRect: null, z: 1 }]],
+    ["com largura negativa", [{ fileId: FILE_ID, rect: { ...RECT, width: -1 }, restoreRect: null, z: 1 }]],
+    ["com posição gigante", [{ fileId: FILE_ID, rect: { ...RECT, x: 1e9 }, restoreRect: null, z: 1 }]],
+    ["com ordem fracionada", [{ fileId: FILE_ID, rect: RECT, restoreRect: null, z: 1.5 }]],
+    ["com a mesma Janela duas vezes", [
+      { fileId: FILE_ID, rect: RECT, restoreRect: null, z: 1 },
+      { fileId: FILE_ID, rect: RECT, restoreRect: null, z: 2 },
+    ]],
+    ["com mais de 10 Janelas", Array.from({ length: 11 }, (_, index) => ({
+      fileId: `6f1c2c1e-5d0a-4d7b-9a43-1f0e8a1b2c${String(index).padStart(2, "0")}`,
+      rect: RECT,
+      restoreRect: null,
+      z: index + 1,
+    }))],
+  ])("recusa Janelas %s", (_case, value) => {
+    expect(parseStoredWindows(value)).toBeUndefined();
   });
 });
 

@@ -5,6 +5,7 @@ import {
   check,
   foreignKey,
   index,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -13,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 // Caminho relativo com extensão, porque o seed de dev roda este arquivo direto no Node
+import { MAX_WINDOWS, type StoredBoardWindow } from "../lib/board/windows.ts";
 import {
   EDGE_WHITESPACE_PATTERN,
   MAX_DESCRIPTION_LENGTH,
@@ -122,6 +124,8 @@ export const stoods = pgTable(
     // Nula quando o Usuário não escreve nada
     description: text("description"),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }).defaultNow().notNull(),
+    // Janelas abertas no Quadro, com posição, tamanho e ordem; o formato é conferido por parseStoredWindows
+    boardWindows: jsonb("board_windows").$type<StoredBoardWindow[]>().default(sql`'[]'::jsonb`).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
@@ -138,6 +142,11 @@ export const stoods = pgTable(
     check(
       "stoods_description_check",
       sql`char_length(${table.description}) <= ${sql.raw(String(MAX_DESCRIPTION_LENGTH))}`,
+    ),
+    // case garante a ordem: jsonb_array_length dá erro, e não recusa, num valor que não é lista
+    check(
+      "stoods_board_windows_check",
+      sql`case when jsonb_typeof(${table.boardWindows}) = 'array' then jsonb_array_length(${table.boardWindows}) <= ${sql.raw(String(MAX_WINDOWS))} else false end`,
     ),
   ],
 );

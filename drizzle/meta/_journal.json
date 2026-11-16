@@ -22,6 +22,13 @@
       "when": 1794598409954,
       "tag": "0002_add_stood_description",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794869835438,
+      "tag": "0003_add_stood_board_windows",
+      "breakpoints": true
     }
   ]
 }

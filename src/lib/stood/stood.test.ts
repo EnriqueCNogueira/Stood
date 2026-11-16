@@ -265,6 +265,24 @@ describe("findBoardStood", () => {
     ]);
   });
 
+  it("devolve as Janelas salvas do Quadro", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+    const note = await createFile(ownerId, stoodId, { name: "Resumo", type: "note", content: "" });
+    const windows = [{ fileId: note.id, rect: { x: 24, y: 24, width: 380, height: 380 }, restoreRect: null, z: 1 }];
+    await db.update(stoods).set({ boardWindows: windows }).where(eq(stoods.id, stoodId));
+
+    await expect(findBoardStood(ownerId, stoodId)).resolves.toMatchObject({ boardWindows: windows });
+  });
+
+  it("abre o Quadro vazio quando as Janelas salvas estão fora do formato", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+    await db.update(stoods).set({ boardWindows: [{ fileId: "a" }] as never }).where(eq(stoods.id, stoodId));
+
+    await expect(findBoardStood(ownerId, stoodId)).resolves.toMatchObject({ boardWindows: [] });
+  });
+
   it("não devolve o Stood de outro Usuário", async () => {
     const otherId = await createUser();
     const stoodId = (await createStoodRow(otherId, "Cálculo I")).id;

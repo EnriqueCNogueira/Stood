@@ -4,6 +4,7 @@ import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { FILE_TYPES, type FileType, files, folders, stoods } from "@/db/schema";
+import { type StoredBoardWindow, parseStoredWindows } from "@/lib/board/windows";
 import { isConstraintViolation } from "@/lib/constraint";
 import { type StoodDetailsReason, validateStoodDetails } from "@/lib/stood/details";
 import { type StoodWithTree, buildSortedByName, buildStoodTree } from "@/lib/stood/tree";
@@ -104,14 +105,16 @@ export async function getRecentStoods(ownerId: string): Promise<RecentStood[]> {
   return recentStoods.map((stood) => ({ ...stood, fileCounts: buildFileCounts(countsByStoodId.get(stood.id) ?? []) }));
 }
 
+type BoardStood = StoodWithTree & { boardWindows: StoredBoardWindow[] };
+
 // Stood de outro dono ou id inválido devolvem undefined, para a página responder "não encontrado".
 // As três consultas rodam juntas: Pastas e Arquivos também filtram pelo dono, então nada de outro Usuário vaza.
-export async function findBoardStood(ownerId: string, stoodId: string): Promise<StoodWithTree | undefined> {
+export async function findBoardStood(ownerId: string, stoodId: string): Promise<BoardStood | undefined> {
   if (!isUuid(stoodId)) return undefined;
 
   const [[stood], { folderRows, fileRows }] = await Promise.all([
     db
-      .select({ id: stoods.id, name: stoods.name, description: stoods.description })
+      .select({ id: stoods.id, name: stoods.name, description: stoods.description, boardWindows: stoods.boardWindows })
       .from(stoods)
       .where(and(eq(stoods.id, stoodId), eq(stoods.ownerId, ownerId)))
       .limit(1),
@@ -119,7 +122,9 @@ export async function findBoardStood(ownerId: string, stoodId: string): Promise<
   ]);
   if (!stood) return undefined;
 
-  return { ...stood, tree: buildStoodTree(folderRows, fileRows) };
+  // Janelas fora do formato não derrubam a página: o Quadro abre vazio
+  const boardWindows = parseStoredWindows(stood.boardWindows) ?? [];
+  return { ...stood, boardWindows, tree: buildStoodTree(folderRows, fileRows) };
 }
 
 export async function updateStoodLastOpenedAt(ownerId: string, stoodId: string): Promise<void> {

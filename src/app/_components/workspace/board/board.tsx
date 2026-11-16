@@ -2,6 +2,8 @@
 
 import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BELOW_HEADER } from "@/app/_components/ui";
+import { useAutosave } from "@/app/_components/workspace/board/autosave";
+import { updateBoardWindowsAction } from "@/app/_components/workspace/board/board-actions";
 import { BoardArea } from "@/app/_components/workspace/board/board-area";
 import { BoardBar } from "@/app/_components/workspace/board/board-bar";
 import { type Notice, BoardNotice } from "@/app/_components/workspace/board/board-notice";
@@ -28,15 +30,18 @@ import {
   type Point,
   type Rect,
   type Size,
+  type StoredBoardWindow,
   buildBoardState,
   buildOpenRect,
   buildPlacedRect,
+  buildRestoredBoardState,
+  buildStoredWindows,
   buildWindowCounts,
   isMaximized,
   isSameRect,
 } from "@/lib/board/windows";
 import type { StoodDetails } from "@/lib/stood/details";
-import { type StoodTreeFile, type StoodWithTree, buildTreeWithFile } from "@/lib/stood/tree";
+import { type StoodTreeFile, type StoodWithTree, buildTreeFiles, buildTreeWithFile } from "@/lib/stood/tree";
 
 // Distância mínima, em pixels, para um clique virar arrasto
 const DRAG_THRESHOLD = 4;
@@ -44,6 +49,9 @@ const DRAG_THRESHOLD = 4;
 const OPEN_GRAB_OFFSET_Y = 18;
 // Abaixo de md, as Janelas ficam em coluna e não se arrastam
 const COMPACT_QUERY = "(max-width: 47.9375rem)";
+// Curto para recarregar logo depois de mover não perder a mudança; o arrasto só muda o estado ao soltar
+const BOARD_SAVE_DELAY_MS = 300;
+const BOARD_SAVE_FAILED_MESSAGE = "Não foi possível salvar o Quadro. A próxima mudança tenta de novo.";
 
 const LIMIT_MESSAGES = {
   "limite-de-janelas": `O Quadro já tem ${MAX_WINDOWS} Janelas abertas. Feche uma para abrir outra.`,
@@ -58,8 +66,13 @@ type Drag =
 // Área medida uma vez no começo do arrasto, para não ler o layout a cada movimento
 type DragArea = { left: number; top: number; context: BoardContext; liveContext: BoardContext };
 
-// Raiz do Quadro: guarda as Janelas, que não são salvas, e liga a barra, a lateral e a área
-export function Board({ stood, noteContents }: { stood: StoodWithTree; noteContents: Record<string, string> }) {
+type BoardProps = {
+  stood: StoodWithTree & { boardWindows: StoredBoardWindow[] };
+  noteContents: Record<string, string>;
+};
+
+// Raiz do Quadro: abre com as Janelas salvas, salva cada mudança e liga a barra, a lateral e a área
+export function Board({ stood, noteContents }: BoardProps) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
   // O Arquivo criado entra direto na árvore, sem renderizar a página de novo
   const [tree, setTree] = useState(stood.tree);
@@ -72,7 +85,9 @@ export function Board({ stood, noteContents }: { stood: StoodWithTree; noteConte
     }),
     [],
   );
-  const [state, setState] = useState<BoardState>({ windows: [] });
+  const [state, setState] = useState<BoardState>(() =>
+    buildRestoredBoardState(stood.boardWindows, buildTreeFiles(stood.tree).map(buildBoardFile)),
+  );
   const stateRef = useRef(state);
   const [outline, setOutline] = useState<Rect | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -84,19 +99,33 @@ export function Board({ stood, noteContents }: { stood: StoodWithTree; noteConte
   const areaRef = useRef<HTMLDivElement>(null);
   const stopDragRef = useRef<(() => void) | null>(null);
   const snap = buildBoardSnap(preferences);
+  const { status: saveStatus, schedule: scheduleSave } = useAutosave(
+    stood.boardWindows,
+    (windows: StoredBoardWindow[]) => updateBoardWindowsAction({ stoodId: stood.id, windows }),
+    { delayMs: BOARD_SAVE_DELAY_MS, warnOnLeave: false },
+  );
 
   // O reducer devolve o mesmo estado quando nada muda, e aí a tela não redesenha
-  const dispatch = useCallback((action: BoardAction, context: BoardContext) => {
-    const result = buildBoardState(stateRef.current, action, context);
-    if (!result.ok) {
-      // Objeto novo a cada recusa, para o aviso reiniciar o tempo mesmo com o mesmo texto
-      setNotice({ message: LIMIT_MESSAGES[result.reason] });
-      return;
-    }
-    if (result.state === stateRef.current) return;
-    stateRef.current = result.state;
-    setState(result.state);
-  }, []);
+  const dispatch = useCallback(
+    (action: BoardAction, context: BoardContext) => {
+      const result = buildBoardState(stateRef.current, action, context);
+      if (!result.ok) {
+        // Objeto novo a cada recusa, para o aviso reiniciar o tempo mesmo com o mesmo texto
+        setNotice({ message: LIMIT_MESSAGES[result.reason] });
+        return;
+      }
+      if (result.state === stateRef.current) return;
+      stateRef.current = result.state;
+      setState(result.state);
+      // Prender as Janelas numa tela menor não salva: abrir de novo numa tela maior mantém o Quadro como estava
+      if (action.type !== "fit-area") scheduleSave(buildStoredWindows(result.state));
+    },
+    [scheduleSave],
+  );
+
+  useEffect(() => {
+    if (saveStatus.kind === "error") setNotice({ message: BOARD_SAVE_FAILED_MESSAGE });
+  }, [saveStatus]);
 
   const dismissNotice = useCallback(() => setNotice(null), []);
 

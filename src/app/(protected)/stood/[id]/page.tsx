@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getStoodNoteContents } from "@/lib/file/file";
 import { findBoardStood, updateStoodLastOpenedAt } from "@/lib/stood/stood";
 
-// Quadro de um Stood: abre vazio a cada visita e registra a hora de abertura
+// Quadro de um Stood: abre com as Janelas salvas e registra a hora de abertura
 export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireSession();
   const { id } = await params;

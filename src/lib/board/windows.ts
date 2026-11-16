@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { FileType } from "@/lib/stood/tree";
 
 // Estado das Janelas do Quadro, sem React: recebe o estado e uma ação e devolve o próximo estado ou a recusa
@@ -7,6 +8,8 @@ export const MAX_VIDEO_WINDOWS = 2;
 export const MIN_WINDOW_WIDTH = 220;
 export const MIN_WINDOW_HEIGHT = 140;
 const CASCADE_STEP = 24;
+// Teto de posição e tamanho salvos, folgado para qualquer tela; o Quadro prende à área ao abrir
+const MAX_STORED_PIXELS = 20_000;
 
 export const DEFAULT_WINDOW_SIZES: Record<FileType, Size> = {
   video: { width: 460, height: 300 },
@@ -32,6 +35,28 @@ export type BoardState = { windows: BoardWindow[] };
 
 // snap é o espaçamento da grade quando o encaixe vale, ou nulo
 export type BoardContext = { area: Size; snap: number | null };
+
+// O que o banco guarda de cada Janela: o Arquivo entra só pelo id, e nome e tipo vêm da árvore ao abrir o Quadro
+export type StoredBoardWindow = { fileId: string; rect: Rect; restoreRect: Rect | null; z: number };
+
+const storedPixelSchema = z.number().min(0).max(MAX_STORED_PIXELS);
+const storedRectSchema = z.object({
+  x: storedPixelSchema,
+  y: storedPixelSchema,
+  width: storedPixelSchema,
+  height: storedPixelSchema,
+});
+const storedWindowsSchema = z
+  .array(
+    z.object({
+      fileId: z.uuid(),
+      rect: storedRectSchema,
+      restoreRect: storedRectSchema.nullable(),
+      z: z.number().int().min(1),
+    }),
+  )
+  .max(MAX_WINDOWS)
+  .refine((windows) => new Set(windows.map((window) => window.fileId)).size === windows.length);
 
 export type BoardAction =
   | { type: "open"; file: BoardFile; position?: Point }
@@ -67,6 +92,26 @@ export function buildBoardState(state: BoardState, action: BoardAction, context:
     case "fit-area":
       return { ok: true, state: buildFittedState(state, context) };
   }
+}
+
+export function buildStoredWindows(state: BoardState): StoredBoardWindow[] {
+  return state.windows.map(({ file, rect, restoreRect, z }) => ({ fileId: file.id, rect, restoreRect, z }));
+}
+
+// Remonta o Quadro salvo com os Arquivos que ainda existem: a Janela de um Arquivo apagado some
+export function buildRestoredBoardState(stored: StoredBoardWindow[], files: BoardFile[]): BoardState {
+  const filesById = new Map(files.map((file) => [file.id, file]));
+  const windows = stored.flatMap(({ fileId, rect, restoreRect, z }) => {
+    const file = filesById.get(fileId);
+    return file ? [{ file, rect, restoreRect, z }] : [];
+  });
+  return { windows };
+}
+
+// Valor lido do banco ou recebido do navegador; fora do formato devolve undefined
+export function parseStoredWindows(value: unknown): StoredBoardWindow[] | undefined {
+  const parsed = storedWindowsSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
 }
 
 // Posição e tamanho finais de uma Janela: encaixados na grade quando vale e presos à área

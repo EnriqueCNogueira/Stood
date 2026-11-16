@@ -45,6 +45,11 @@ export function buildTreeWithFile(tree: StoodTreeNode[], file: StoodTreeFile): S
   return [...tree, file].sort(compareNodes);
 }
 
+// Todos os Arquivos da árvore, de qualquer Pasta
+export function buildTreeFiles(tree: StoodTreeNode[]): StoodTreeFile[] {
+  return tree.flatMap((node) => (node.kind === "file" ? [node] : buildTreeFiles(node.children)));
+}
+
 export function buildSortedByName<T extends { name: string }>(items: T[]) {
   return items.sort((a, b) => NAME_COLLATOR.compare(a.name, b.name));
 }
