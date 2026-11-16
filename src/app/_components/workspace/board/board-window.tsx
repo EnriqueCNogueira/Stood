@@ -3,8 +3,9 @@
 import { Maximize2, Minimize2, X } from "lucide-react";
 import type { PointerEvent } from "react";
 import { ICON_BUTTON } from "@/app/_components/ui";
+import { NoteEditor } from "@/app/_components/workspace/board/note-editor";
 import { FILE_TYPE_LABELS, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
-import { type BoardFile, type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
+import { type BoardFile, type BoardNotes, type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
 import { buildYouTubeEmbedUrl } from "@/lib/video/link";
 
 const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-75" };
@@ -14,6 +15,7 @@ type BoardWindowProps = {
   zIndex: number;
   isActive: boolean;
   isCompact: boolean;
+  notes: BoardNotes;
   onBarPointerDown: (event: PointerEvent<HTMLElement>) => void;
   onResizePointerDown: (event: PointerEvent<HTMLElement>) => void;
   onFocus: () => void;
@@ -21,12 +23,13 @@ type BoardWindowProps = {
   onClose: () => void;
 };
 
-// Janela com barra, botões de maximizar e fechar e canto de redimensionar; o Vídeo toca, os outros tipos ainda são placeholder
+// Janela com barra, botões de maximizar e fechar e canto de redimensionar; Vídeo e Nota funcionam, os outros tipos ainda são placeholder
 export function BoardWindow({
   window,
   zIndex,
   isActive,
   isCompact,
+  notes,
   onBarPointerDown,
   onResizePointerDown,
   onFocus,
@@ -41,6 +44,8 @@ export function BoardWindow({
     <section
       aria-label={`${FILE_TYPE_LABELS[file.type]}: ${file.name}`}
       onPointerDown={onFocus}
+      // Foco por teclado, no texto da Nota ou no player do Vídeo também traz a Janela para a frente
+      onFocus={onFocus}
       style={isCompact ? undefined : { left: rect.x, top: rect.y, width: rect.width, height: rect.height, zIndex }}
       className={`${position} flex flex-col overflow-hidden rounded-lg border bg-surface text-text shadow-card ${
         isActive && !isCompact ? "border-accent/70 ring-3 ring-accent/12" : "border-border"
@@ -74,7 +79,7 @@ export function BoardWindow({
         </button>
       </header>
 
-      <WindowContent file={file} />
+      <WindowContent file={file} notes={notes} />
 
       {!isCompact && !maximized && (
         <div
@@ -90,7 +95,17 @@ export function BoardWindow({
 }
 
 // O iframe fica montado enquanto a Janela está aberta: mover, redimensionar e maximizar não param o vídeo
-function WindowContent({ file }: { file: BoardFile }) {
+function WindowContent({ file, notes }: { file: BoardFile; notes: BoardNotes }) {
+  if (file.type === "note") {
+    return (
+      <NoteEditor
+        fileId={file.id}
+        name={file.name}
+        initialContent={notes.getContent(file.id)}
+        onContentChange={(content) => notes.setContent(file.id, content)}
+      />
+    );
+  }
   if (file.type === "video" && file.videoId) {
     return (
       <iframe

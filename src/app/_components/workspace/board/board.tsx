@@ -20,6 +20,7 @@ import {
   type BoardAction,
   type BoardContext,
   type BoardFile,
+  type BoardNotes,
   type BoardState,
   DEFAULT_WINDOW_SIZES,
   MAX_VIDEO_WINDOWS,
@@ -58,10 +59,19 @@ type Drag =
 type DragArea = { left: number; top: number; context: BoardContext; liveContext: BoardContext };
 
 // Raiz do Quadro: guarda as Janelas, que não são salvas, e liga a barra, a lateral e a área
-export function Board({ stood }: { stood: StoodWithTree }) {
+export function Board({ stood, noteContents }: { stood: StoodWithTree; noteContents: Record<string, string> }) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
   // O Arquivo criado entra direto na árvore, sem renderizar a página de novo
   const [tree, setTree] = useState(stood.tree);
+  // Reabrir uma Nota mostra o que foi digitado nela, mesmo que a página não tenha sido carregada de novo
+  const noteContentsRef = useRef(new Map(Object.entries(noteContents)));
+  const notes = useMemo<BoardNotes>(
+    () => ({
+      getContent: (fileId) => noteContentsRef.current.get(fileId) ?? "",
+      setContent: (fileId, content) => noteContentsRef.current.set(fileId, content),
+    }),
+    [],
+  );
   const [state, setState] = useState<BoardState>({ windows: [] });
   const stateRef = useRef(state);
   const [outline, setOutline] = useState<Rect | null>(null);
@@ -274,6 +284,7 @@ export function Board({ stood }: { stood: StoodWithTree }) {
             preferences={preferences}
             outline={outline}
             isCompact={isCompact}
+            notes={notes}
             onBarPointerDown={startMove}
             onResizePointerDown={startResize}
             onFocus={(fileId) => dispatch({ type: "focus", fileId }, getContext())}

@@ -21,6 +21,9 @@ export type Size = { width: number; height: number };
 export type Rect = Point & Size;
 export type BoardFile = { id: string; type: FileType; name: string; videoId?: string };
 
+// Texto das Notas do Quadro, guardado fora do estado para digitar não redesenhar as outras Janelas
+export type BoardNotes = { getContent: (fileId: string) => string; setContent: (fileId: string, content: string) => void };
+
 // restoreRect guarda posição e tamanho enquanto a Janela está maximizada; z é a ordem de empilhamento, maior na frente
 export type BoardWindow = { file: BoardFile; rect: Rect; restoreRect: Rect | null; z: number };
 

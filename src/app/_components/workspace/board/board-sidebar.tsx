@@ -5,13 +5,16 @@ import { type KeyboardEvent, type PointerEvent, useCallback, useRef, useState } 
 import { useDismiss } from "@/app/_components/dismiss";
 import { BUTTON, FOCUS, ICON_BUTTON, MENU_ITEM, POPOVER } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FILE_TYPE_ORDER, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
+import { NoteDialog } from "@/app/_components/workspace/board/note-dialog";
 import { VideoDialog } from "@/app/_components/workspace/board/video-dialog";
 import { Sidebar } from "@/app/_components/workspace/sidebar";
 import { FileLabel, TREE_ROW, TREE_ROW_HOVER, TreeList } from "@/app/_components/workspace/tree";
 import { SIDEBAR_WIDTH_STORAGE_KEYS } from "@/lib/board/preferences";
-import type { StoodTreeFile, StoodTreeNode } from "@/lib/stood/tree";
+import type { FileType, StoodTreeFile, StoodTreeNode } from "@/lib/stood/tree";
 
 const DEFAULT_WIDTH = 248;
+// Tipos que já se criam pelo menu; os outros aparecem desabilitados até a etapa de cada um
+const CREATABLE_TYPES = new Set<FileType>(["note", "video"]);
 
 type BoardSidebarProps = {
   stoodId: string;
@@ -109,10 +112,10 @@ export function BoardSidebar({
   );
 }
 
-// Só o Vídeo já cria; os outros tipos aparecem desabilitados até a etapa de cada um
 function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreated: (file: StoodTreeFile) => void }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<FileType | null>(null);
+  const closeDialog = useCallback(() => setDialogType(null), []);
   const containerRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setIsOpen(false), []);
   useDismiss(containerRef, isOpen, close);
@@ -133,7 +136,7 @@ function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreate
       {isOpen && (
         <div role="menu" aria-label="Novo Arquivo" className={`absolute top-11 right-0 left-0 z-10 p-1 ${POPOVER}`}>
           {FILE_TYPE_ORDER.map((type) => {
-            const isEnabled = type === "video";
+            const isEnabled = CREATABLE_TYPES.has(type);
             return (
               <button
                 key={type}
@@ -142,7 +145,7 @@ function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreate
                 disabled={!isEnabled}
                 onClick={() => {
                   setIsOpen(false);
-                  setIsVideoDialogOpen(true);
+                  setDialogType(type);
                 }}
                 className={`${MENU_ITEM} cursor-pointer gap-2 hover:not-disabled:bg-surface-2 ${FOCUS}`}
               >
@@ -155,9 +158,8 @@ function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreate
         </div>
       )}
       {/* Fora do menu, que desmonta ao fechar */}
-      {isVideoDialogOpen && (
-        <VideoDialog stoodId={stoodId} onAdded={onFileCreated} onClose={() => setIsVideoDialogOpen(false)} />
-      )}
+      {dialogType === "video" && <VideoDialog stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />}
+      {dialogType === "note" && <NoteDialog stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />}
     </div>
   );
 }
