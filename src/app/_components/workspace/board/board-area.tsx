@@ -3,7 +3,7 @@
 import type { CSSProperties, PointerEvent, RefObject } from "react";
 import { BoardWindow } from "@/app/_components/workspace/board/board-window";
 import { type BoardPreferences, SPACING_PIXELS } from "@/lib/board/preferences";
-import { type BoardNotes, type BoardState, type Rect, findFrontWindow } from "@/lib/board/windows";
+import { type BoardContents, type BoardState, type Rect, findFrontWindow } from "@/lib/board/windows";
 
 const BACKGROUND_CLASSES = { clean: "", grid: "board-grid", dots: "board-dots" };
 
@@ -16,7 +16,7 @@ type BoardAreaProps = {
   preferences: BoardPreferences;
   outline: Rect | null;
   isCompact: boolean;
-  notes: BoardNotes;
+  contents: BoardContents;
   onBarPointerDown: (fileId: string, event: PointerEvent<HTMLElement>) => void;
   onResizePointerDown: (fileId: string, event: PointerEvent<HTMLElement>) => void;
   onFocus: (fileId: string) => void;
@@ -25,7 +25,7 @@ type BoardAreaProps = {
 };
 
 // Área do Quadro com o fundo e o tema da engrenagem; no celular, as Janelas ficam em coluna
-export function BoardArea({ areaRef, state, preferences, outline, isCompact, notes, ...handlers }: BoardAreaProps) {
+export function BoardArea({ areaRef, state, preferences, outline, isCompact, contents, ...handlers }: BoardAreaProps) {
   const theme = preferences.theme === "site" ? undefined : preferences.theme;
   const front = findFrontWindow(state);
   // O HTML segue a ordem de abertura e a frente sai do z-index, de 1 a 10: mover o nó no meio do clique perderia o clique duplo
@@ -56,7 +56,7 @@ export function BoardArea({ areaRef, state, preferences, outline, isCompact, not
           zIndex={stackOrder.indexOf(window) + 1}
           isActive={window === front}
           isCompact={isCompact}
-          notes={notes}
+          contents={contents}
           onBarPointerDown={(event) => handlers.onBarPointerDown(window.file.id, event)}
           onResizePointerDown={(event) => handlers.onResizePointerDown(window.file.id, event)}
           onFocus={() => handlers.onFocus(window.file.id)}

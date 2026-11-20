@@ -14,7 +14,8 @@ const MAX_STORED_PIXELS = 20_000;
 export const DEFAULT_WINDOW_SIZES: Record<FileType, Size> = {
   video: { width: 460, height: 300 },
   note: { width: 380, height: 380 },
-  drawing: { width: 440, height: 300 },
+  // A barra de ferramentas ocupa uma linha, então o Desenho abre maior
+  drawing: { width: 520, height: 400 },
   image: { width: 320, height: 240 },
   pdf: { width: 340, height: 380 },
 };
@@ -24,8 +25,8 @@ export type Size = { width: number; height: number };
 export type Rect = Point & Size;
 export type BoardFile = { id: string; type: FileType; name: string; videoId?: string };
 
-// Texto das Notas do Quadro, guardado fora do estado para digitar não redesenhar as outras Janelas
-export type BoardNotes = { getContent: (fileId: string) => string; setContent: (fileId: string, content: string) => void };
+// Conteúdo das Notas e Desenhos do Quadro, guardado fora do estado para editar não redesenhar as outras Janelas
+export type BoardContents = { getContent: (fileId: string) => string; setContent: (fileId: string, content: string) => void };
 
 // restoreRect guarda posição e tamanho enquanto a Janela está maximizada; z é a ordem de empilhamento, maior na frente
 export type BoardWindow = { file: BoardFile; rect: Rect; restoreRect: Rect | null; z: number };

@@ -6,7 +6,7 @@ import { useDismiss } from "@/app/_components/dismiss";
 import { BUTTON, FOCUS, ICON_BUTTON, MENU_ITEM, POPOVER } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FILE_TYPE_ORDER, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
 import { ImageDialog } from "@/app/_components/workspace/board/image-dialog";
-import { NoteDialog } from "@/app/_components/workspace/board/note-dialog";
+import { NamedFileDialog } from "@/app/_components/workspace/board/named-file-dialog";
 import { VideoDialog } from "@/app/_components/workspace/board/video-dialog";
 import { Sidebar } from "@/app/_components/workspace/sidebar";
 import { FileLabel, TREE_ROW, TREE_ROW_HOVER, TreeList } from "@/app/_components/workspace/tree";
@@ -15,7 +15,7 @@ import type { FileType, StoodTreeFile, StoodTreeNode } from "@/lib/stood/tree";
 
 const DEFAULT_WIDTH = 248;
 // Tipos que já se criam pelo menu; os outros aparecem desabilitados até a etapa de cada um
-const CREATABLE_TYPES = new Set<FileType>(["note", "video", "image"]);
+const CREATABLE_TYPES = new Set<FileType>(["note", "drawing", "video", "image"]);
 
 type BoardSidebarProps = {
   stoodId: string;
@@ -160,7 +160,9 @@ function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreate
       )}
       {/* Fora do menu, que desmonta ao fechar */}
       {dialogType === "video" && <VideoDialog stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />}
-      {dialogType === "note" && <NoteDialog stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />}
+      {(dialogType === "note" || dialogType === "drawing") && (
+        <NamedFileDialog type={dialogType} stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />
+      )}
       {dialogType === "image" && <ImageDialog stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />}
     </div>
   );

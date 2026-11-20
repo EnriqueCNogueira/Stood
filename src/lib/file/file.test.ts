@@ -2,12 +2,15 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { fileBlobs, files } from "@/db/schema";
+import { EMPTY_DRAWING_CONTENT, MAX_DRAWING_LENGTH, buildDrawingContent } from "@/lib/drawing/scene";
 import {
+  createDrawingFile,
   createImageFile,
   createNoteFile,
   createVideoFile,
   findImage,
-  getStoodNoteContents,
+  getStoodEditableContents,
+  updateDrawingContent,
   updateNoteContent,
 } from "@/lib/file/file";
 import { MAX_IMAGE_BYTES } from "@/lib/file/image";
@@ -358,15 +361,20 @@ describe("updateNoteContent", () => {
   });
 });
 
-describe("getStoodNoteContents", () => {
-  it("devolve o texto de cada Nota do Stood, pelo id", async () => {
+describe("getStoodEditableContents", () => {
+  it("devolve o conteúdo de cada Nota e Desenho do Stood, pelo id", async () => {
     const ownerId = await createUser();
     const stood = await createStood(ownerId, "Cálculo I");
     const folder = await createFolder(ownerId, stood.id);
     const root = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "# Limites" });
     const nested = await createFile(ownerId, stood.id, { type: "note", name: "Aula", content: "", folderId: folder.id });
+    const drawing = await createFile(ownerId, stood.id, { type: "drawing", name: "Gráfico", content: EMPTY_DRAWING_CONTENT });
 
-    await expect(getStoodNoteContents(ownerId, stood.id)).resolves.toEqual({ [root.id]: "# Limites", [nested.id]: "" });
+    await expect(getStoodEditableContents(ownerId, stood.id)).resolves.toEqual({
+      [root.id]: "# Limites",
+      [nested.id]: "",
+      [drawing.id]: EMPTY_DRAWING_CONTENT,
+    });
   });
 
   it("deixa de fora os outros tipos e os outros Stoods", async () => {
@@ -376,22 +384,119 @@ describe("getStoodNoteContents", () => {
     await createFile(ownerId, stood.id, { type: "video", name: "Aula 1", content: VIDEO_ID });
     await createFile(ownerId, otherStood.id, { type: "note", name: "Resumo", content: "# Vetores" });
 
-    await expect(getStoodNoteContents(ownerId, stood.id)).resolves.toEqual({});
+    await expect(getStoodEditableContents(ownerId, stood.id)).resolves.toEqual({});
   });
 
-  it("não devolve as Notas do Stood de outro Usuário", async () => {
+  it("não devolve o conteúdo do Stood de outro Usuário", async () => {
     const otherId = await createUser();
     const otherStood = await createStood(otherId, "Cálculo I");
     await createFile(otherId, otherStood.id, { type: "note", name: "Resumo", content: "# Limites" });
     const ownerId = await createUser();
 
-    await expect(getStoodNoteContents(ownerId, otherStood.id)).resolves.toEqual({});
+    await expect(getStoodEditableContents(ownerId, otherStood.id)).resolves.toEqual({});
   });
 
   it("devolve vazio para id que não é uuid", async () => {
     const ownerId = await createUser();
 
-    await expect(getStoodNoteContents(ownerId, "nao-e-uuid")).resolves.toEqual({});
+    await expect(getStoodEditableContents(ownerId, "nao-e-uuid")).resolves.toEqual({});
+  });
+});
+
+describe("createDrawingFile", () => {
+  it("cria o Desenho vazio na raiz do Stood", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+
+    const result = await createDrawingFile(ownerId, { stoodId: stood.id, name: "Gráfico" });
+
+    expect(result.ok && (await getFileRow(result.file.id))).toEqual({
+      ownerId,
+      stoodId: stood.id,
+      folderId: null,
+      type: "drawing",
+      name: "Gráfico",
+      content: EMPTY_DRAWING_CONTENT,
+    });
+  });
+
+  it("devolve o Arquivo no formato da árvore da barra lateral", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+
+    await expect(createDrawingFile(ownerId, { stoodId: stood.id, name: "Gráfico" })).resolves.toStrictEqual({
+      ok: true,
+      file: { kind: "file", id: expect.any(String), name: "Gráfico", type: "drawing" },
+    });
+  });
+
+  it("recusa nome de outro Desenho do Stood", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    await createDrawingFile(ownerId, { stoodId: stood.id, name: "Gráfico" });
+
+    await expect(createDrawingFile(ownerId, { stoodId: stood.id, name: "GRÁFICO" })).resolves.toEqual({
+      ok: false,
+      reason: "nome-repetido",
+    });
+  });
+});
+
+describe("updateDrawingContent", () => {
+  const SCENE_CONTENT = buildDrawingContent({
+    version: 1,
+    elements: [{ kind: "line", id: "a", start: { x: 0, y: 0 }, end: { x: 10, y: 10 }, color: "ink", strokeWidth: 2 }],
+  });
+
+  it("grava a cena do Desenho", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const drawing = await createFile(ownerId, stood.id, { type: "drawing", name: "Gráfico", content: EMPTY_DRAWING_CONTENT });
+
+    const result = await updateDrawingContent(ownerId, { fileId: drawing.id, content: SCENE_CONTENT });
+
+    expect({ result, content: (await getFileRow(drawing.id)).content }).toEqual({ result: { ok: true }, content: SCENE_CONTENT });
+  });
+
+  it.each([
+    ["fora do formato", JSON.stringify({ version: 1, elements: [{ kind: "star" }] })],
+    ["acima do limite de tamanho", `${" ".repeat(MAX_DRAWING_LENGTH)}${EMPTY_DRAWING_CONTENT}`],
+  ])("recusa cena %s sem gravar", async (_case, content) => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const drawing = await createFile(ownerId, stood.id, { type: "drawing", name: "Gráfico", content: EMPTY_DRAWING_CONTENT });
+
+    const result = await updateDrawingContent(ownerId, { fileId: drawing.id, content });
+
+    expect({ result, content: (await getFileRow(drawing.id)).content }).toEqual({
+      result: { ok: false, reason: "desenho-invalido" },
+      content: EMPTY_DRAWING_CONTENT,
+    });
+  });
+
+  it("não grava no Desenho de outro Usuário", async () => {
+    const otherId = await createUser();
+    const otherStood = await createStood(otherId, "Cálculo I");
+    const drawing = await createFile(otherId, otherStood.id, { type: "drawing", name: "Gráfico", content: EMPTY_DRAWING_CONTENT });
+    const ownerId = await createUser();
+
+    const result = await updateDrawingContent(ownerId, { fileId: drawing.id, content: SCENE_CONTENT });
+
+    expect({ result, content: (await getFileRow(drawing.id)).content }).toEqual({
+      result: { ok: false, reason: "desenho-nao-encontrado" },
+      content: EMPTY_DRAWING_CONTENT,
+    });
+  });
+
+  it("não grava a cena numa Nota", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const note = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "# Limites" });
+
+    await expect(updateDrawingContent(ownerId, { fileId: note.id, content: SCENE_CONTENT })).resolves.toEqual({
+      ok: false,
+      reason: "desenho-nao-encontrado",
+    });
   });
 });
 

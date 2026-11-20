@@ -1,10 +1,11 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { type FileType, fileBlobs, files } from "@/db/schema";
 import { isConstraintViolation } from "@/lib/constraint";
+import { EMPTY_DRAWING_CONTENT, MAX_DRAWING_LENGTH, parseDrawingScene } from "@/lib/drawing/scene";
 import { type ImageType, MAX_IMAGE_BYTES, parseImageType } from "@/lib/file/image";
 import { MAX_NOTE_LENGTH } from "@/lib/file/note";
 import { type NameReason, validateName } from "@/lib/stood/details";
@@ -19,9 +20,14 @@ export type CreateNoteFileResult = CreateRootFileResult;
 export type CreateImageFileResult =
   | CreateRootFileResult
   | { ok: false; reason: "imagem-vazia" | "imagem-grande" | "formato-nao-suportado" };
+export type CreateDrawingFileResult = CreateRootFileResult;
 export type UpdateNoteContentResult = { ok: true } | { ok: false; reason: "nota-longa" | "nota-nao-encontrada" };
+export type UpdateDrawingContentResult = { ok: true } | { ok: false; reason: "desenho-invalido" | "desenho-nao-encontrado" };
 
 type RootFileInput = { stoodId: string; name: string };
+// Tipos que o Usuário edita na Janela e salvam sozinhos
+const EDITABLE_TYPES = ["note", "drawing"] as const satisfies FileType[];
+type EditableType = (typeof EDITABLE_TYPES)[number];
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type InsertExtra = (tx: Transaction, fileId: string) => Promise<unknown>;
 
@@ -73,7 +79,10 @@ export async function findImage(ownerId: string, fileId: string): Promise<{ mime
   return image ? { mimeType: image.mimeType as ImageType, data: image.data } : undefined;
 }
 
-// O filtro de tipo impede que o texto sobrescreva o id de um Vídeo ou a cena de um Desenho
+export async function createDrawingFile(ownerId: string, input: RootFileInput): Promise<CreateDrawingFileResult> {
+  return createRootFile(ownerId, input, "drawing", EMPTY_DRAWING_CONTENT);
+}
+
 export async function updateNoteContent(
   ownerId: string,
   input: { fileId: string; content: string },
@@ -81,23 +90,42 @@ export async function updateNoteContent(
   if (!isUuid(input.fileId)) return { ok: false, reason: "nota-nao-encontrada" };
   if (input.content.length > MAX_NOTE_LENGTH) return { ok: false, reason: "nota-longa" };
 
-  const updated = await db
-    .update(files)
-    .set({ content: input.content })
-    .where(and(eq(files.id, input.fileId), eq(files.ownerId, ownerId), eq(files.type, "note")))
-    .returning({ id: files.id });
-  return updated.length > 0 ? { ok: true } : { ok: false, reason: "nota-nao-encontrada" };
+  const isUpdated = await updateEditableContent(ownerId, input.fileId, "note", input.content);
+  return isUpdated ? { ok: true } : { ok: false, reason: "nota-nao-encontrada" };
 }
 
-// Texto de todas as Notas do Stood, pelo id do Arquivo, para o Quadro abrir as Janelas sem nova consulta
-export async function getStoodNoteContents(ownerId: string, stoodId: string): Promise<Record<string, string>> {
+// Só grava cena no formato do editor: um JSON qualquer quebraria o Desenho ao abrir
+export async function updateDrawingContent(
+  ownerId: string,
+  input: { fileId: string; content: string },
+): Promise<UpdateDrawingContentResult> {
+  if (!isUuid(input.fileId)) return { ok: false, reason: "desenho-nao-encontrado" };
+  const isValidScene = input.content.length <= MAX_DRAWING_LENGTH && parseDrawingScene(input.content) !== undefined;
+  if (!isValidScene) return { ok: false, reason: "desenho-invalido" };
+
+  const isUpdated = await updateEditableContent(ownerId, input.fileId, "drawing", input.content);
+  return isUpdated ? { ok: true } : { ok: false, reason: "desenho-nao-encontrado" };
+}
+
+// Conteúdo das Notas e Desenhos do Stood, pelo id do Arquivo, para o Quadro abrir as Janelas sem nova consulta
+export async function getStoodEditableContents(ownerId: string, stoodId: string): Promise<Record<string, string>> {
   if (!isUuid(stoodId)) return {};
 
   const rows = await db
     .select({ id: files.id, content: files.content })
     .from(files)
-    .where(and(eq(files.ownerId, ownerId), eq(files.stoodId, stoodId), eq(files.type, "note")));
+    .where(and(eq(files.ownerId, ownerId), eq(files.stoodId, stoodId), inArray(files.type, EDITABLE_TYPES)));
   return Object.fromEntries(rows.map((row) => [row.id, row.content ?? ""]));
+}
+
+// O filtro de tipo impede que o texto de uma Nota sobrescreva o id de um Vídeo ou a cena de um Desenho
+async function updateEditableContent(ownerId: string, fileId: string, type: EditableType, content: string) {
+  const updated = await db
+    .update(files)
+    .set({ content })
+    .where(and(eq(files.id, fileId), eq(files.ownerId, ownerId), eq(files.type, type)))
+    .returning({ id: files.id });
+  return updated.length > 0;
 }
 
 // Arquivo novo na raiz do Stood; a FK composta garante no banco que o Stood é do dono.

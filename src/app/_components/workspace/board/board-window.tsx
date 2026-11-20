@@ -3,20 +3,21 @@
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { type PointerEvent, useState } from "react";
 import { ICON_BUTTON } from "@/app/_components/ui";
+import { DrawingEditor } from "@/app/_components/workspace/board/drawing-editor";
 import { NoteEditor } from "@/app/_components/workspace/board/note-editor";
 import { FILE_TYPE_LABELS, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
-import { type BoardFile, type BoardNotes, type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
+import { type BoardFile, type BoardContents, type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
 import { buildImageUrl } from "@/lib/file/image";
 import { buildYouTubeEmbedUrl } from "@/lib/video/link";
 
-const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-75" };
+const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-110" };
 
 type BoardWindowProps = {
   window: BoardWindowState;
   zIndex: number;
   isActive: boolean;
   isCompact: boolean;
-  notes: BoardNotes;
+  contents: BoardContents;
   onBarPointerDown: (event: PointerEvent<HTMLElement>) => void;
   onResizePointerDown: (event: PointerEvent<HTMLElement>) => void;
   onFocus: () => void;
@@ -24,13 +25,13 @@ type BoardWindowProps = {
   onClose: () => void;
 };
 
-// Janela com barra, botões de maximizar e fechar e canto de redimensionar; Vídeo, Nota e Imagem funcionam, os outros tipos ainda são placeholder
+// Janela com barra, botões de maximizar e fechar e canto de redimensionar; o PDF ainda é placeholder
 export function BoardWindow({
   window,
   zIndex,
   isActive,
   isCompact,
-  notes,
+  contents,
   onBarPointerDown,
   onResizePointerDown,
   onFocus,
@@ -80,7 +81,7 @@ export function BoardWindow({
         </button>
       </header>
 
-      <WindowContent file={file} notes={notes} />
+      <WindowContent file={file} contents={contents} />
 
       {!isCompact && !maximized && (
         <div
@@ -96,14 +97,24 @@ export function BoardWindow({
 }
 
 // O iframe fica montado enquanto a Janela está aberta: mover, redimensionar e maximizar não param o vídeo
-function WindowContent({ file, notes }: { file: BoardFile; notes: BoardNotes }) {
+function WindowContent({ file, contents }: { file: BoardFile; contents: BoardContents }) {
   if (file.type === "note") {
     return (
       <NoteEditor
         fileId={file.id}
         name={file.name}
-        initialContent={notes.getContent(file.id)}
-        onContentChange={(content) => notes.setContent(file.id, content)}
+        initialContent={contents.getContent(file.id)}
+        onContentChange={(content) => contents.setContent(file.id, content)}
+      />
+    );
+  }
+  if (file.type === "drawing") {
+    return (
+      <DrawingEditor
+        fileId={file.id}
+        name={file.name}
+        initialContent={contents.getContent(file.id)}
+        onContentChange={(content) => contents.setContent(file.id, content)}
       />
     );
   }
