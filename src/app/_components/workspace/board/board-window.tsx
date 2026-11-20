@@ -1,18 +1,23 @@
 "use client";
 
 import { Maximize2, Minimize2, X } from "lucide-react";
-import type { PointerEvent } from "react";
+import { type PointerEvent, useState } from "react";
 import { ICON_BUTTON } from "@/app/_components/ui";
+import { DrawingEditor } from "@/app/_components/workspace/board/drawing-editor";
+import { NoteEditor } from "@/app/_components/workspace/board/note-editor";
 import { FILE_TYPE_LABELS, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
-import { type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
+import { type BoardFile, type BoardContents, type BoardWindow as BoardWindowState, isMaximized } from "@/lib/board/windows";
+import { buildImageUrl } from "@/lib/file/image";
+import { buildYouTubeEmbedUrl } from "@/lib/video/link";
 
-const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-75" };
+const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-110" };
 
 type BoardWindowProps = {
   window: BoardWindowState;
   zIndex: number;
   isActive: boolean;
   isCompact: boolean;
+  contents: BoardContents;
   onBarPointerDown: (event: PointerEvent<HTMLElement>) => void;
   onResizePointerDown: (event: PointerEvent<HTMLElement>) => void;
   onFocus: () => void;
@@ -20,12 +25,13 @@ type BoardWindowProps = {
   onClose: () => void;
 };
 
-// Janela com barra, botões de maximizar e fechar e canto de redimensionar; o conteúdo é um placeholder do tipo
+// Janela com barra, botões de maximizar e fechar e canto de redimensionar; o PDF ainda é placeholder
 export function BoardWindow({
   window,
   zIndex,
   isActive,
   isCompact,
+  contents,
   onBarPointerDown,
   onResizePointerDown,
   onFocus,
@@ -40,6 +46,8 @@ export function BoardWindow({
     <section
       aria-label={`${FILE_TYPE_LABELS[file.type]}: ${file.name}`}
       onPointerDown={onFocus}
+      // Foco por teclado, no texto da Nota ou no player do Vídeo também traz a Janela para a frente
+      onFocus={onFocus}
       style={isCompact ? undefined : { left: rect.x, top: rect.y, width: rect.width, height: rect.height, zIndex }}
       className={`${position} flex flex-col overflow-hidden rounded-lg border bg-surface text-text shadow-card ${
         isActive && !isCompact ? "border-accent/70 ring-3 ring-accent/12" : "border-border"
@@ -73,11 +81,7 @@ export function BoardWindow({
         </button>
       </header>
 
-      <div className="grid min-h-0 flex-1 place-content-center justify-items-center gap-2 p-4 text-center">
-        <FileTypeIcon type={file.type} size={32} />
-        <strong className="max-w-full truncate font-medium">{file.name}</strong>
-        <span className="font-mono text-meta text-text-muted">{FILE_TYPE_LABELS[file.type]}</span>
-      </div>
+      <WindowContent file={file} contents={contents} />
 
       {!isCompact && !maximized && (
         <div
@@ -89,6 +93,73 @@ export function BoardWindow({
         </div>
       )}
     </section>
+  );
+}
+
+// O iframe fica montado enquanto a Janela está aberta: mover, redimensionar e maximizar não param o vídeo
+function WindowContent({ file, contents }: { file: BoardFile; contents: BoardContents }) {
+  if (file.type === "note") {
+    return (
+      <NoteEditor
+        fileId={file.id}
+        name={file.name}
+        initialContent={contents.getContent(file.id)}
+        onContentChange={(content) => contents.setContent(file.id, content)}
+      />
+    );
+  }
+  if (file.type === "drawing") {
+    return (
+      <DrawingEditor
+        fileId={file.id}
+        name={file.name}
+        initialContent={contents.getContent(file.id)}
+        onContentChange={(content) => contents.setContent(file.id, content)}
+      />
+    );
+  }
+  if (file.type === "image") return <ImageView file={file} />;
+  if (file.type === "video" && file.videoId) {
+    return (
+      <iframe
+        src={buildYouTubeEmbedUrl(file.videoId)}
+        title={file.name}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        // O YouTube recusa o player sem a origem do site que o incorpora
+        referrerPolicy="strict-origin-when-cross-origin"
+        className="min-h-0 w-full flex-1 bg-bg"
+      />
+    );
+  }
+
+  return (
+    <div className="grid min-h-0 flex-1 place-content-center justify-items-center gap-2 p-4 text-center">
+      <FileTypeIcon type={file.type} size={32} />
+      <strong className="max-w-full truncate font-medium">{file.name}</strong>
+      <span className="font-mono text-meta text-text-muted">{FILE_TYPE_LABELS[file.type]}</span>
+    </div>
+  );
+}
+
+// A Imagem cabe inteira na Janela, sem cortar; draggable desligado para não brigar com o arrasto do Quadro
+function ImageView({ file }: { file: BoardFile }) {
+  const [hasFailed, setHasFailed] = useState(false);
+  if (hasFailed) {
+    return (
+      <p role="alert" className="grid min-h-0 flex-1 place-content-center p-4 text-center text-ui text-danger">
+        Não foi possível carregar a Imagem.
+      </p>
+    );
+  }
+  return (
+    <img
+      src={buildImageUrl(file.id)}
+      alt={file.name}
+      draggable={false}
+      onError={() => setHasFailed(true)}
+      className="min-h-0 w-full flex-1 bg-bg object-contain select-none"
+    />
   );
 }
 
