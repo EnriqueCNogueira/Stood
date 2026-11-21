@@ -34,6 +34,7 @@ import {
   isMaximized,
   isSameRect,
 } from "@/lib/board/windows";
+import type { ActiveFocus } from "@/lib/pomodoro/pomodoro";
 import type { StoodDetails } from "@/lib/stood/details";
 import type { StoodTreeFile, StoodWithTree } from "@/lib/stood/tree";
 
@@ -58,7 +59,9 @@ type Drag =
 type DragArea = { left: number; top: number; context: BoardContext; liveContext: BoardContext };
 
 // Raiz do Quadro: guarda as Janelas, que não são salvas, e liga a barra, a lateral e a área
-export function Board({ stood }: { stood: StoodWithTree }) {
+type BoardProps = { stood: StoodWithTree; activeFocus: ActiveFocus | null; serverNow: number };
+
+export function Board({ stood, activeFocus, serverNow }: BoardProps) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
   const [state, setState] = useState<BoardState>({ windows: [] });
   const stateRef = useRef(state);
@@ -257,6 +260,8 @@ export function Board({ stood }: { stood: StoodWithTree }) {
           stoodId={stood.id}
           details={details}
           counts={buildWindowCounts(state)}
+          activeFocus={activeFocus}
+          serverNow={serverNow}
           onDetailsSaved={setDetails}
           onOpenDrawer={() => setIsDrawerOpen(true)}
         />
