@@ -35,7 +35,10 @@ export default function PrivacyPage() {
             <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa.
           </li>
           <li>
-            <strong>Preferências da tela:</strong> o tema do site, a largura e o estado das barras laterais e as opções do Quadro (fundo, grade e tema) ficam só no seu navegador (localStorage) e não são enviados para nós.
+            <strong>Pomodoro:</strong> cada Foco que você faz, com o horário de início, a duração, a hora em que foi interrompido e o Stood em que começou, e a Meta semanal, se você definir uma.
+          </li>
+          <li>
+            <strong>Preferências da tela:</strong> o tema do site, a largura e o estado das barras laterais, as opções do Quadro (fundo, grade e tema), as durações e o som do Pomodoro e a Pausa em andamento ficam só no seu navegador (localStorage) e não são enviados para nós.
           </li>
         </LegalList>
         <p>Não usamos ferramentas de análise, rastreamento ou publicidade.</p>
@@ -46,6 +49,7 @@ export default function PrivacyPage() {
           <li>Identificar você ao entrar e manter a sua sessão.</li>
           <li>Enviar e-mails de confirmação de cadastro e de troca de senha.</li>
           <li>Guardar e mostrar os seus Stoods, só para você.</li>
+          <li>Mostrar o seu Tempo estudado na semana, no total e em cada Stood, e o progresso da Meta semanal.</li>
           <li>Proteger o serviço contra abuso, como tentativas repetidas de login.</li>
         </LegalList>
         <p>A base legal é a execução do serviço que você pediu ao criar a sua Conta (art. 7º, V, da LGPD). Não vendemos nem alugamos dados pessoais.</p>
