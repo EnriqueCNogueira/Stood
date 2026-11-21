@@ -1,11 +1,11 @@
 import "server-only";
 
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@/db";
 import { FILE_TYPES, type FileType, files, folders, stoods } from "@/db/schema";
 import { type StoodDetailsReason, validateStoodDetails } from "@/lib/stood/details";
 import { type StoodWithTree, buildSortedByName, buildStoodTree } from "@/lib/stood/tree";
+import { isUuid } from "@/lib/uuid";
 
 type RecentStood = {
   id: string;
@@ -25,7 +25,6 @@ type StoodDetailsInput = { name: string; description: string };
 const UNIQUE_VIOLATION = "23505";
 const NAME_UNIQUE_CONSTRAINT = "stoods_owner_id_name_unique";
 const RECENT_STOODS_LIMIT = 3;
-const uuidSchema = z.uuid();
 
 export async function createStood(ownerId: string, input: StoodDetailsInput): Promise<CreateStoodResult> {
   const validation = validateStoodDetails(input);
@@ -148,10 +147,6 @@ function buildFileCounts(rows: { type: FileType; total: number }[]): Record<File
   const counts = Object.fromEntries(FILE_TYPES.map((type) => [type, 0])) as Record<FileType, number>;
   for (const row of rows) counts[row.type] = row.total;
   return counts;
-}
-
-function isUuid(value: string) {
-  return uuidSchema.safeParse(value).success;
 }
 
 // O Drizzle embrulha o erro do pg em cause; só a violação do nome único vira Result

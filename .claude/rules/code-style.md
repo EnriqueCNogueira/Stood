@@ -28,6 +28,7 @@ Vocabulário fechado. Operação que não cabe usa um verbo novo, que entra nest
 | `upsert` | Insere ou atualiza |
 | `delete` | Apaga |
 | `revoke` | Invalida |
+| `interrupt` | Encerra antes do fim previsto o que estava em andamento (`interruptFocus`) |
 | `validate` | Devolve ok ou erro |
 | `parse` | Transforma texto em estrutura |
 | `build` | Monta um valor sem I/O |
