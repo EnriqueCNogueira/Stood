@@ -62,6 +62,28 @@ _Evitar_: Documento, slides
 Um Arquivo que aponta para um vídeo do YouTube.
 _Evitar_: Link, aula, YouTube
 
+### Pomodoro
+
+**Pomodoro**:
+A ferramenta do Quadro que cronometra o estudo do Usuário, alternando Focos e Pausas.
+_Evitar_: Timer, cronômetro
+
+**Foco**:
+Um período cronometrado de estudo no Pomodoro, começado dentro de um Stood, que conta como Tempo estudado. O Usuário tem no máximo um Foco em andamento.
+_Evitar_: Sessão, bloco, ciclo
+
+**Pausa**:
+O descanso entre dois Focos, que não conta como Tempo estudado.
+_Evitar_: Intervalo, descanso
+
+**Tempo estudado**:
+A soma da duração dos Focos do Usuário num período, como a semana.
+_Evitar_: Horas de estudo, tempo de foco
+
+**Meta semanal**:
+O Tempo estudado que o Usuário quer alcançar em cada semana, de segunda a domingo.
+_Evitar_: Objetivo, alvo
+
 ### GitHub
 
 **Repositório**:
