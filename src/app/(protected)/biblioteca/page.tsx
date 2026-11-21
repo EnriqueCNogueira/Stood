@@ -3,15 +3,21 @@ import { BELOW_HEADER, BUTTON } from "@/app/_components/ui";
 import { LibraryBrain } from "@/app/_components/workspace/library/library-brain";
 import { LibrarySidebar } from "@/app/_components/workspace/library/library-sidebar";
 import { StoodCard } from "@/app/_components/workspace/library/stood-card";
+import { WeekPanel } from "@/app/_components/workspace/library/week-panel";
 import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
 import { requireSession } from "@/lib/auth/session";
 import { buildFirstName, buildRelativeTime } from "@/lib/library/library";
+import { getWeekSummary } from "@/lib/pomodoro/pomodoro";
 import { getLibraryStoods, getRecentStoods } from "@/lib/stood/stood";
 
-// Destino depois do login: os Stoods do Usuário, os abertos por último e a árvore de todos
+// Destino depois do login: a semana de estudo, os Stoods do Usuário, os abertos por último e a árvore de todos
 export default async function LibraryPage() {
   const user = await requireSession();
-  const [library, recent] = await Promise.all([getLibraryStoods(user.id), getRecentStoods(user.id)]);
+  const [library, recent, week] = await Promise.all([
+    getLibraryStoods(user.id),
+    getRecentStoods(user.id),
+    getWeekSummary(user.id),
+  ]);
   const firstName = buildFirstName(user.name);
   const now = new Date();
 
@@ -21,6 +27,8 @@ export default async function LibraryPage() {
 
       <main className="min-w-0 flex-1 px-4 pt-7 pb-16 md:px-12 md:pt-10 2xl:pt-14">
         <h1 className="mb-8 text-3xl font-medium tracking-tight 2xl:text-4xl">{firstName ? `Olá, ${firstName}` : "Olá"}</h1>
+
+        <WeekPanel summary={week} serverNow={now.getTime()} />
 
         <section aria-labelledby="recent-stoods">
           <h2 id="recent-stoods" className="mb-3.5 text-base font-medium">
