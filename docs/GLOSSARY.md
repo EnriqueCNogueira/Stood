@@ -24,6 +24,10 @@ _Evitar_: Estudo, repositório, projeto
 A tela que lista os Stoods do Usuário, aberta depois de entrar.
 _Evitar_: Home, workspace, início
 
+**Matéria**:
+Um Stood global, igual para todos e só leitura, com os Vídeos de uma disciplina. Não pertence a nenhum Usuário: ele cria um Stood a partir da Matéria, e só essa cópia pode ser modificada.
+_Evitar_: Disciplina, curso, template, Stood predefinido
+
 **Quadro**:
 A tela que abre um Stood, em que os Arquivos aparecem em Janelas. 
 _Evitar_: Board, canvas, workspace
