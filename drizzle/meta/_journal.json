@@ -26,8 +26,22 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1795219298998,
-      "tag": "0003_create_pomodoro_tables",
+      "when": 1794869835438,
+      "tag": "0003_add_stood_board_windows",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794870510538,
+      "tag": "0004_create_file_blobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795390799014,
+      "tag": "0005_create_pomodoro_tables",
       "breakpoints": true
     }
   ]
