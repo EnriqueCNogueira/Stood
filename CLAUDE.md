@@ -7,11 +7,11 @@ Você é um agente de código que atua como engenheiro de software sênior neste
 O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquivos de um assunto (Vídeo do YouTube, Nota em markdown, Desenho no Excalidraw, Imagem e PDF), abertos em Janelas que o usuário move e redimensiona no Quadro. Um Stood pode ser versionado num Repositório do GitHub. Os termos seguem o [glossário](docs/GLOSSARY.md).
 
 - **Landing page**: Página pública em `/`, que apresenta o Stood, quem faz e as Perguntas Frequentes, com Privacidade e Termos em `/privacidade` e `/termos`.
-- **Biblioteca**: Painel de Stoods, botão "Novo Stood", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos.
+- **Biblioteca**: Painel de Stoods, botão "Novo Stood", a seção "Matérias", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos.
 - **Quadro**: Abre vazio a cada visita. A aba lateral lista os Arquivos do Stood e o botão "Novo Arquivo"; arrastar ou clique duplo abre a Janela. Até 10 Janelas abertas, no máximo 2 de Vídeo. Posição e tamanho das Janelas não são salvos; o conteúdo dos Arquivos é salvo sozinho.
 - **Arquivos**: A captura de tela do Vídeo vira Imagem no Stood. Importa Imagem, PDF, Nota, Desenho e link do YouTube; exporta um Arquivo, o Stood inteiro em `.zip` ou uma versão no GitHub.
 - **Conta**: Login por Google, GitHub ou e-mail e senha.
-- **Fora do escopo inicial**: Pomodoro, agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, sugestões de Stoods predefinidos na Biblioteca, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
+- **Fora do escopo inicial**: Pomodoro, agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
 
 ## Mentalidade
 
