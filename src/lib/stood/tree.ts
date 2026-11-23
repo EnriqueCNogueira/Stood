@@ -1,4 +1,5 @@
 import type { FileType } from "@/db/schema";
+import type { StoodTag } from "@/lib/tag/rules";
 
 // Árvore de Pastas e Arquivos de um Stood, sem I/O: o client também usa estes tipos
 export type { FileType };
@@ -7,7 +8,13 @@ export type { FileType };
 export type StoodTreeFile = { kind: "file"; id: string; name: string; type: FileType; videoId?: string };
 export type StoodTreeFolder = { kind: "folder"; id: string; name: string; children: StoodTreeNode[] };
 export type StoodTreeNode = StoodTreeFolder | StoodTreeFile;
-export type StoodWithTree = { id: string; name: string; description: string | null; tree: StoodTreeNode[] };
+export type StoodWithTree = {
+  id: string;
+  name: string;
+  description: string | null;
+  tags: StoodTag[];
+  tree: StoodTreeNode[];
+};
 
 type FolderRow = { id: string; name: string; parentId: string | null };
 type FileRow = { id: string; name: string; type: FileType; folderId: string | null; videoId?: string | null };

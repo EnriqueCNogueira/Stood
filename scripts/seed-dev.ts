@@ -1,12 +1,19 @@
-// Seed de dev: cria Stoods com Pastas aninhadas e Arquivos dos 5 tipos, Focos encerrados e a Meta semanal
+// Seed de dev: cria Stoods com Pastas aninhadas, Arquivos dos 5 tipos, Tags, Focos encerrados e a Meta semanal
 // para um Usuário que já existe.
 // Uso: pnpm seed:dev <email>. Só para conferir as telas no navegador; nenhum teste depende dele.
 
 import { existsSync } from "node:fs";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import { type FileType, files, focuses, folders, stoods, users, weeklyGoals } from "../src/db/schema.ts";
+import { type FileType, files, focuses, folders, stoodTags, stoods, tags, users, weeklyGoals } from "../src/db/schema.ts";
+
+// Tags de exemplo e os Stoods que cada uma marca, pelo nome
+const SEED_TAGS: Record<string, string[]> = {
+  Prova: ["Cálculo I", "Física II"],
+  Exatas: ["Cálculo I", "Física II", "Álgebra linear"],
+  "Semestre 1": ["Química geral", "Cálculo I"],
+};
 
 const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
@@ -118,6 +125,7 @@ async function main(email: string | undefined) {
       });
       created++;
     }
+    await createSeedTags(db, user.id);
     const createdFocuses = await createSeedFocuses(db, user.id);
     await db.insert(weeklyGoals).values({ ownerId: user.id, minutes: SEED_WEEKLY_GOAL_MINUTES }).onConflictDoNothing();
     console.log("seed done", { created, skipped: SEED_STOODS.length - created, createdFocuses });
@@ -181,6 +189,32 @@ async function createSeedFocuses(db: ReturnType<typeof drizzle>, ownerId: string
 
   if (rows.length > 0) await db.insert(focuses).values(rows);
   return rows.length;
+}
+
+// Cria as Tags que faltam e marca os Stoods de exemplo; rodar de novo não duplica nada.
+// A Tag é procurada sem diferenciar maiúsculas, como a regra do banco: "prova" já existente vale como "Prova".
+async function createSeedTags(db: ReturnType<typeof drizzle>, ownerId: string) {
+  const tagNames = Object.keys(SEED_TAGS);
+  const stoodNamesByTag = new Map(Object.entries(SEED_TAGS).map(([name, stoodNames]) => [name.toLowerCase(), stoodNames]));
+  await db
+    .insert(tags)
+    .values(tagNames.map((name) => ({ ownerId, name })))
+    .onConflictDoNothing();
+  const tagRows = await db
+    .select({ id: tags.id, name: tags.name })
+    .from(tags)
+    .where(and(eq(tags.ownerId, ownerId), inArray(sql`lower(${tags.name})`, [...stoodNamesByTag.keys()])));
+  const stoodRows = await db
+    .select({ id: stoods.id, name: stoods.name })
+    .from(stoods)
+    .where(and(eq(stoods.ownerId, ownerId), inArray(stoods.name, [...new Set(Object.values(SEED_TAGS).flat())])));
+
+  const links = tagRows.flatMap((tag) =>
+    stoodRows
+      .filter((stood) => stoodNamesByTag.get(tag.name.toLowerCase())?.includes(stood.name))
+      .map((stood) => ({ ownerId, stoodId: stood.id, tagId: tag.id })),
+  );
+  if (links.length > 0) await db.insert(stoodTags).values(links).onConflictDoNothing();
 }
 
 function fail(message: string): never {

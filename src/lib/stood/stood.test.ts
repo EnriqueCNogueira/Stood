@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { stoods } from "@/db/schema";
+import { stoodTags, stoods, tags } from "@/db/schema";
 import {
   createStood,
   findBoardStood,
@@ -11,7 +11,7 @@ import {
   updateStoodLastOpenedAt,
 } from "@/lib/stood/stood";
 import { buildStoodTree } from "@/lib/stood/tree";
-import { createFile, createFolder, createStood as createStoodRow, createUser } from "@/test/db";
+import { createFile, createFolder, createStood as createStoodRow, createTag, createUser } from "@/test/db";
 
 const MS_PER_DAY = 86_400_000;
 const VALID_VIDEO_ID = "dQw4w9WgXcQ";
@@ -298,6 +298,111 @@ describe("findBoardStood", () => {
   });
 });
 
+describe("createStood: Tags", () => {
+  it("grava nome, descrição e Tags juntos, criando a Tag nova só ao salvar", async () => {
+    const ownerId = await createUser();
+    const exams = await createTag(ownerId, "Prova");
+
+    const result = await createStood(ownerId, {
+      name: "Cálculo I",
+      description: "",
+      tags: { tagIds: [exams.id], newTagNames: ["Exatas"] },
+    });
+
+    const stoodId = result.ok ? result.id : "";
+    expect(await getStoodTagNames(stoodId)).toEqual(["Exatas", "Prova"]);
+  });
+
+  it("não grava o Stood quando as Tags são recusadas", async () => {
+    const ownerId = await createUser();
+    const ownedTags = await db
+      .insert(tags)
+      .values(Array.from({ length: 11 }, (_, index) => ({ ownerId, name: `Tag ${index + 1}` })))
+      .returning({ id: tags.id });
+
+    const result = await createStood(ownerId, {
+      name: "Cálculo I",
+      description: "",
+      tags: { tagIds: ownedTags.map((tag) => tag.id), newTagNames: [] },
+    });
+
+    expect(result).toEqual({ ok: false, reason: "limite-de-tags-do-stood" });
+    expect(await db.select().from(stoods).where(eq(stoods.ownerId, ownerId))).toEqual([]);
+  });
+});
+
+describe("updateStood: Tags", () => {
+  it("troca as Tags junto com nome e descrição e devolve as Tags salvas", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo")).id;
+    await createTag(ownerId, "Prova", [stoodId]);
+    const sciences = await createTag(ownerId, "Exatas");
+
+    const result = await updateStood(ownerId, stoodId, {
+      name: "Cálculo I",
+      description: "",
+      tags: { tagIds: [sciences.id], newTagNames: [] },
+    });
+
+    expect(result).toEqual({ ok: true, tags: [{ id: sciences.id, name: "Exatas" }] });
+    expect([(await getStoodRow(stoodId)).name, await getStoodTagNames(stoodId)]).toEqual(["Cálculo I", ["Exatas"]]);
+  });
+
+  it("não troca nome nem descrição quando as Tags são recusadas", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo")).id;
+
+    const result = await updateStood(ownerId, stoodId, {
+      name: "Cálculo I",
+      description: "",
+      tags: { tagIds: [], newTagNames: ["a".repeat(31)] },
+    });
+
+    expect(result).toEqual({ ok: false, reason: "nome-da-tag-longo" });
+    expect((await getStoodRow(stoodId)).name).toBe("Cálculo");
+  });
+
+  it("não marca Tags no Stood de outro Usuário", async () => {
+    const otherId = await createUser();
+    const stoodId = (await createStoodRow(otherId, "Cálculo I")).id;
+    const ownerId = await createUser();
+
+    const result = await updateStood(ownerId, stoodId, {
+      name: "Cálculo I",
+      description: "",
+      tags: { tagIds: [], newTagNames: ["Prova"] },
+    });
+
+    expect(result).toEqual({ ok: false, reason: "stood-nao-encontrado" });
+    expect(await getStoodTagNames(stoodId)).toEqual([]);
+  });
+});
+
+describe("listas de Stoods: Tags", () => {
+  it("devolvem as Tags de cada Stood em ordem alfabética", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+    await createTag(ownerId, "Prova", [stoodId]);
+    await createTag(ownerId, "Exatas", [stoodId]);
+    const expectedTags = [{ name: "Exatas" }, { name: "Prova" }];
+
+    const [library, recent, board] = await Promise.all([
+      getLibraryStoods(ownerId),
+      getRecentStoods(ownerId),
+      findBoardStood(ownerId, stoodId),
+    ]);
+
+    expect([library[0].tags, recent[0].tags, board?.tags]).toMatchObject([expectedTags, expectedTags, expectedTags]);
+  });
+
+  it("devolvem lista vazia para o Stood sem Tags", async () => {
+    const ownerId = await createUser();
+    const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
+
+    await expect(findBoardStood(ownerId, stoodId)).resolves.toMatchObject({ tags: [] });
+  });
+});
+
 describe("updateStoodLastOpenedAt", () => {
   it("grava a hora de abertura", async () => {
     const ownerId = await createUser();
@@ -380,6 +485,15 @@ describe("buildStoodTree", () => {
     expect(buildStoodTree([], [])).toEqual([]);
   });
 });
+
+async function getStoodTagNames(stoodId: string) {
+  const rows = await db
+    .select({ name: tags.name })
+    .from(stoodTags)
+    .innerJoin(tags, eq(tags.id, stoodTags.tagId))
+    .where(eq(stoodTags.stoodId, stoodId));
+  return rows.map((row) => row.name).sort();
+}
 
 async function getStoodRow(stoodId: string) {
   const [stood] = await db.select().from(stoods).where(eq(stoods.id, stoodId)).limit(1);

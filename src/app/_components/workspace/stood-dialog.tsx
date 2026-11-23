@@ -4,19 +4,22 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, type ReactNode, useId, useRef, useState, useTransition } from "react";
 import { FormMessage } from "@/app/_components/auth/auth-card";
-import { BUTTON, FIELD, FIELD_LABEL, ICON_BUTTON, INPUT } from "@/app/_components/ui";
+import { BUTTON, DIALOG, FIELD, FIELD_LABEL, ICON_BUTTON, INPUT } from "@/app/_components/ui";
 import {
   type CreateStoodActionResult,
   type UpdateStoodActionResult,
   createStoodAction,
   updateStoodAction,
 } from "@/app/_components/workspace/stood-actions";
+import { TagField, type TagSelection } from "@/app/_components/workspace/tag-field";
+import { TAG_REASON_MESSAGES } from "@/app/_components/workspace/tag-messages";
 import {
   MAX_DESCRIPTION_LENGTH,
   MAX_NAME_LENGTH,
   type StoodDetails,
   validateStoodDetails,
 } from "@/lib/stood/details";
+import type { StoodTag } from "@/lib/tag/rules";
 
 const UNEXPECTED_MESSAGE = "Não foi possível salvar. Tente de novo.";
 
@@ -31,37 +34,55 @@ const REASON_MESSAGES: Record<DialogReason, string> = {
   "nome-repetido": "Você já tem um Stood com esse nome.",
   "descricao-longa": `A descrição pode ter até ${MAX_DESCRIPTION_LENGTH} caracteres.`,
   "stood-nao-encontrado": "Este Stood não existe mais.",
+  "nome-da-tag-vazio": TAG_REASON_MESSAGES["nome-da-tag-vazio"],
+  "nome-da-tag-longo": TAG_REASON_MESSAGES["nome-da-tag-longo"],
+  "limite-de-tags": TAG_REASON_MESSAGES["limite-de-tags"],
+  "limite-de-tags-do-stood": TAG_REASON_MESSAGES["limite-de-tags-do-stood"],
   "entrada-invalida": UNEXPECTED_MESSAGE,
   inesperado: UNEXPECTED_MESSAGE,
 };
 
+const TAG_REASONS = new Set<DialogReason>(["nome-da-tag-vazio", "nome-da-tag-longo", "limite-de-tags", "limite-de-tags-do-stood"]);
+
 type StoodDialogProps = {
   triggerClassName: string;
   triggerLabel?: string;
+  // Tags do dono, para as sugestões do campo de Tags
+  allTags: StoodTag[];
   children: ReactNode;
 } & (
   | { mode: "create" }
-  | { mode: "edit"; stoodId: string; details: StoodDetails; onSaved: (details: StoodDetails) => void }
+  | {
+      mode: "edit";
+      stoodId: string;
+      details: StoodDetails;
+      tags: StoodTag[];
+      onSaved: (details: StoodDetails, tags: StoodTag[]) => void;
+    }
 );
 
-// Diálogo de nome e descrição: "Novo Stood" na Biblioteca e "Editar" no Quadro; mantém o que foi digitado quando há erro
+// Diálogo de nome, descrição e Tags: "Novo Stood" na Biblioteca e "Editar" no Quadro; mantém o que foi digitado quando há erro
 export function StoodDialog(props: StoodDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const errorId = useId();
   const initial = props.mode === "edit" ? props.details : { name: "", description: null };
+  const initialTags = props.mode === "edit" ? props.tags : [];
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description ?? "");
+  const [selection, setSelection] = useState<TagSelection>({ tags: initialTags, newNames: [] });
   const [reason, setReason] = useState<DialogReason | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const title = props.mode === "create" ? "Novo Stood" : "Editar Stood";
-  const isNameError = reason !== null && reason.startsWith("nome");
+  const isNameError = reason !== null && reason.startsWith("nome-") && !TAG_REASONS.has(reason);
   const isDescriptionError = reason === "descricao-longa";
+  const isTagsError = reason !== null && TAG_REASONS.has(reason);
 
   function open() {
     setName(initial.name);
     setDescription(initial.description ?? "");
+    setSelection({ tags: initialTags, newNames: [] });
     setReason(null);
     dialogRef.current?.showModal();
   }
@@ -74,20 +95,21 @@ export function StoodDialog(props: StoodDialogProps) {
       return;
     }
 
+    const tags = { tagIds: selection.tags.map((tag) => tag.id), newTagNames: selection.newNames };
     startTransition(async () => {
       try {
         if (props.mode === "create") {
-          const result = await createStoodAction({ name, description });
+          const result = await createStoodAction({ name, description, tags });
           if (result.ok) router.push(`/stood/${result.id}`);
           else setReason(result.reason);
           return;
         }
-        const result = await updateStoodAction({ stoodId: props.stoodId, name, description });
+        const result = await updateStoodAction({ stoodId: props.stoodId, name, description, tags });
         if (!result.ok) {
           setReason(result.reason);
           return;
         }
-        props.onSaved(validation.details);
+        props.onSaved(validation.details, result.tags ?? selection.tags);
         dialogRef.current?.close();
       } catch {
         setReason("inesperado");
@@ -104,7 +126,7 @@ export function StoodDialog(props: StoodDialogProps) {
       <dialog
         ref={dialogRef}
         aria-labelledby={titleId}
-        className="m-auto rounded-lg border border-border bg-surface text-text shadow-card backdrop:bg-bg/70"
+        className={DIALOG}
       >
         <form onSubmit={submit} noValidate className="grid w-md max-w-full gap-4 p-5">
           <div className="flex items-center justify-between gap-3">
@@ -148,6 +170,14 @@ export function StoodDialog(props: StoodDialogProps) {
             />
             <Counter length={description.trim().length} max={MAX_DESCRIPTION_LENGTH} />
           </label>
+
+          <TagField
+            allTags={props.allTags}
+            selection={selection}
+            isInvalid={isTagsError}
+            describedBy={isTagsError ? errorId : undefined}
+            onChange={setSelection}
+          />
 
           {reason && (
             <FormMessage tone="error" id={errorId}>

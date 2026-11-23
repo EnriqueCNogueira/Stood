@@ -4,22 +4,36 @@ import { PanelLeft, Pencil } from "lucide-react";
 import { ICON_BUTTON } from "@/app/_components/ui";
 import { PomodoroControl } from "@/app/_components/workspace/board/pomodoro-control";
 import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
+import { TagChips } from "@/app/_components/workspace/tag-chips";
 import { MAX_VIDEO_WINDOWS, MAX_WINDOWS, type WindowCounts } from "@/lib/board/windows";
 import type { ActiveFocus } from "@/lib/pomodoro/pomodoro";
 import type { StoodDetails } from "@/lib/stood/details";
+import type { StoodTag } from "@/lib/tag/rules";
 
 type BoardBarProps = {
   stoodId: string;
   details: StoodDetails;
+  tags: StoodTag[];
+  allTags: StoodTag[];
   counts: WindowCounts;
   activeFocus: ActiveFocus | null;
   serverNow: number;
-  onDetailsSaved: (details: StoodDetails) => void;
+  onDetailsSaved: (details: StoodDetails, tags: StoodTag[]) => void;
   onOpenDrawer: () => void;
 };
 
-// Barra do Quadro, à direita da lateral: nome com o lápis de editar, descrição, Pomodoro e contador de Janelas
-export function BoardBar({ stoodId, details, counts, activeFocus, serverNow, onDetailsSaved, onOpenDrawer }: BoardBarProps) {
+// Barra do Quadro, à direita da lateral: nome com o lápis de editar, descrição, Tags, Pomodoro e contador de Janelas
+export function BoardBar({
+  stoodId,
+  details,
+  tags,
+  allTags,
+  counts,
+  activeFocus,
+  serverNow,
+  onDetailsSaved,
+  onOpenDrawer,
+}: BoardBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 sm:px-5">
       <button type="button" aria-label="Abrir os Arquivos" onClick={onOpenDrawer} className={`${ICON_BUTTON} md:hidden`}>
@@ -33,6 +47,8 @@ export function BoardBar({ stoodId, details, counts, activeFocus, serverNow, onD
             mode="edit"
             stoodId={stoodId}
             details={details}
+            tags={tags}
+            allTags={allTags}
             onSaved={onDetailsSaved}
             triggerLabel="Editar Stood"
             triggerClassName={`${ICON_BUTTON} flex-none`}
@@ -44,6 +60,11 @@ export function BoardBar({ stoodId, details, counts, activeFocus, serverNow, onD
           <p title={details.description} className="truncate text-ui text-text-muted">
             {details.description}
           </p>
+        )}
+        {tags.length > 0 && (
+          <div className="mt-1">
+            <TagChips tags={tags} label={`Tags de ${details.name}`} />
+          </div>
         )}
       </div>
 

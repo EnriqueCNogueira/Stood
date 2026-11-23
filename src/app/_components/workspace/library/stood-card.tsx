@@ -1,18 +1,21 @@
 import { Brain } from "lucide-react";
 import { CARD, FOCUS } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FILE_TYPE_ORDER, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
+import { TagChips } from "@/app/_components/workspace/tag-chips";
 import type { FileType } from "@/lib/stood/tree";
+import type { StoodTag } from "@/lib/tag/rules";
 
 type StoodCardProps = {
   id: string;
   name: string;
   description: string | null;
+  tags: StoodTag[];
   fileCounts: Record<FileType, number>;
   openedAgo: string;
 };
 
-// Cartão de "Continuar de onde parou": ícone, nome, descrição em 2 linhas, Arquivos por tipo e há quanto tempo abriu
-export function StoodCard({ id, name, description, fileCounts, openedAgo }: StoodCardProps) {
+// Cartão de "Continuar de onde parou": ícone, nome, descrição em 2 linhas, Tags, Arquivos por tipo e há quanto tempo abriu
+export function StoodCard({ id, name, description, tags, fileCounts, openedAgo }: StoodCardProps) {
   const typesWithFiles = FILE_TYPE_ORDER.filter((type) => fileCounts[type] > 0);
 
   return (
@@ -25,6 +28,8 @@ export function StoodCard({ id, name, description, fileCounts, openedAgo }: Stoo
       </div>
 
       <p className="line-clamp-2 min-h-10 text-ui text-text-muted">{description ?? "Sem descrição."}</p>
+
+      <TagChips tags={tags} label={`Tags de ${name}`} />
 
       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-meta text-text-muted">
         {typesWithFiles.length > 0 ? (
