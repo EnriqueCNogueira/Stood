@@ -23,19 +23,30 @@ export type UpdateStoodResult =
   | { ok: false; reason: StoodDetailsReason | "nome-repetido" | "stood-nao-encontrado" };
 
 type StoodDetailsInput = { name: string; description: string };
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type InsertStoodContent = (tx: Transaction, stoodId: string) => Promise<unknown>;
 
 const NAME_UNIQUE_CONSTRAINT = "stoods_owner_id_name_unique";
 const RECENT_STOODS_LIMIT = 3;
 
-export async function createStood(ownerId: string, input: StoodDetailsInput): Promise<CreateStoodResult> {
+// insertContent grava, na mesma transação, as Pastas e os Arquivos iniciais: nome repetido não deixa Arquivo solto
+export async function createStood(
+  ownerId: string,
+  input: StoodDetailsInput,
+  insertContent?: InsertStoodContent,
+): Promise<CreateStoodResult> {
   const validation = validateStoodDetails(input);
   if (!validation.ok) return validation;
 
   try {
-    const [stood] = await db
-      .insert(stoods)
-      .values({ ownerId, ...validation.details })
-      .returning({ id: stoods.id });
+    const stood = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(stoods)
+        .values({ ownerId, ...validation.details })
+        .returning({ id: stoods.id });
+      await insertContent?.(tx, created.id);
+      return created;
+    });
     return { ok: true, id: stood.id };
   } catch (error) {
     if (isConstraintViolation(error, NAME_UNIQUE_CONSTRAINT)) return { ok: false, reason: "nome-repetido" };

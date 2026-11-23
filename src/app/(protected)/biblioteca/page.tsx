@@ -3,14 +3,19 @@ import { BELOW_HEADER, BUTTON } from "@/app/_components/ui";
 import { LibraryBrain } from "@/app/_components/workspace/library/library-brain";
 import { LibrarySidebar } from "@/app/_components/workspace/library/library-sidebar";
 import { StoodCard } from "@/app/_components/workspace/library/stood-card";
+import { SubjectCard } from "@/app/_components/workspace/library/subject-card";
 import { WeekPanel } from "@/app/_components/workspace/library/week-panel";
 import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
 import { requireSession } from "@/lib/auth/session";
 import { buildFirstName, buildRelativeTime } from "@/lib/library/library";
 import { getWeekSummary } from "@/lib/pomodoro/pomodoro";
 import { getLibraryStoods, getRecentStoods } from "@/lib/stood/stood";
+import { SUBJECTS } from "@/lib/subject/catalog";
 
-// Destino depois do login: a semana de estudo, os Stoods do Usuário, os abertos por último e a árvore de todos
+// Linha e respiro entre as seções da Biblioteca
+const SECTION_DIVIDER = "mt-10 border-t border-border pt-8 2xl:mt-12 2xl:pt-10";
+
+// Destino depois do login: a semana de estudo, as Matérias, os Stoods abertos por último e a árvore de todos
 export default async function LibraryPage() {
   const user = await requireSession();
   const [library, recent, week] = await Promise.all([
@@ -30,7 +35,27 @@ export default async function LibraryPage() {
 
         <WeekPanel summary={week} serverNow={now.getTime()} />
 
-        <section aria-labelledby="recent-stoods">
+        <section aria-labelledby="subjects" className={SECTION_DIVIDER}>
+          <h2 id="subjects" className="mb-1 text-base font-medium">
+            Matérias
+          </h2>
+          <p className="mb-3.5 text-ui text-text-muted">
+            Stoods prontos com as aulas de cada Matéria. Clique numa delas para criar a sua cópia, que você pode editar.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {SUBJECTS.map((subject) => (
+              <SubjectCard
+                key={subject.slug}
+                slug={subject.slug}
+                name={subject.name}
+                description={subject.description}
+                videoCount={subject.videos.length}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="recent-stoods" className={SECTION_DIVIDER}>
           <h2 id="recent-stoods" className="mb-3.5 text-base font-medium">
             Continuar de onde parou
           </h2>
