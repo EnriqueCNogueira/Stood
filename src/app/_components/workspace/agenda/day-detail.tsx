@@ -2,12 +2,12 @@ import { Plus, Repeat } from "lucide-react";
 import { BUTTON, CARD, FOCUS } from "@/app/_components/ui";
 import { AppointmentDialog } from "@/app/_components/workspace/agenda/appointment-dialog";
 import type { AgendaMonth } from "@/lib/agenda/agenda";
-import { buildDayTitle, sortDayItems } from "@/lib/agenda/rules";
+import { buildDayTitle, buildSortedDayItems } from "@/lib/agenda/rules";
 import { buildStudiedTimeLabel } from "@/lib/pomodoro/time";
 
 // Detalhe do dia escolhido: Tempo estudado por Stood, Compromissos do dia em ordem e "Novo Compromisso" já com esse dia
 export function DayDetail({ agenda }: { agenda: AgendaMonth }) {
-  const items = sortDayItems(agenda.items.filter((item) => item.day === agenda.selectedDay));
+  const items = buildSortedDayItems(agenda.items.filter((item) => item.day === agenda.selectedDay));
   const studiedSeconds = agenda.studiedSecondsByDay[agenda.selectedDay];
 
   return (

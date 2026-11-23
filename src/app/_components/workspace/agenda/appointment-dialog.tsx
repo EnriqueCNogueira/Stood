@@ -18,7 +18,10 @@ import {
   MAX_APPOINTMENT_TITLE_LENGTH,
   type Recurrence,
   buildDayTitle,
+  buildSeriesInput,
+  isSameRecurrence,
   validateAppointmentInput,
+  validateOccurrenceEdit,
 } from "@/lib/agenda/rules";
 
 type DialogReason =
@@ -96,8 +99,7 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
   const [isPending, startTransition] = useTransition();
   const entry = props.mode === "edit" ? props.entry : null;
   const series = entry?.series ?? null;
-  const isRecurrenceChanged =
-    series !== null && (values.recurrence !== series.recurrence || values.weekdays.join() !== series.weekdays.join());
+  const isRecurrenceChanged = series !== null && !isSameRecurrence(values, series);
   const isSeriesRuleChanged = isRecurrenceChanged || (series !== null && (values.endsOn || null) !== series.endsOn);
 
   function open() {
@@ -130,7 +132,8 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const validation = validateAppointmentInput(buildRuleInput(values));
+    const ruleInput = buildRuleInput(values);
+    const validation = entry?.isRecurring ? validateOccurrenceEdit(ruleInput, entry.series.day) : validateAppointmentInput(ruleInput);
     if (!validation.ok) {
       setReason(validation.reason);
       return;
@@ -159,14 +162,14 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
     );
   }
 
-  // "Todas" mantém o dia de início da série; o dia do formulário só vale para "Só esta"
+  // "Todas" leva para a série só o que mudou no formulário; o dia só vale para "Só esta"
   function saveAll() {
     if (!entry || !series) return;
     run(() =>
       updateAppointmentAction({
         kind: "all",
         appointmentId: entry.appointmentId,
-        input: buildActionInput({ ...values, day: series.day }),
+        input: buildSeriesInput(buildActionInput(values), entry, series),
       }),
     );
   }
@@ -395,7 +398,7 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
                     type="button"
                     disabled={isPending}
                     onClick={() => remove("all")}
-                    className={`${BUTTON.base} ${BUTTON.md} border-danger/40 bg-danger/12 text-danger hover:not-disabled:bg-danger/20`}
+                    className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.danger}`}
                   >
                     Todas
                   </button>
@@ -405,7 +408,7 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
                   type="button"
                   disabled={isPending}
                   onClick={() => remove("all")}
-                  className={`${BUTTON.base} ${BUTTON.md} border-danger/40 bg-danger/12 text-danger hover:not-disabled:bg-danger/20 ${FOCUS}`}
+                  className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.danger} ${FOCUS}`}
                 >
                   Apagar
                 </button>

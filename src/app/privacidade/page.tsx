@@ -49,7 +49,8 @@ export default function PrivacyPage() {
           <li>Identificar você ao entrar e manter a sua sessão.</li>
           <li>Enviar e-mails de confirmação de cadastro e de troca de senha.</li>
           <li>Guardar e mostrar os seus Stoods, só para você.</li>
-          <li>Mostrar o seu Tempo estudado na semana, no total e em cada Stood, e o progresso da Meta semanal.</li>
+          <li>Mostrar o seu Tempo estudado na semana e em cada dia da Agenda, no total e em cada Stood, e o progresso da Meta semanal.</li>
+          <li>Guardar os seus Compromissos, mostrá-los na Agenda e lembrar os próximos na Biblioteca, só para você.</li>
           <li>Proteger o serviço contra abuso, como tentativas repetidas de login.</li>
         </LegalList>
         <p>A base legal é a execução do serviço que você pediu ao criar a sua Conta (art. 7º, V, da LGPD). Não vendemos nem alugamos dados pessoais.</p>

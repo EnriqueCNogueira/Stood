@@ -57,6 +57,9 @@ type AppointmentInput = {
 
 type OccurrenceInput = { title: string; day: string; timeOfDay: string | null };
 
+// Campos que "Todas" pode levar da Ocorrência para a série
+type SharedValues = { title: string; timeOfDay: string | null; stoodId: string | null };
+
 export type AppointmentInputReason =
   | "titulo-vazio"
   | "titulo-longo"
@@ -72,6 +75,9 @@ type ValidateOccurrenceInputResult =
 
 const MS_PER_DAY = 86_400_000;
 const DAYS_PER_WEEK = 7;
+// Fora destes anos as contas de data deixam de caber em "AAAA-MM-DD"
+const MIN_YEAR = 1900;
+const MAX_YEAR = 2199;
 const DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -97,7 +103,7 @@ export function buildOccurrenceDays(rule: AppointmentRule, from: string, to: str
 
   const weekdays = new Set(rule.weekdays);
   const days: string[] = [];
-  for (let day = start; day <= end; day = addDays(day, 1)) {
+  for (let day = start; day <= end; day = buildShiftedDay(day, 1)) {
     if (rule.recurrence === "daily" || weekdays.has(buildWeekday(day))) days.push(day);
   }
   return days;
@@ -134,13 +140,13 @@ export function buildAgendaItems(rules: AppointmentRule[], changes: OccurrenceCh
 }
 
 // Ordem de um dia: primeiro o dia inteiro, depois por horário, e o empate por título
-export function sortDayItems<T extends { title: string; timeOfDay: string | null }>(items: T[]): T[] {
+export function buildSortedDayItems<T extends { title: string; timeOfDay: string | null }>(items: T[]): T[] {
   return [...items].sort(compareDayOrder);
 }
 
 // Lembrete da Biblioteca: até 3 dos próximos 14 dias, contando hoje inteiro, e o recorrente uma vez só
 export function buildUpcomingItems(rules: AppointmentRule[], changes: OccurrenceChange[], today: string): AgendaItem[] {
-  const items = buildAgendaItems(rules, changes, today, addDays(today, UPCOMING_DAYS - 1));
+  const items = buildAgendaItems(rules, changes, today, buildShiftedDay(today, UPCOMING_DAYS - 1));
   const seen = new Set<string>();
   const upcoming = items.filter((item) => {
     if (seen.has(item.appointmentId)) return false;
@@ -168,12 +174,12 @@ export function buildTodayInBrasilia(now: Date) {
 // Semanas do mês, de domingo a sábado, com os dias dos meses vizinhos completando a primeira e a última
 export function buildMonthGrid(month: string): string[][] {
   const first = `${month}-01`;
-  const last = addDays(`${shiftMonth(month, 1)}-01`, -1);
-  const gridStart = addDays(first, -buildWeekday(first));
-  const gridEnd = addDays(last, DAYS_PER_WEEK - 1 - buildWeekday(last));
+  const last = buildShiftedDay(`${buildShiftedMonth(month, 1)}-01`, -1);
+  const gridStart = buildShiftedDay(first, -buildWeekday(first));
+  const gridEnd = buildShiftedDay(last, DAYS_PER_WEEK - 1 - buildWeekday(last));
   const weeks: string[][] = [];
-  for (let day = gridStart; day <= gridEnd; day = addDays(day, DAYS_PER_WEEK)) {
-    weeks.push(Array.from({ length: DAYS_PER_WEEK }, (_, index) => addDays(day, index)));
+  for (let day = gridStart; day <= gridEnd; day = buildShiftedDay(day, DAYS_PER_WEEK)) {
+    weeks.push(Array.from({ length: DAYS_PER_WEEK }, (_, index) => buildShiftedDay(day, index)));
   }
   return weeks;
 }
@@ -188,24 +194,55 @@ export function buildDayTitle(day: string) {
   return DAY_TITLE_FORMAT.format(new Date(parseDay(day)));
 }
 
-export function shiftMonth(month: string, delta: number) {
+export function buildShiftedMonth(month: string, delta: number) {
   const [, year, monthNumber] = MONTH_PATTERN.exec(month) ?? [];
   const date = new Date(Date.UTC(Number(year), Number(monthNumber) - 1 + delta, 1));
   return date.toISOString().slice(0, 7);
 }
 
-export function addDays(day: string, amount: number) {
+export function buildShiftedDay(day: string, amount: number) {
   return new Date(parseDay(day) + amount * MS_PER_DAY).toISOString().slice(0, 10);
 }
 
 export function isValidDay(day: string) {
   const match = DAY_PATTERN.exec(day);
   if (!match) return false;
+  const year = Number(match[1]);
+  if (year < MIN_YEAR || year > MAX_YEAR) return false;
   return new Date(parseDay(day)).toISOString().slice(0, 10) === day;
 }
 
 export function isValidMonth(month: string) {
   return MONTH_PATTERN.test(month) && isValidDay(`${month}-01`);
+}
+
+// Mesma repetição: os dias da semana só contam na semanal
+export function isSameRecurrence(a: Pick<AppointmentRule, "recurrence" | "weekdays">, b: Pick<AppointmentRule, "recurrence" | "weekdays">) {
+  if (a.recurrence !== b.recurrence) return false;
+  return a.recurrence !== "weekly" || a.weekdays.join() === b.weekdays.join();
+}
+
+// "Todas": a série recebe só o que mudou no formulário, que começa com os dados da Ocorrência aberta.
+// O dia do formulário é o da Ocorrência, então a série continua começando no mesmo dia.
+export function buildSeriesInput<T extends SharedValues & { day: string }>(
+  form: T,
+  occurrence: SharedValues,
+  series: SharedValues & { day: string },
+): T {
+  return {
+    ...form,
+    day: series.day,
+    title: form.title === occurrence.title ? series.title : form.title,
+    timeOfDay: form.timeOfDay === occurrence.timeOfDay ? series.timeOfDay : form.timeOfDay,
+    stoodId: form.stoodId === occurrence.stoodId ? series.stoodId : form.stoodId,
+  };
+}
+
+// Edição a partir de uma Ocorrência: o dia é o dela, que pode passar da data final; a data final é conferida com o início da série
+export function validateOccurrenceEdit(input: AppointmentInput, seriesDay: string): ValidateAppointmentInputResult {
+  const occurrence = validateOccurrenceInput(input);
+  if (!occurrence.ok) return occurrence;
+  return validateAppointmentInput({ ...input, day: seriesDay });
 }
 
 // Regras do diálogo do Compromisso; o que não vale para a repetição escolhida é descartado
@@ -240,8 +277,8 @@ export function validateOccurrenceInput(input: { title: string; day: string; tim
 function buildMonthlyDays(startDay: string, from: string, to: string): string[] {
   const dayOfMonth = Number(startDay.slice(8, 10));
   const days: string[] = [];
-  for (let month = from.slice(0, 7); month <= to.slice(0, 7); month = shiftMonth(month, 1)) {
-    const lastDay = Number(addDays(`${shiftMonth(month, 1)}-01`, -1).slice(8, 10));
+  for (let month = from.slice(0, 7); month <= to.slice(0, 7); month = buildShiftedMonth(month, 1)) {
+    const lastDay = Number(buildShiftedDay(`${buildShiftedMonth(month, 1)}-01`, -1).slice(8, 10));
     const day = `${month}-${String(Math.min(dayOfMonth, lastDay)).padStart(2, "0")}`;
     if (day >= startDay && day >= from && day <= to) days.push(day);
   }

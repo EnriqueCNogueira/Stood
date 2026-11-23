@@ -11,16 +11,24 @@ import {
   MAX_APPOINTMENTS_PER_USER,
   type OccurrenceChange,
   type Recurrence,
-  addDays,
   buildAgendaItems,
   buildMonthGrid,
   buildOccurrenceDays,
+  buildShiftedDay,
   buildTodayInBrasilia,
   buildUpcomingItems,
+  isSameRecurrence,
+  isValidDay,
   validateAppointmentInput,
   validateOccurrenceInput,
 } from "@/lib/agenda/rules";
-import { buildEndedFocusCondition, buildFocusStudiedSecondsSum } from "@/lib/pomodoro/pomodoro";
+import { requireOwnerLock } from "@/lib/lock";
+import {
+  type StoodStudiedTime,
+  buildEndedFocusCondition,
+  buildFocusStudiedSecondsSum,
+  buildStudiedStoods,
+} from "@/lib/pomodoro/pomodoro";
 import { buildSortedByName } from "@/lib/stood/tree";
 import { isUuid } from "@/lib/uuid";
 
@@ -28,8 +36,6 @@ import { isUuid } from "@/lib/uuid";
 export type AppointmentSeries = Omit<AppointmentRule, "id">;
 
 export type AgendaEntry = AgendaItem & { stoodName: string | null; series: AppointmentSeries };
-
-export type StoodStudiedTime = { id: string; name: string; studiedSeconds: number };
 
 export type AgendaMonth = {
   month: string;
@@ -67,6 +73,19 @@ export type UpdateAppointmentResult =
     };
 export type DeleteAppointmentResult = { ok: true } | { ok: false; reason: "compromisso-nao-encontrado" | "ocorrencia-nao-encontrada" };
 
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+const RULE_COLUMNS = {
+  id: appointments.id,
+  title: appointments.title,
+  day: appointments.day,
+  timeOfDay: appointments.timeOfDay,
+  stoodId: appointments.stoodId,
+  recurrence: appointments.recurrence,
+  weekdays: appointments.weekdays,
+  endsOn: appointments.endsOn,
+};
+
 // O fuso entra como texto fixo, e não como parâmetro, para o agrupamento repetir exatamente a mesma expressão
 const TIME_ZONE_SQL = sql.raw(`'${AGENDA_TIME_ZONE}'`);
 const focusLocalDay = sql<string>`to_char(${focuses.startedAt} at time zone ${TIME_ZONE_SQL}, 'YYYY-MM-DD')`;
@@ -89,10 +108,6 @@ export async function getAgendaMonth(ownerId: string, month: string, selectedDay
   const items = buildAgendaItems(rules, changes, from, to).map((item) =>
     buildEntry(item, rulesById.get(item.appointmentId) as AppointmentRule, stoodNames),
   );
-  // Focos de Stood apagado entram no total do dia, mas ainda não têm nome para o detalhe
-  const selectedDayStoods = selectedRows
-    .filter((row): row is StoodStudiedTime => row.id !== null && row.name !== null)
-    .sort((a, b) => b.studiedSeconds - a.studiedSeconds || a.name.localeCompare(b.name, "pt-BR"));
 
   return {
     month,
@@ -100,7 +115,7 @@ export async function getAgendaMonth(ownerId: string, month: string, selectedDay
     studiedSecondsByDay: Object.fromEntries(studiedRows.map((row) => [row.day, row.studiedSeconds])),
     items,
     selectedDay,
-    selectedDayStoods,
+    selectedDayStoods: buildStudiedStoods(selectedRows),
     stoods: buildSortedByName(ownedStoods),
   };
 }
@@ -109,10 +124,10 @@ export async function getAgendaMonth(ownerId: string, month: string, selectedDay
 export async function createAppointment(ownerId: string, input: AppointmentInput): Promise<CreateAppointmentResult> {
   const validation = validateAppointmentInput(input);
   if (!validation.ok) return validation;
-  if (input.stoodId !== null && !(await isOwnedStood(ownerId, input.stoodId))) return { ok: false, reason: "stood-nao-encontrado" };
 
   return db.transaction(async (tx): Promise<CreateAppointmentResult> => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`appointments:${ownerId}`}, 0))`);
+    await requireOwnerLock(tx, ownerId, "appointments");
+    if (input.stoodId !== null && !(await isOwnedStood(tx, ownerId, input.stoodId))) return { ok: false, reason: "stood-nao-encontrado" };
     const [{ total }] = await tx.select({ total: count() }).from(appointments).where(eq(appointments.ownerId, ownerId));
     if (total >= MAX_APPOINTMENTS_PER_USER) return { ok: false, reason: "limite-de-compromissos" };
 
@@ -144,41 +159,51 @@ export async function updateAppointment(
   scope: AppointmentScope,
   input: AppointmentInput | OccurrenceUpdate,
 ): Promise<UpdateAppointmentResult> {
-  const rule = await findOwnedRule(ownerId, appointmentId);
-  if (!rule) return { ok: false, reason: "compromisso-nao-encontrado" };
-  if (input.stoodId !== null && !(await isOwnedStood(ownerId, input.stoodId))) return { ok: false, reason: "stood-nao-encontrado" };
+  if (!isUuid(appointmentId)) return { ok: false, reason: "compromisso-nao-encontrado" };
 
-  if (scope.kind === "all") return updateSeries(ownerId, rule, input as AppointmentInput);
+  return db.transaction(async (tx): Promise<UpdateAppointmentResult> => {
+    await requireOwnerLock(tx, ownerId, "appointments");
+    const rule = await findOwnedRule(tx, ownerId, appointmentId);
+    if (!rule) return { ok: false, reason: "compromisso-nao-encontrado" };
+    if (input.stoodId !== null && !(await isOwnedStood(tx, ownerId, input.stoodId))) return { ok: false, reason: "stood-nao-encontrado" };
 
-  const validation = validateOccurrenceInput(input);
-  if (!validation.ok) return validation;
-  if (!isRuleOccurrence(rule, scope.originalDay)) return { ok: false, reason: "ocorrencia-nao-encontrada" };
+    if (scope.kind === "all") return updateSeries(tx, ownerId, rule, input as AppointmentInput);
 
-  const values = { ...validation.input, stoodId: input.stoodId, isDeleted: false };
-  await db
-    .insert(appointmentChanges)
-    .values({ ownerId, appointmentId, originalDay: scope.originalDay, ...values })
-    .onConflictDoUpdate({ target: [appointmentChanges.appointmentId, appointmentChanges.originalDay], set: values });
-  return { ok: true };
+    const validation = validateOccurrenceInput(input);
+    if (!validation.ok) return validation;
+    if (!(await hasOccurrence(tx, ownerId, rule, scope.originalDay))) return { ok: false, reason: "ocorrencia-nao-encontrada" };
+
+    const values = { ...validation.input, stoodId: input.stoodId, isDeleted: false };
+    await tx
+      .insert(appointmentChanges)
+      .values({ ownerId, appointmentId, originalDay: scope.originalDay, ...values })
+      .onConflictDoUpdate({ target: [appointmentChanges.appointmentId, appointmentChanges.originalDay], set: values });
+    return { ok: true };
+  });
 }
 
 // "Todas" apaga a série e, em cascata, as Ocorrências mudadas; "Só esta" marca a Ocorrência como apagada
 export async function deleteAppointment(ownerId: string, appointmentId: string, scope: AppointmentScope): Promise<DeleteAppointmentResult> {
-  const rule = await findOwnedRule(ownerId, appointmentId);
-  if (!rule) return { ok: false, reason: "compromisso-nao-encontrado" };
+  if (!isUuid(appointmentId)) return { ok: false, reason: "compromisso-nao-encontrado" };
 
-  if (scope.kind === "all") {
-    await db.delete(appointments).where(and(eq(appointments.id, appointmentId), eq(appointments.ownerId, ownerId)));
+  return db.transaction(async (tx): Promise<DeleteAppointmentResult> => {
+    await requireOwnerLock(tx, ownerId, "appointments");
+    const rule = await findOwnedRule(tx, ownerId, appointmentId);
+    if (!rule) return { ok: false, reason: "compromisso-nao-encontrado" };
+
+    if (scope.kind === "all") {
+      await tx.delete(appointments).where(and(eq(appointments.id, appointmentId), eq(appointments.ownerId, ownerId)));
+      return { ok: true };
+    }
+
+    if (!(await hasOccurrence(tx, ownerId, rule, scope.originalDay))) return { ok: false, reason: "ocorrencia-nao-encontrada" };
+    const deleted = { isDeleted: true, title: null, day: null, timeOfDay: null, stoodId: null };
+    await tx
+      .insert(appointmentChanges)
+      .values({ ownerId, appointmentId, originalDay: scope.originalDay, ...deleted })
+      .onConflictDoUpdate({ target: [appointmentChanges.appointmentId, appointmentChanges.originalDay], set: deleted });
     return { ok: true };
-  }
-
-  if (!isRuleOccurrence(rule, scope.originalDay)) return { ok: false, reason: "ocorrencia-nao-encontrada" };
-  const deleted = { isDeleted: true, title: null, day: null, timeOfDay: null, stoodId: null };
-  await db
-    .insert(appointmentChanges)
-    .values({ ownerId, appointmentId, originalDay: scope.originalDay, ...deleted })
-    .onConflictDoUpdate({ target: [appointmentChanges.appointmentId, appointmentChanges.originalDay], set: deleted });
-  return { ok: true };
+  });
 }
 
 // Lembrete da Biblioteca: até 3 dos próximos 14 dias, contando hoje inteiro no horário de Brasília
@@ -194,20 +219,25 @@ export async function getUpcomingAppointments(ownerId: string, now = new Date())
   );
 }
 
-async function updateSeries(ownerId: string, rule: AppointmentRule, input: AppointmentInput): Promise<UpdateAppointmentResult> {
+async function updateSeries(
+  tx: Transaction,
+  ownerId: string,
+  rule: AppointmentRule,
+  input: AppointmentInput,
+): Promise<UpdateAppointmentResult> {
   const validation = validateAppointmentInput(input);
   if (!validation.ok) return validation;
   const next = validation.input;
-  const isRecurrenceChanged =
-    next.recurrence !== rule.recurrence || next.day !== rule.day || next.weekdays.join() !== rule.weekdays.join();
 
-  await db.transaction(async (tx) => {
+  await tx
+    .update(appointments)
+    .set({ ...next, stoodId: input.stoodId })
+    .where(and(eq(appointments.id, rule.id), eq(appointments.ownerId, ownerId)));
+  if (next.day !== rule.day || !isSameRecurrence(next, rule)) {
     await tx
-      .update(appointments)
-      .set({ ...next, stoodId: input.stoodId })
-      .where(and(eq(appointments.id, rule.id), eq(appointments.ownerId, ownerId)));
-    if (isRecurrenceChanged) await tx.delete(appointmentChanges).where(eq(appointmentChanges.appointmentId, rule.id));
-  });
+      .delete(appointmentChanges)
+      .where(and(eq(appointmentChanges.appointmentId, rule.id), eq(appointmentChanges.ownerId, ownerId)));
+  }
   return { ok: true };
 }
 
@@ -215,19 +245,7 @@ async function updateSeries(ownerId: string, rule: AppointmentRule, input: Appoi
 // são calculadas na memória, o que vale também para a repetição sem fim
 async function getRulesAndChanges(ownerId: string): Promise<{ rules: AppointmentRule[]; changes: OccurrenceChange[] }> {
   const [ruleRows, changeRows] = await Promise.all([
-    db
-      .select({
-        id: appointments.id,
-        title: appointments.title,
-        day: appointments.day,
-        timeOfDay: appointments.timeOfDay,
-        stoodId: appointments.stoodId,
-        recurrence: appointments.recurrence,
-        weekdays: appointments.weekdays,
-        endsOn: appointments.endsOn,
-      })
-      .from(appointments)
-      .where(eq(appointments.ownerId, ownerId)),
+    db.select(RULE_COLUMNS).from(appointments).where(eq(appointments.ownerId, ownerId)),
     db
       .select({
         appointmentId: appointmentChanges.appointmentId,
@@ -247,15 +265,18 @@ async function getRulesAndChanges(ownerId: string): Promise<{ rules: Appointment
   };
 }
 
-async function findOwnedRule(ownerId: string, appointmentId: string): Promise<AppointmentRule | undefined> {
-  if (!isUuid(appointmentId)) return undefined;
-  const { rules } = await getRulesAndChanges(ownerId);
-  return rules.find((rule) => rule.id === appointmentId);
+async function findOwnedRule(tx: Transaction, ownerId: string, appointmentId: string): Promise<AppointmentRule | undefined> {
+  const [row] = await tx
+    .select(RULE_COLUMNS)
+    .from(appointments)
+    .where(and(eq(appointments.id, appointmentId), eq(appointments.ownerId, ownerId)))
+    .limit(1);
+  return row && { ...row, timeOfDay: buildShortTime(row.timeOfDay) };
 }
 
-async function isOwnedStood(ownerId: string, stoodId: string) {
+async function isOwnedStood(tx: Transaction, ownerId: string, stoodId: string) {
   if (!isUuid(stoodId)) return false;
-  const [stood] = await db
+  const [stood] = await tx
     .select({ id: stoods.id })
     .from(stoods)
     .where(and(eq(stoods.id, stoodId), eq(stoods.ownerId, ownerId)))
@@ -263,9 +284,24 @@ async function isOwnedStood(ownerId: string, stoodId: string) {
   return stood !== undefined;
 }
 
-// Só o Compromisso recorrente tem Ocorrências, e só nos dias que a própria repetição cria
-function isRuleOccurrence(rule: AppointmentRule, originalDay: string) {
-  return rule.recurrence !== "none" && buildOccurrenceDays(rule, originalDay, originalDay).length === 1;
+// Só o Compromisso recorrente tem Ocorrências: nos dias que a própria repetição cria e nos que já foram mudados à mão,
+// que continuam na Agenda mesmo quando a série é encurtada para antes deles
+async function hasOccurrence(tx: Transaction, ownerId: string, rule: AppointmentRule, originalDay: string) {
+  if (rule.recurrence === "none" || !isValidDay(originalDay)) return false;
+  if (buildOccurrenceDays(rule, originalDay, originalDay).length === 1) return true;
+
+  const [change] = await tx
+    .select({ isDeleted: appointmentChanges.isDeleted })
+    .from(appointmentChanges)
+    .where(
+      and(
+        eq(appointmentChanges.appointmentId, rule.id),
+        eq(appointmentChanges.originalDay, originalDay),
+        eq(appointmentChanges.ownerId, ownerId),
+      ),
+    )
+    .limit(1);
+  return change !== undefined && !change.isDeleted;
 }
 
 function getStudiedRowsByDay(ownerId: string, from: string, to: string, now: Date) {
@@ -289,7 +325,7 @@ function getStudiedRowsByStood(ownerId: string, day: string, now: Date) {
 function buildStartedBetween(from: string, to: string): SQL | undefined {
   return and(
     sql`${focuses.startedAt} >= (${from}::date)::timestamp at time zone ${TIME_ZONE_SQL}`,
-    sql`${focuses.startedAt} < (${addDays(to, 1)}::date)::timestamp at time zone ${TIME_ZONE_SQL}`,
+    sql`${focuses.startedAt} < (${buildShiftedDay(to, 1)}::date)::timestamp at time zone ${TIME_ZONE_SQL}`,
   );
 }
 

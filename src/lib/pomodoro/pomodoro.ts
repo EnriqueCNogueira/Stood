@@ -9,6 +9,7 @@ import {
   isValidFocusMinutes,
   isValidWeeklyGoalMinutes,
 } from "@/lib/pomodoro/limits";
+import { requireOwnerLock } from "@/lib/lock";
 import { isUuid } from "@/lib/uuid";
 
 export type ActiveFocus = { stoodId: string | null; stoodName: string | null; endsAt: Date };
@@ -45,7 +46,7 @@ export async function createFocus(
   if (!isUuid(stoodId)) return { ok: false, reason: "stood-nao-encontrado" };
 
   return db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${ownerId}, 0))`);
+    await requireOwnerLock(tx, ownerId, "focuses");
 
     const [stood] = await tx
       .select({ name: stoods.name })
@@ -111,12 +112,7 @@ export async function getWeekSummary(ownerId: string, now = new Date()): Promise
   ]);
 
   const studiedSeconds = stoodRows.reduce((total, row) => total + row.studiedSeconds, 0);
-  // Focos de Stood apagado entram no total, mas ainda não têm nome para aparecer na lista
-  const studiedStoods = stoodRows
-    .filter((row): row is StoodStudiedTime => row.id !== null && row.name !== null)
-    .sort((a, b) => b.studiedSeconds - a.studiedSeconds || NAME_COLLATOR.compare(a.name, b.name));
-
-  return { studiedSeconds, stoods: studiedStoods, weeklyGoalMinutes: goal?.minutes ?? null, activeFocus };
+  return { studiedSeconds, stoods: buildStudiedStoods(stoodRows), weeklyGoalMinutes: goal?.minutes ?? null, activeFocus };
 }
 
 export async function upsertWeeklyGoal(ownerId: string, minutes: number): Promise<UpsertWeeklyGoalResult> {
@@ -157,6 +153,14 @@ export function buildEndedFocusCondition(now: Date) {
 // A CHECK garante que a interrupção vem antes do fim previsto, então ela é o fim real quando existe.
 export function buildFocusStudiedSecondsSum() {
   return sql<number>`floor(sum(extract(epoch from coalesce(${focuses.interruptedAt}, ${focusEnd}) - ${focuses.startedAt})))::int`;
+}
+
+// Tempo estudado por Stood, do maior para o menor, com o empate em ordem alfabética.
+// Focos de Stood apagado entram no total, mas ainda não têm nome para aparecer na lista.
+export function buildStudiedStoods(rows: { id: string | null; name: string | null; studiedSeconds: number }[]): StoodStudiedTime[] {
+  return rows
+    .filter((row): row is StoodStudiedTime => row.id !== null && row.name !== null)
+    .sort((a, b) => b.studiedSeconds - a.studiedSeconds || NAME_COLLATOR.compare(a.name, b.name));
 }
 
 // Em andamento: não foi interrompido e o fim previsto ainda não chegou

@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Repeat } from "lucide-react";
 import { BUTTON, FOCUS, ICON_BUTTON } from "@/app/_components/ui";
 import type { AgendaMonth } from "@/lib/agenda/agenda";
-import { buildAgendaDayPath, buildMonthTitle, shiftMonth, sortDayItems } from "@/lib/agenda/rules";
+import { buildAgendaDayPath, buildMonthTitle, buildShiftedMonth, buildSortedDayItems } from "@/lib/agenda/rules";
 import { buildStudiedTimeLabel } from "@/lib/pomodoro/time";
 
 const WEEKDAY_HEADERS = [
@@ -30,10 +30,10 @@ export function MonthGrid({ agenda, today }: MonthGridProps) {
         <a href={`/agenda?dia=${today}`} className={`${BUTTON.base} ${BUTTON.sm} ${BUTTON.secondary}`}>
           Hoje
         </a>
-        <a href={`/agenda?mes=${shiftMonth(agenda.month, -1)}`} aria-label="Mês anterior" className={ICON_BUTTON}>
+        <a href={`/agenda?mes=${buildShiftedMonth(agenda.month, -1)}`} aria-label="Mês anterior" className={ICON_BUTTON}>
           <ChevronLeft size={16} aria-hidden />
         </a>
-        <a href={`/agenda?mes=${shiftMonth(agenda.month, 1)}`} aria-label="Mês seguinte" className={ICON_BUTTON}>
+        <a href={`/agenda?mes=${buildShiftedMonth(agenda.month, 1)}`} aria-label="Mês seguinte" className={ICON_BUTTON}>
           <ChevronRight size={16} aria-hidden />
         </a>
       </div>
@@ -59,7 +59,7 @@ export function MonthGrid({ agenda, today }: MonthGridProps) {
                 isToday={day === today}
                 isSelected={day === agenda.selectedDay}
                 studiedSeconds={agenda.studiedSecondsByDay[day]}
-                items={sortDayItems(itemsByDay.get(day) ?? [])}
+                items={buildSortedDayItems(itemsByDay.get(day) ?? [])}
               />
             ))}
           </div>

@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import { addDays, buildTodayInBrasilia } from "../src/lib/agenda/rules.ts";
+import { buildShiftedDay, buildTodayInBrasilia } from "../src/lib/agenda/rules.ts";
 import { type FileType, appointments, files, focuses, folders, stoodTags, stoods, tags, users, weeklyGoals } from "../src/db/schema.ts";
 
 // Compromissos de exemplo, a partir de hoje; o simulado se repete todo sábado, sem data final
@@ -243,7 +243,7 @@ async function createSeedAppointments(db: ReturnType<typeof drizzle>, ownerId: s
     return {
       ownerId,
       title: appointment.title,
-      day: addDays(today, appointment.daysFromToday ?? daysUntilSaturday),
+      day: buildShiftedDay(today, appointment.daysFromToday ?? daysUntilSaturday),
       timeOfDay: appointment.timeOfDay,
       stoodId: appointment.stoodName ? (stoodIdByName.get(appointment.stoodName) ?? null) : null,
       recurrence: isWeekly ? ("weekly" as const) : ("none" as const),

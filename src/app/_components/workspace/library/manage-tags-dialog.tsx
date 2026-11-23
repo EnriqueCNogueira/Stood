@@ -197,7 +197,7 @@ export function ManageTagsDialog({ tags, stoods }: ManageTagsDialogProps) {
                           type="button"
                           disabled={isPending}
                           onClick={() => remove(tag.id)}
-                          className={`${BUTTON.base} ${BUTTON.sm} border-danger/40 bg-danger/12 text-danger hover:not-disabled:bg-danger/20`}
+                          className={`${BUTTON.base} ${BUTTON.sm} ${BUTTON.danger}`}
                         >
                           Apagar Tag
                         </button>

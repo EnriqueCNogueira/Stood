@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   type AppointmentRule,
   type OccurrenceChange,
-  addDays,
   buildAgendaDayPath,
   buildAgendaItems,
   buildDayTitle,
@@ -10,11 +9,17 @@ import {
   buildMonthTitle,
   buildOccurrenceDays,
   buildRelativeDayLabel,
+  buildSeriesInput,
+  buildShiftedDay,
+  buildShiftedMonth,
+  buildSortedDayItems,
   buildTodayInBrasilia,
   buildUpcomingItems,
-  shiftMonth,
-  sortDayItems,
+  isSameRecurrence,
+  isValidDay,
+  isValidMonth,
   validateAppointmentInput,
+  validateOccurrenceEdit,
   validateOccurrenceInput,
 } from "@/lib/agenda/rules";
 
@@ -161,9 +166,9 @@ describe("buildAgendaItems", () => {
   });
 });
 
-describe("sortDayItems", () => {
+describe("buildSortedDayItems", () => {
   it("põe o dia inteiro antes dos horários, os horários em ordem e o empate por título", () => {
-    const sorted = sortDayItems([
+    const sorted = buildSortedDayItems([
       { title: "Monitoria", timeOfDay: "14:00" },
       { title: "Entrega", timeOfDay: null },
       { title: "Prova", timeOfDay: "08:00" },
@@ -245,9 +250,9 @@ describe("buildMonthGrid", () => {
   });
 });
 
-describe("shiftMonth e addDays", () => {
+describe("buildShiftedMonth e buildShiftedDay", () => {
   it("passa da virada do ano", () => {
-    expect([shiftMonth("2026-12", 1), shiftMonth("2026-01", -1), addDays("2026-12-31", 1)]).toEqual(["2027-01", "2025-12", "2027-01-01"]);
+    expect([buildShiftedMonth("2026-12", 1), buildShiftedMonth("2026-01", -1), buildShiftedDay("2026-12-31", 1)]).toEqual(["2027-01", "2025-12", "2027-01-01"]);
   });
 });
 
@@ -284,6 +289,64 @@ describe("validateAppointmentInput", () => {
     ["data final antes do início", { recurrence: "daily" as const, endsOn: "2026-11-19" }, "data-final-antes-do-inicio"],
   ])("recusa %s", (_case, values, reason) => {
     expect(validateAppointmentInput({ ...VALID_INPUT, ...values })).toEqual({ ok: false, reason });
+  });
+});
+
+describe("isValidDay e isValidMonth", () => {
+  it.each(["1900-01-01", "2199-12-31"])("aceita o dia %s, no limite dos anos da Agenda", (day) => {
+    expect(isValidDay(day) && isValidMonth(day.slice(0, 7))).toBe(true);
+  });
+
+  it.each(["1899-12-31", "2200-01-01", "9999-12-31"])("recusa o dia %s, fora dos anos da Agenda", (day) => {
+    expect(isValidDay(day) || isValidMonth(day.slice(0, 7))).toBe(false);
+  });
+});
+
+describe("isSameRecurrence", () => {
+  it("ignora os dias da semana quando a repetição não é semanal", () => {
+    expect(isSameRecurrence({ recurrence: "daily", weekdays: [] }, { recurrence: "daily", weekdays: [1] })).toBe(true);
+  });
+
+  it.each([
+    ["tipo", { recurrence: "monthly" as const, weekdays: [6] }],
+    ["dias da semana", { recurrence: "weekly" as const, weekdays: [0, 6] }],
+  ])("percebe a mudança de %s", (_case, changed) => {
+    expect(isSameRecurrence({ recurrence: "weekly", weekdays: [6] }, changed)).toBe(false);
+  });
+});
+
+describe("validateOccurrenceEdit", () => {
+  const input = { ...VALID_INPUT, recurrence: "weekly" as const, weekdays: [6], endsOn: "2026-11-30" };
+
+  it("aceita a Ocorrência movida para depois da data final da série", () => {
+    expect(validateOccurrenceEdit({ ...input, day: "2026-12-02" }, "2026-11-07")).toMatchObject({ ok: true });
+  });
+
+  it("recusa a data final antes do início da série", () => {
+    expect(validateOccurrenceEdit({ ...input, endsOn: "2026-11-01" }, "2026-11-07")).toEqual({
+      ok: false,
+      reason: "data-final-antes-do-inicio",
+    });
+  });
+
+  it("recusa o dia inválido da Ocorrência", () => {
+    expect(validateOccurrenceEdit({ ...input, day: "" }, "2026-11-07")).toEqual({ ok: false, reason: "dia-invalido" });
+  });
+});
+
+describe("buildSeriesInput", () => {
+  const series = { title: "Simulado", day: "2026-11-07", timeOfDay: "09:00", stoodId: "calculo", recurrence: "weekly" as const, weekdays: [6], endsOn: null };
+  const occurrence = { title: "Revisão", day: "2026-11-28", timeOfDay: null, stoodId: null };
+  const form = { ...series, ...occurrence };
+
+  it("mantém da série o que não mudou no formulário de uma Ocorrência mudada", () => {
+    expect(buildSeriesInput({ ...form, endsOn: "2026-12-19" }, occurrence, series)).toEqual({ ...series, endsOn: "2026-12-19" });
+  });
+
+  it("leva para a série o título, o horário e o Stood que mudaram", () => {
+    const changed = { title: "Simulado geral", timeOfDay: "08:00", stoodId: "fisica" };
+
+    expect(buildSeriesInput({ ...form, ...changed }, occurrence, series)).toEqual({ ...series, ...changed });
   });
 });
 

@@ -11,7 +11,8 @@ import {
   updateAppointment,
 } from "@/lib/agenda/agenda";
 import { MAX_APPOINTMENTS_PER_USER } from "@/lib/agenda/rules";
-import { createStood, createUser } from "@/test/db";
+import { requireOwnerLock } from "@/lib/lock";
+import { createStood, createUser, trackWriteOrder } from "@/test/db";
 
 // Segunda-feira, 23/11/2026, 10h em Brasília (UTC-3)
 const NOW = new Date("2026-11-23T13:00:00.000Z");
@@ -34,6 +35,15 @@ async function createOwnedAppointment(ownerId: string, values: Partial<Appointme
   const result = await createAppointment(ownerId, { ...APPOINTMENT, ...values });
   if (!result.ok) throw new Error(`não criou o Compromisso: ${result.reason}`);
   return result.id;
+}
+
+// Simulado de sábado com 28/11 mudado à mão e, depois, a série encurtada para antes dele
+async function createShortenedSeries(ownerId: string) {
+  const id = await createOwnedAppointment(ownerId, SATURDAY_MOCK);
+  const change = { title: "Revisão", day: "2026-11-28", timeOfDay: null, stoodId: null };
+  await updateAppointment(ownerId, id, { kind: "one", originalDay: "2026-11-28" }, change);
+  await updateAppointment(ownerId, id, { kind: "all" }, { ...SATURDAY_MOCK, endsOn: "2026-11-21" });
+  return { id, change };
 }
 
 async function getChangeRows(appointmentId: string) {
@@ -156,6 +166,37 @@ describe("updateAppointment", () => {
     expect(await getChangeRows(id)).toEqual([]);
   });
 
+  it("muda de novo a Ocorrência mudada que ficou depois da data final da série encurtada", async () => {
+    const ownerId = await createUser();
+    const { id, change } = await createShortenedSeries(ownerId);
+
+    const result = await updateAppointment(ownerId, id, { kind: "one", originalDay: "2026-11-28" }, { ...change, title: "Revisão geral" });
+
+    expect(result).toEqual({ ok: true });
+    expect(await getChangeRows(id)).toMatchObject([{ originalDay: "2026-11-28", title: "Revisão geral" }]);
+  });
+
+  it.each(["amanhã", "2026-02-30", ""])("recusa mudar a Ocorrência de um dia malformado: %j", async (originalDay) => {
+    const ownerId = await createUser();
+    const id = await createOwnedAppointment(ownerId, { recurrence: "daily" });
+
+    await expect(
+      updateAppointment(ownerId, id, { kind: "one", originalDay }, { title: "Prova", day: "2026-11-28", timeOfDay: null, stoodId: null }),
+    ).resolves.toEqual({ ok: false, reason: "ocorrencia-nao-encontrada" });
+  });
+
+  it("espera a gravação de Compromissos do mesmo Usuário que já começou", async () => {
+    const ownerId = await createUser();
+    const id = await createOwnedAppointment(ownerId);
+
+    const order = await trackWriteOrder(
+      (tx) => requireOwnerLock(tx, ownerId, "appointments"),
+      () => updateAppointment(ownerId, id, { kind: "all" }, { ...APPOINTMENT, title: "Prova final" }),
+    );
+
+    expect(order).toEqual(["primeira gravação", "segunda gravação"]);
+  });
+
   it("trata o Compromisso de outro Usuário como inexistente e não o altera", async () => {
     const otherId = await createUser();
     const id = await createOwnedAppointment(otherId);
@@ -188,6 +229,29 @@ describe("deleteAppointment", () => {
     await deleteAppointment(ownerId, id, { kind: "all" });
 
     expect([await db.select().from(appointments).where(eq(appointments.id, id)), await getChangeRows(id)]).toEqual([[], []]);
+  });
+
+  it("apaga a Ocorrência mudada que ficou depois da data final da série encurtada", async () => {
+    const ownerId = await createUser();
+    const { id } = await createShortenedSeries(ownerId);
+
+    const result = await deleteAppointment(ownerId, id, { kind: "one", originalDay: "2026-11-28" });
+
+    const agenda = await getAgendaMonth(ownerId, "2026-11", "2026-11-28", NOW);
+    expect(result).toEqual({ ok: true });
+    expect(agenda.items.map((item) => item.day)).toEqual(["2026-11-07", "2026-11-14", "2026-11-21"]);
+  });
+
+  it("espera a gravação de Compromissos do mesmo Usuário que já começou", async () => {
+    const ownerId = await createUser();
+    const id = await createOwnedAppointment(ownerId);
+
+    const order = await trackWriteOrder(
+      (tx) => requireOwnerLock(tx, ownerId, "appointments"),
+      () => deleteAppointment(ownerId, id, { kind: "all" }),
+    );
+
+    expect(order).toEqual(["primeira gravação", "segunda gravação"]);
   });
 
   it("não apaga o Compromisso de outro Usuário", async () => {
