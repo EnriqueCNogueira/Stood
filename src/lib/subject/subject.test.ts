@@ -1,11 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { files, stoods } from "@/db/schema";
+import { files, stoodTags, stoods, tags } from "@/db/schema";
 import { buildSortedByName } from "@/lib/stood/tree";
 import { buildSubjectTree, SUBJECTS } from "@/lib/subject/catalog";
 import { createStoodFromSubject } from "@/lib/subject/subject";
-import { createStood as createStoodRow, createUser } from "@/test/db";
+import { MAX_TAG_NAME_LENGTH } from "@/lib/tag/rules";
+import { createStood as createStoodRow, createTag, createUser } from "@/test/db";
 
 const subject = SUBJECTS[0];
 
@@ -55,6 +56,36 @@ describe("createStoodFromSubject", () => {
     expect(await db.select({ id: files.id }).from(files).where(eq(files.ownerId, ownerId))).toEqual([]);
   });
 
+  it("marca a cópia com as Tags escolhidas, existentes e novas", async () => {
+    const ownerId = await createUser();
+    const exams = await createTag(ownerId, "Prova");
+
+    const result = await createStoodFromSubject(ownerId, {
+      subjectSlug: subject.slug,
+      name: subject.name,
+      description: "",
+      tags: { tagIds: [exams.id], newTagNames: ["Exatas"] },
+    });
+
+    expect(result.ok && (await getTagNames(result.id))).toEqual(["Exatas", "Prova"]);
+  });
+
+  it("recusa Tag inválida sem deixar Stood, Arquivo nem Tag soltos", async () => {
+    const ownerId = await createUser();
+
+    const result = await createStoodFromSubject(ownerId, {
+      subjectSlug: subject.slug,
+      name: subject.name,
+      description: "",
+      tags: { tagIds: [], newTagNames: ["Exatas", "a".repeat(MAX_TAG_NAME_LENGTH + 1)] },
+    });
+
+    expect(result).toEqual({ ok: false, reason: "nome-da-tag-longo" });
+    expect(await db.select({ id: stoods.id }).from(stoods).where(eq(stoods.ownerId, ownerId))).toEqual([]);
+    expect(await db.select({ id: files.id }).from(files).where(eq(files.ownerId, ownerId))).toEqual([]);
+    expect(await db.select({ id: tags.id }).from(tags).where(eq(tags.ownerId, ownerId))).toEqual([]);
+  });
+
   it.each([
     ["vazio", "", "nome-vazio"],
     ["com /", "Cálculo/1", "nome-com-separador"],
@@ -81,6 +112,15 @@ describe("createStoodFromSubject", () => {
 async function getStoodRow(id: string) {
   const [stood] = await db.select().from(stoods).where(eq(stoods.id, id)).limit(1);
   return stood;
+}
+
+async function getTagNames(stoodId: string) {
+  const rows = await db
+    .select({ name: tags.name })
+    .from(stoodTags)
+    .innerJoin(tags, eq(tags.id, stoodTags.tagId))
+    .where(eq(stoodTags.stoodId, stoodId));
+  return rows.map((row) => row.name).sort();
 }
 
 // Todos os Arquivos do Stood, de qualquer tipo, para um Arquivo a mais ou de outro tipo aparecer na comparação

@@ -44,6 +44,10 @@ _Evitar_: Diretório
 Um item de conteúdo de um Stood, de um dos tipos Nota, Desenho, Imagem, PDF ou Vídeo.
 _Evitar_: Documento, item, anexo
 
+**Tag**:
+Um nome que o Usuário cria para agrupar Stoods. Um Stood pode ter várias Tags, e uma Tag pode existir sem marcar nenhum Stood.
+_Evitar_: Etiqueta, marcador, categoria
+
 ### Tipos de Arquivo
 
 **Nota**:

@@ -6,8 +6,15 @@ import { requireSession } from "@/lib/auth/session";
 import { type CreateStoodResult, type UpdateStoodResult, createStood, updateStood } from "@/lib/stood/stood";
 import { type CreateStoodFromSubjectResult, createStoodFromSubject } from "@/lib/subject/subject";
 
-// As regras de nome e descrição ficam no Service; aqui só se confere o formato da entrada
-const detailsInputSchema = z.object({ name: z.string(), description: z.string() });
+// Teto só para barrar entrada abusiva; o limite de Tags por Stood fica no Service
+const MAX_TAG_ITEMS = 50;
+
+// As regras de nome, descrição e Tags ficam no Service; aqui só se confere o formato da entrada
+const tagsInputSchema = z.object({
+  tagIds: z.array(z.string()).max(MAX_TAG_ITEMS),
+  newTagNames: z.array(z.string()).max(MAX_TAG_ITEMS),
+});
+const detailsInputSchema = z.object({ name: z.string(), description: z.string(), tags: tagsInputSchema.optional() });
 const updateInputSchema = detailsInputSchema.extend({ stoodId: z.string() });
 const subjectInputSchema = detailsInputSchema.extend({ subjectSlug: z.string() });
 
@@ -38,7 +45,7 @@ export async function createStoodFromSubjectAction(input: unknown): Promise<Crea
   return result;
 }
 
-// Sem revalidar a página: o Quadro troca o nome na tela, e uma nova renderização gravaria last_opened_at
+// Sem revalidar a página: o Quadro troca o nome e as Tags na tela, e uma nova renderização gravaria last_opened_at
 export async function updateStoodAction(input: unknown): Promise<UpdateStoodActionResult> {
   const user = await requireSession();
   const parsed = updateInputSchema.safeParse(input);

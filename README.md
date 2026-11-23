@@ -40,6 +40,7 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 
 - **Biblioteca**: Todos os seus Stoods num lugar só, numa lista sem pastas. Dentro de cada Stood, você organiza os arquivos em Pastas da forma que quiser.
 - **Matérias**: Na Biblioteca, Stoods prontos de Cálculo 1, Programação Orientada a Objetos e Engenharia de Software, com videoaulas do conteúdo. Um clique cria a sua cópia, que você edita à vontade sem mudar a Matéria.
+- **Tags**: Marque seus Stoods com Tags como "Prova" ou "Semestre 1" e filtre a Biblioteca para ver só os de um grupo.
 - **Salvamento automático**: Notas e desenhos são salvos enquanto você escreve, sem botão de salvar.
 - **Captura de tela**: Um clique no vídeo guarda aquele momento da aula como imagem, junto dos outros arquivos do estudo.
 - **Publicação no GitHub**: Seu Stood vai inteiro para o GitHub com um clique, e cada publicação guarda uma versão dele.

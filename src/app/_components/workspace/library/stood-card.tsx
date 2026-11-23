@@ -1,7 +1,9 @@
 import { Brain, GraduationCap } from "lucide-react";
 import { CARD, FOCUS } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FILE_TYPE_ORDER, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
+import { TagChips } from "@/app/_components/workspace/tag-chips";
 import type { FileType } from "@/lib/stood/tree";
+import type { StoodTag } from "@/lib/tag/rules";
 
 // Classes do cartão clicável, iguais no link do Stood e no botão da Matéria
 export const STOOD_CARD = `${CARD} ${FOCUS} flex w-full cursor-pointer flex-col gap-3 bg-surface p-4 text-left hover:bg-surface-2`;
@@ -10,15 +12,16 @@ type StoodCardBodyProps = {
   icon: "stood" | "subject";
   name: string;
   description: string | null;
+  tags?: StoodTag[];
   fileCounts: Partial<Record<FileType, number>>;
   meta?: string;
 };
 
-type StoodCardProps = Omit<StoodCardBodyProps, "icon" | "meta"> & { id: string; openedAgo: string };
+type StoodCardProps = Omit<StoodCardBodyProps, "icon" | "meta" | "tags"> & { id: string; tags: StoodTag[]; openedAgo: string };
 
 const ICONS = { stood: Brain, subject: GraduationCap };
 
-// Cartão de "Continuar de onde parou": ícone, nome, descrição em 2 linhas, Arquivos por tipo e há quanto tempo abriu
+// Cartão de "Continuar de onde parou": ícone, nome, descrição em 2 linhas, Tags, Arquivos por tipo e há quanto tempo abriu
 export function StoodCard({ id, openedAgo, ...body }: StoodCardProps) {
   return (
     <a href={`/stood/${id}`} className={STOOD_CARD}>
@@ -27,8 +30,9 @@ export function StoodCard({ id, openedAgo, ...body }: StoodCardProps) {
   );
 }
 
-// Só span por dentro, porque o cartão da Matéria é um botão e botão não aceita bloco nem lista
-export function StoodCardBody({ icon, name, description, fileCounts, meta }: StoodCardBodyProps) {
+// Só span por dentro, porque o cartão da Matéria é um botão e botão não aceita bloco nem lista.
+// A lista de Tags só aparece no cartão do Stood, que é um link.
+export function StoodCardBody({ icon, name, description, tags, fileCounts, meta }: StoodCardBodyProps) {
   const Icon = ICONS[icon];
   const typesWithFiles = FILE_TYPE_ORDER.filter((type) => (fileCounts[type] ?? 0) > 0);
 
@@ -42,6 +46,8 @@ export function StoodCardBody({ icon, name, description, fileCounts, meta }: Sto
       </span>
 
       <span className="line-clamp-2 min-h-10 text-ui text-text-muted">{description ?? "Sem descrição."}</span>
+
+      {tags && <TagChips tags={tags} label={`Tags de ${name}`} />}
 
       <span className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-meta text-text-muted">
         {typesWithFiles.length > 0 ? (

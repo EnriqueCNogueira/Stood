@@ -1,12 +1,12 @@
 import "server-only";
 
 import { files } from "@/db/schema";
-import { type CreateStoodResult, createStood } from "@/lib/stood/stood";
+import { type CreateStoodResult, type StoodInput, createStood } from "@/lib/stood/stood";
 import { buildSubjectTree, findSubject } from "@/lib/subject/catalog";
 
 export type CreateStoodFromSubjectResult = CreateStoodResult | { ok: false; reason: "materia-nao-encontrada" };
 
-type CreateStoodFromSubjectInput = { subjectSlug: string; name: string; description: string };
+type CreateStoodFromSubjectInput = StoodInput & { subjectSlug: string };
 
 // Copia a Matéria para um Stood novo do dono; a Matéria segue intacta e só a cópia pode ser modificada.
 // O dono vem da sessão, e a FK composta de files amarra cada Vídeo ao Stood desse mesmo dono.

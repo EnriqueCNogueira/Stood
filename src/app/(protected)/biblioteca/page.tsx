@@ -11,24 +11,27 @@ import { buildFirstName, buildRelativeTime } from "@/lib/library/library";
 import { getWeekSummary } from "@/lib/pomodoro/pomodoro";
 import { getLibraryStoods, getRecentStoods } from "@/lib/stood/stood";
 import { SUBJECTS } from "@/lib/subject/catalog";
+import { getTags } from "@/lib/tag/tag";
 
 // Linha e respiro entre as seções da Biblioteca
 const SECTION_DIVIDER = "mt-10 border-t border-border pt-8 2xl:mt-12 2xl:pt-10";
 
-// Destino depois do login: a semana de estudo, as Matérias, os Stoods abertos por último e a árvore de todos
+// Destino depois do login: a semana de estudo, as Matérias, os Stoods abertos por último, a árvore de todos e as Tags
 export default async function LibraryPage() {
   const user = await requireSession();
-  const [library, recent, week] = await Promise.all([
+  const [library, recent, week, tags] = await Promise.all([
     getLibraryStoods(user.id),
     getRecentStoods(user.id),
     getWeekSummary(user.id),
+    getTags(user.id),
   ]);
+  const allTags = tags.map(({ id, name }) => ({ id, name }));
   const firstName = buildFirstName(user.name);
   const now = new Date();
 
   return (
     <div className={`flex flex-col ${BELOW_HEADER.mdMinHeight} md:flex-row`}>
-      <LibrarySidebar stoods={library} />
+      <LibrarySidebar stoods={library} tags={tags} />
 
       <main className="min-w-0 flex-1 px-4 pt-7 pb-16 md:px-12 md:pt-10 2xl:pt-14">
         <h1 className="mb-8 text-3xl font-medium tracking-tight 2xl:text-4xl">{firstName ? `Olá, ${firstName}` : "Olá"}</h1>
@@ -50,6 +53,7 @@ export default async function LibraryPage() {
                 name={subject.name}
                 description={subject.description}
                 videoCount={subject.videos.length}
+                allTags={allTags}
               />
             ))}
           </div>
@@ -68,6 +72,7 @@ export default async function LibraryPage() {
                   id={stood.id}
                   name={stood.name}
                   description={stood.description}
+                  tags={stood.tags}
                   fileCounts={stood.fileCounts}
                   openedAgo={buildRelativeTime(stood.lastOpenedAt, now)}
                 />
@@ -77,7 +82,11 @@ export default async function LibraryPage() {
             <div className="grid justify-items-start gap-3 rounded-lg border border-dashed border-border p-6">
               <p className="font-medium">Você ainda não tem nenhum Stood.</p>
               <p className="text-text-muted">Crie o primeiro para reunir as Pastas e os Arquivos de um assunto.</p>
-              <StoodDialog mode="create" triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
+              <StoodDialog
+                mode="create"
+                allTags={allTags}
+                triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}
+              >
                 <Plus size={16} aria-hidden />
                 Criar o primeiro Stood
               </StoodDialog>

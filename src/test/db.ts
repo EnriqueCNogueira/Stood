@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { files, folders, type NewFile, type NewFolder, type NewStood, stoods, users } from "@/db/schema";
+import { files, folders, type NewFile, type NewFolder, type NewStood, stoodTags, stoods, tags, users } from "@/db/schema";
 import { buildUniqueEmail } from "@/test/auth";
 
 // Linhas de Usuário, Stood, Pasta e Arquivo inseridas direto no banco, com e-mail único por caso
@@ -42,4 +42,13 @@ export async function createFile(ownerId: string, stoodId: string, file: Omit<Ne
     .values({ ...file, ownerId, stoodId })
     .returning({ id: files.id });
   return created;
+}
+
+// Tag do dono, opcionalmente já marcando os Stoods passados
+export async function createTag(ownerId: string, name: string, stoodIds: string[] = []) {
+  const [tag] = await db.insert(tags).values({ ownerId, name }).returning({ id: tags.id, name: tags.name });
+  if (stoodIds.length > 0) {
+    await db.insert(stoodTags).values(stoodIds.map((stoodId) => ({ ownerId, stoodId, tagId: tag.id })));
+  }
+  return tag;
 }

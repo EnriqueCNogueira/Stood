@@ -27,6 +27,9 @@ export const INPUT = "h-9 w-full rounded-md border border-border bg-surface px-3
 
 export const CARD = "rounded-lg border border-border shadow-card transition";
 
+// Diálogo modal (elemento dialog), como o do Stood e o de Gerenciar Tags
+export const DIALOG = "m-auto rounded-lg border border-border bg-surface text-text shadow-card backdrop:bg-bg/70";
+
 // Caixa flutuante de menu, engrenagem, dica e aviso; a posição fica em quem usa
 export const POPOVER = "rounded-md border border-border bg-surface shadow-card";
 

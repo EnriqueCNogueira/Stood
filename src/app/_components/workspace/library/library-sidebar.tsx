@@ -1,21 +1,52 @@
 "use client";
 
 import { Brain, CircleHelp, Plus } from "lucide-react";
-import { type KeyboardEvent, useRef, useState } from "react";
+import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { BELOW_HEADER, BUTTON, FOCUS, POPOVER } from "@/app/_components/ui";
+import { ManageTagsDialog } from "@/app/_components/workspace/library/manage-tags-dialog";
 import { Sidebar } from "@/app/_components/workspace/sidebar";
 import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
 import { FileLabel, TREE_CHILDREN, TREE_ROW, TreeChevron, TreeList } from "@/app/_components/workspace/tree";
 import { SIDEBAR_WIDTH_STORAGE_KEYS } from "@/lib/board/preferences";
-import type { StoodWithTree } from "@/lib/stood/tree";
+import { type StoodWithTree, buildSortedByName } from "@/lib/stood/tree";
+import { type StoodTag, filterStoodsByTags } from "@/lib/tag/rules";
 
 const DEFAULT_WIDTH = 264;
 const TOOLTIP_WIDTH = 240;
 const TOOLTIP_GAP = 6;
 const VIEWPORT_MARGIN = 8;
 
-// Barra lateral da Biblioteca: "Novo Stood" e a árvore de todos os Stoods; no celular vira um bloco acima do conteúdo
-export function LibrarySidebar({ stoods }: { stoods: StoodWithTree[] }) {
+type LibrarySidebarProps = {
+  stoods: StoodWithTree[];
+  tags: { id: string; name: string; stoodCount: number }[];
+};
+
+// Barra lateral da Biblioteca: "Novo Stood", o filtro por Tag e a árvore dos Stoods; no celular vira um bloco acima do conteúdo
+export function LibrarySidebar({ stoods, tags }: LibrarySidebarProps) {
+  const [selectedTagIds, setSelectedTagIds] = useState<ReadonlySet<string>>(new Set());
+  const allTags = useMemo(() => tags.map(({ id, name }) => ({ id, name })), [tags]);
+  const filterTags = useMemo(() => buildFilterTags(stoods), [stoods]);
+  // Tag ligada que deixou de marcar Stoods (apagada ou tirada) sai do filtro sozinha
+  const activeTagIds = useMemo(
+    () => new Set(filterTags.filter((tag) => selectedTagIds.has(tag.id)).map((tag) => tag.id)),
+    [filterTags, selectedTagIds],
+  );
+  const visibleStoods = filterStoodsByTags(stoods, activeTagIds);
+  // "Gerenciar Tags" só precisa do nome e das Tags de cada Stood, não da árvore
+  const pickerStoods = useMemo(
+    () => stoods.map((stood) => ({ id: stood.id, name: stood.name, tagIds: stood.tags.map((tag) => tag.id) })),
+    [stoods],
+  );
+
+  function toggleTag(tagId: string) {
+    setSelectedTagIds((current) => {
+      const next = new Set(current);
+      if (next.has(tagId)) next.delete(tagId);
+      else next.add(tagId);
+      return next;
+    });
+  }
+
   return (
     <Sidebar
       label="Stoods"
@@ -24,25 +55,58 @@ export function LibrarySidebar({ stoods }: { stoods: StoodWithTree[] }) {
       className={`border-b md:sticky md:top-14 md:border-b-0 ${BELOW_HEADER.mdHeight}`}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
-        <StoodDialog mode="create" triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary} w-full`}>
+        <StoodDialog mode="create" allTags={allTags} triggerClassName={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary} w-full`}>
           <Plus size={16} aria-hidden />
           Novo Stood
         </StoodDialog>
+
+        <div className="grid gap-1.5">
+          {filterTags.length > 0 && (
+            <div role="group" aria-labelledby="library-tag-filter" className="grid gap-1.5 px-2">
+              <p id="library-tag-filter" className="text-xs font-medium text-text-muted">
+                Filtrar por Tag
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {filterTags.map((tag) => {
+                  const isActive = activeTagIds.has(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => toggleTag(tag.id)}
+                      className={`max-w-full cursor-pointer truncate rounded-full border px-2 py-0.5 text-meta transition ${FOCUS} ${
+                        isActive
+                          ? "border-accent bg-accent/12 text-accent-text"
+                          : "border-border bg-surface-2 text-text-muted hover:text-text"
+                      }`}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <ManageTagsDialog tags={tags} stoods={pickerStoods} />
+        </div>
 
         <div>
           <p id="library-stoods" className="mb-1 px-2 text-xs font-medium text-text-muted">
             Stoods
           </p>
-          {stoods.length > 0 ? (
+          {visibleStoods.length > 0 ? (
             <ul aria-labelledby="library-stoods">
-              {stoods.map((stood) => (
+              {visibleStoods.map((stood) => (
                 <li key={stood.id}>
                   <StoodItem stood={stood} />
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="px-2 text-ui text-text-muted">Nenhum Stood ainda.</p>
+            <p className="px-2 text-ui text-text-muted">
+              {stoods.length > 0 ? "Nenhum Stood com essas Tags." : "Nenhum Stood ainda."}
+            </p>
           )}
         </div>
       </div>
@@ -148,4 +212,10 @@ function DescriptionHint({ name, description }: { name: string; description: str
       )}
     </>
   );
+}
+
+// Só as Tags que marcam algum Stood entram no filtro: ligar uma Tag sem Stood sempre esvaziaria a lista
+function buildFilterTags(stoods: StoodWithTree[]): StoodTag[] {
+  const byId = new Map(stoods.flatMap((stood) => stood.tags).map((tag) => [tag.id, tag]));
+  return buildSortedByName([...byId.values()]);
 }

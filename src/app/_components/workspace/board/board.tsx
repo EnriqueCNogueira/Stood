@@ -43,6 +43,7 @@ import {
 import type { ActiveFocus } from "@/lib/pomodoro/pomodoro";
 import type { StoodDetails } from "@/lib/stood/details";
 import { type StoodTreeFile, type StoodWithTree, buildTreeFiles, buildTreeWithFile } from "@/lib/stood/tree";
+import type { StoodTag } from "@/lib/tag/rules";
 
 // Distância mínima, em pixels, para um clique virar arrasto
 const DRAG_THRESHOLD = 4;
@@ -72,11 +73,15 @@ type BoardProps = {
   editableContents: Record<string, string>;
   activeFocus: ActiveFocus | null;
   serverNow: number;
+  allTags: StoodTag[];
 };
 
 // Raiz do Quadro: abre com as Janelas salvas, salva cada mudança e liga a barra, a lateral, a área e o Pomodoro
-export function Board({ stood, editableContents, activeFocus, serverNow }: BoardProps) {
+export function Board({ stood, editableContents, activeFocus, serverNow, allTags }: BoardProps) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
+  const [tags, setTags] = useState<StoodTag[]>(stood.tags);
+  // Tags criadas no diálogo deste Quadro entram nas sugestões sem recarregar a página
+  const [knownTags, setKnownTags] = useState<StoodTag[]>(allTags);
   // O Arquivo criado entra direto na árvore, sem renderizar a página de novo
   const [tree, setTree] = useState(stood.tree);
   // Reabrir uma Nota mostra o que foi digitado nela, mesmo que a página não tenha sido carregada de novo
@@ -281,6 +286,12 @@ export function Board({ stood, editableContents, activeFocus, serverNow }: Board
     setIsDrawerOpen(false);
   }
 
+  function saveDetails(nextDetails: StoodDetails, nextTags: StoodTag[]) {
+    setDetails(nextDetails);
+    setTags(nextTags);
+    setKnownTags((current) => [...current, ...nextTags.filter((tag) => !current.some((known) => known.id === tag.id))]);
+  }
+
   function changePreferences(next: BoardPreferences) {
     setStoredPreferences(JSON.stringify(next));
   }
@@ -304,10 +315,12 @@ export function Board({ stood, editableContents, activeFocus, serverNow }: Board
         <BoardBar
           stoodId={stood.id}
           details={details}
+          tags={tags}
+          allTags={knownTags}
           counts={buildWindowCounts(state)}
           activeFocus={activeFocus}
           serverNow={serverNow}
-          onDetailsSaved={setDetails}
+          onDetailsSaved={saveDetails}
           onOpenDrawer={() => setIsDrawerOpen(true)}
         />
 
