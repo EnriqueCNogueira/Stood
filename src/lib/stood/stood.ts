@@ -1,13 +1,13 @@
 import "server-only";
 
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@/db";
 import { FILE_TYPES, type FileType, files, folders, stoods } from "@/db/schema";
 import { type StoredBoardWindow, parseStoredWindows } from "@/lib/board/windows";
 import { isConstraintViolation } from "@/lib/constraint";
 import { type StoodDetailsReason, validateStoodDetails } from "@/lib/stood/details";
 import { type StoodWithTree, buildSortedByName, buildStoodTree } from "@/lib/stood/tree";
+import { isUuid } from "@/lib/uuid";
 
 type RecentStood = {
   id: string;
@@ -28,7 +28,6 @@ export type InsertStoodContent = (tx: Transaction, stoodId: string) => Promise<u
 
 const NAME_UNIQUE_CONSTRAINT = "stoods_owner_id_name_unique";
 const RECENT_STOODS_LIMIT = 3;
-const uuidSchema = z.uuid();
 
 // insertContent grava, na mesma transação, as Pastas e os Arquivos iniciais: nome repetido não deixa Arquivo solto
 export async function createStood(
@@ -172,8 +171,4 @@ function buildFileCounts(rows: { type: FileType; total: number }[]): Record<File
   const counts = Object.fromEntries(FILE_TYPES.map((type) => [type, 0])) as Record<FileType, number>;
   for (const row of rows) counts[row.type] = row.total;
   return counts;
-}
-
-function isUuid(value: string) {
-  return uuidSchema.safeParse(value).success;
 }

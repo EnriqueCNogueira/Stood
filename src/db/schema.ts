@@ -6,6 +6,7 @@ import {
   customType,
   foreignKey,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -23,6 +24,14 @@ import {
   MAX_NAME_LENGTH,
   PATH_SEPARATOR_PATTERN,
 } from "../lib/stood/details.ts";
+import {
+  MAX_FOCUS_MINUTES,
+  MAX_WEEKLY_GOAL_MINUTES,
+  MIN_COUNTED_FOCUS_SECONDS,
+  MIN_FOCUS_MINUTES,
+  MIN_WEEKLY_GOAL_MINUTES,
+  WEEKLY_GOAL_STEP_MINUTES,
+} from "../lib/pomodoro/limits.ts";
 import { YOUTUBE_VIDEO_ID_PATTERN } from "../lib/video/link.ts";
 
 // --- Autenticação (Better Auth) ---
@@ -272,6 +281,60 @@ export const fileBlobs = pgTable(
     check(
       "file_blobs_data_check",
       sql`octet_length(${table.data}) between 1 and ${sql.raw(String(MAX_IMAGE_BYTES))}`,
+    ),
+  ],
+);
+
+// --- Pomodoro ---
+
+// Foco: período cronometrado de estudo, começado num Stood. É dado do Usuário, e não só do Stood:
+// por isso tem FK direta para users, e apagar o Stood mantém o Foco contando como Tempo estudado.
+// A FK (stood_id, owner_id) para stoods, com ON DELETE SET NULL só de stood_id, foi escrita à mão
+// na migration, porque o drizzle-kit não gera SET NULL com lista de colunas.
+export const focuses = pgTable(
+  "focuses",
+  {
+    id: uuid("id").default(sql`pg_catalog.gen_random_uuid()`).primaryKey(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Nulo depois que o Stood é apagado
+    stoodId: uuid("stood_id"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    durationMinutes: integer("duration_minutes").notNull(),
+    // Nulo enquanto o Foco não é interrompido; sem interrupção, o Foco termina no fim previsto
+    interruptedAt: timestamp("interrupted_at", { withTimezone: true }),
+  },
+  (table) => [
+    // Resumo da semana e busca do Foco em andamento, do mais novo ao mais antigo
+    index("focuses_owner_id_started_at_idx").on(table.ownerId, table.startedAt.desc()),
+    // Busca dos Focos no SET NULL de apagar Stood
+    index("focuses_stood_id_idx").on(table.stoodId),
+    check(
+      "focuses_duration_minutes_check",
+      sql`${table.durationMinutes} between ${sql.raw(String(MIN_FOCUS_MINUTES))} and ${sql.raw(String(MAX_FOCUS_MINUTES))}`,
+    ),
+    // Interrompido com menos do mínimo, o Foco é apagado; depois do fim previsto, não há o que interromper
+    check(
+      "focuses_interrupted_at_check",
+      sql`${table.interruptedAt} is null or (${table.interruptedAt} >= ${table.startedAt} + interval '${sql.raw(String(MIN_COUNTED_FOCUS_SECONDS))} seconds' and ${table.interruptedAt} < ${table.startedAt} + ${table.durationMinutes} * interval '1 minute')`,
+    ),
+  ],
+);
+
+// Meta semanal: uma por Usuário; remover a meta apaga a linha
+export const weeklyGoals = pgTable(
+  "weekly_goals",
+  {
+    ownerId: uuid("owner_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    minutes: integer("minutes").notNull(),
+  },
+  (table) => [
+    check(
+      "weekly_goals_minutes_check",
+      sql`${table.minutes} between ${sql.raw(String(MIN_WEEKLY_GOAL_MINUTES))} and ${sql.raw(String(MAX_WEEKLY_GOAL_MINUTES))} and ${table.minutes} % ${sql.raw(String(WEEKLY_GOAL_STEP_MINUTES))} = 0`,
     ),
   ],
 );

@@ -40,6 +40,7 @@ import {
   isMaximized,
   isSameRect,
 } from "@/lib/board/windows";
+import type { ActiveFocus } from "@/lib/pomodoro/pomodoro";
 import type { StoodDetails } from "@/lib/stood/details";
 import { type StoodTreeFile, type StoodWithTree, buildTreeFiles, buildTreeWithFile } from "@/lib/stood/tree";
 
@@ -69,10 +70,12 @@ type DragArea = { left: number; top: number; context: BoardContext; liveContext:
 type BoardProps = {
   stood: StoodWithTree & { boardWindows: StoredBoardWindow[] };
   editableContents: Record<string, string>;
+  activeFocus: ActiveFocus | null;
+  serverNow: number;
 };
 
-// Raiz do Quadro: abre com as Janelas salvas, salva cada mudança e liga a barra, a lateral e a área
-export function Board({ stood, editableContents }: BoardProps) {
+// Raiz do Quadro: abre com as Janelas salvas, salva cada mudança e liga a barra, a lateral, a área e o Pomodoro
+export function Board({ stood, editableContents, activeFocus, serverNow }: BoardProps) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
   // O Arquivo criado entra direto na árvore, sem renderizar a página de novo
   const [tree, setTree] = useState(stood.tree);
@@ -302,6 +305,8 @@ export function Board({ stood, editableContents }: BoardProps) {
           stoodId={stood.id}
           details={details}
           counts={buildWindowCounts(state)}
+          activeFocus={activeFocus}
+          serverNow={serverNow}
           onDetailsSaved={setDetails}
           onOpenDrawer={() => setIsDrawerOpen(true)}
         />

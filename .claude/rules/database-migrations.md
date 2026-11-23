@@ -37,6 +37,7 @@ paths: ["src/db/**", "drizzle/**", "drizzle.config.ts"]
 
 - **Coluna**: Tabela raiz de dado do usuário, como `stoods`, tem `owner_id NOT NULL` referenciando `users.id` com `onDelete: "cascade"`. É a coluna do filtro de [architecture.md](architecture.md#isolamento-por-dono).
 - **Filha**: Repete `owner_id NOT NULL` e amarra o dono só pela FK composta `(parent_id, owner_id)` para `(id, owner_id)` do pai, com `UNIQUE (id, owner_id)` no pai e cascade; o cascade a partir de `users` chega pelo pai, sem FK direta.
+- **Pai opcional**: Dado do Usuário que precisa sobreviver ao pai apagado, como o Foco ao Stood, tem FK direta para `users` com cascade e FK composta `(parent_id, owner_id)` com `ON DELETE SET NULL (parent_id)`, escrita à mão no fim da migration.
 - **Global**: Conteúdo igual para todos não tem `owner_id`.
 
 ## Anti-patterns

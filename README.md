@@ -43,6 +43,7 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 - **Salvamento automático**: Notas e desenhos são salvos enquanto você escreve, sem botão de salvar.
 - **Captura de tela**: Um clique no vídeo guarda aquele momento da aula como imagem, junto dos outros arquivos do estudo.
 - **Publicação no GitHub**: Seu Stood vai inteiro para o GitHub com um clique, e cada publicação guarda uma versão dele.
+- **Pomodoro**: Na barra do quadro, você estuda em Focos com Pausas entre eles, com as durações que escolher. Na Biblioteca, você vê quanto estudou na semana, em cada Stood, e o progresso da sua meta semanal.
 - **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, PDFs, Anotações e links do Youtube). E pode exportar para o Github ou Arquivo compactado (`.zip`).
 - **Conta**: Entrada por Google, GitHub ou e-mail e senha. O perfil tem só nome, e-mail e o avatar do provedor.
 

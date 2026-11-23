@@ -1,14 +1,33 @@
-// Seed de dev: cria Stoods com Pastas aninhadas e Arquivos dos 5 tipos para um Usuário que já existe.
+// Seed de dev: cria Stoods com Pastas aninhadas e Arquivos dos 5 tipos, Focos encerrados e a Meta semanal
+// para um Usuário que já existe.
 // Uso: pnpm seed:dev <email>. Só para conferir as telas no navegador; nenhum teste depende dele.
 
 import { existsSync } from "node:fs";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import { type FileType, files, folders, stoods, users } from "../src/db/schema.ts";
+import { type FileType, files, focuses, folders, stoods, users, weeklyGoals } from "../src/db/schema.ts";
 
+const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
+// Os Focos de exemplo terminam antes de agora, um depois do outro, com este intervalo entre eles
+const FOCUS_GAP_MINUTES = 10;
+const FIRST_FOCUS_ENDS_AGO_MINUTES = 30;
+const SEED_WEEKLY_GOAL_MINUTES = 10 * 60;
+
+// Foco encerrado; com studiedMinutes menor que a duração, ele foi interrompido e conta só esse tempo
+type SeedFocus = { stoodName: string; durationMinutes: number; studiedMinutes?: number };
+
+// Do mais antigo ao mais recente: 2 h 48 min no total, 1 h 40 min em Cálculo I, 43 min em Física II e 25 min em Química geral
+const SEED_FOCUSES: SeedFocus[] = [
+  { stoodName: "Cálculo I", durationMinutes: 50 },
+  { stoodName: "Física II", durationMinutes: 25 },
+  { stoodName: "Cálculo I", durationMinutes: 25 },
+  { stoodName: "Química geral", durationMinutes: 25 },
+  { stoodName: "Física II", durationMinutes: 25, studiedMinutes: 18 },
+  { stoodName: "Cálculo I", durationMinutes: 25 },
+];
 const DRAWING_CONTENT = JSON.stringify({ type: "excalidraw", version: 2, elements: [], appState: {}, files: {} });
 
 type SeedFile = { name: string; type: FileType; content?: string };
@@ -99,7 +118,9 @@ async function main(email: string | undefined) {
       });
       created++;
     }
-    console.log("seed done", { created, skipped: SEED_STOODS.length - created });
+    const createdFocuses = await createSeedFocuses(db, user.id);
+    await db.insert(weeklyGoals).values({ ownerId: user.id, minutes: SEED_WEEKLY_GOAL_MINUTES }).onConflictDoNothing();
+    console.log("seed done", { created, skipped: SEED_STOODS.length - created, createdFocuses });
   } finally {
     await pool.end();
   }
@@ -126,6 +147,40 @@ async function createFolderContent(
       .returning({ id: folders.id });
     await createFolderContent(tx, ownerId, stoodId, row.id, child);
   }
+}
+
+// Cria os Focos de exemplo só se o Usuário ainda não tem nenhum Foco, para rodar de novo não duplicar o Tempo estudado.
+// Todos terminam nas últimas horas, então caem na semana atual, exceto se o seed rodar na madrugada de segunda.
+async function createSeedFocuses(db: ReturnType<typeof drizzle>, ownerId: string) {
+  const [existing] = await db.select({ id: focuses.id }).from(focuses).where(eq(focuses.ownerId, ownerId)).limit(1);
+  if (existing) return 0;
+
+  const stoodRows = await db
+    .select({ id: stoods.id, name: stoods.name })
+    .from(stoods)
+    .where(and(eq(stoods.ownerId, ownerId), inArray(stoods.name, [...new Set(SEED_FOCUSES.map((focus) => focus.stoodName))])));
+  const stoodIdByName = new Map(stoodRows.map((stood) => [stood.name, stood.id]));
+
+  // Monta a linha do tempo de trás para frente, a partir do Foco mais recente
+  let endsAt = Date.now() - FIRST_FOCUS_ENDS_AGO_MINUTES * MS_PER_MINUTE;
+  const rows = [...SEED_FOCUSES].reverse().flatMap((focus) => {
+    const stoodId = stoodIdByName.get(focus.stoodName);
+    const studiedMinutes = focus.studiedMinutes ?? focus.durationMinutes;
+    const startedAt = endsAt - studiedMinutes * MS_PER_MINUTE;
+    const isInterrupted = studiedMinutes < focus.durationMinutes;
+    const row = {
+      ownerId,
+      stoodId: stoodId ?? null,
+      startedAt: new Date(startedAt),
+      durationMinutes: focus.durationMinutes,
+      interruptedAt: isInterrupted ? new Date(endsAt) : null,
+    };
+    endsAt = startedAt - FOCUS_GAP_MINUTES * MS_PER_MINUTE;
+    return stoodId ? [row] : [];
+  });
+
+  if (rows.length > 0) await db.insert(focuses).values(rows);
+  return rows.length;
 }
 
 function fail(message: string): never {

@@ -36,6 +36,13 @@
       "when": 1794870510538,
       "tag": "0004_create_file_blobs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795390799014,
+      "tag": "0005_create_pomodoro_tables",
+      "breakpoints": true
     }
   ]
 }
