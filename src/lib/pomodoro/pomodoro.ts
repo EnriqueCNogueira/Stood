@@ -139,16 +139,24 @@ function getWeekStoodRows(ownerId: string, now: Date) {
     sql`${focuses.startedAt} >= ${weekStart}`,
     sql`${focuses.startedAt} < ${weekStart} + interval '7 days'`,
   );
-  const isEnded = or(sql`${focuses.interruptedAt} is not null`, lte(focusEnd, now));
-  // A CHECK garante que a interrupção vem antes do fim previsto, então ela é o fim real quando existe
-  const studiedSeconds = sql<number>`floor(sum(extract(epoch from coalesce(${focuses.interruptedAt}, ${focusEnd}) - ${focuses.startedAt})))::int`;
-
   return db
-    .select({ id: focuses.stoodId, name: stoods.name, studiedSeconds })
+    .select({ id: focuses.stoodId, name: stoods.name, studiedSeconds: buildFocusStudiedSecondsSum() })
     .from(focuses)
     .leftJoin(stoods, and(eq(stoods.id, focuses.stoodId), eq(stoods.ownerId, focuses.ownerId)))
-    .where(and(eq(focuses.ownerId, ownerId), isInWeek, isEnded))
+    .where(and(eq(focuses.ownerId, ownerId), isInWeek, buildEndedFocusCondition(now)))
     .groupBy(focuses.stoodId, stoods.name);
+}
+
+// Só o Foco encerrado conta como Tempo estudado: interrompido ou com o fim previsto já passado.
+// A Agenda usa a mesma regra para somar o Tempo estudado de cada dia.
+export function buildEndedFocusCondition(now: Date) {
+  return or(sql`${focuses.interruptedAt} is not null`, lte(focusEnd, now));
+}
+
+// Soma do Tempo estudado dos Focos agrupados, em segundos inteiros.
+// A CHECK garante que a interrupção vem antes do fim previsto, então ela é o fim real quando existe.
+export function buildFocusStudiedSecondsSum() {
+  return sql<number>`floor(sum(extract(epoch from coalesce(${focuses.interruptedAt}, ${focusEnd}) - ${focuses.startedAt})))::int`;
 }
 
 // Em andamento: não foi interrompido e o fim previsto ainda não chegou

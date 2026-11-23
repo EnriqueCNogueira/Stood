@@ -3,25 +3,30 @@ import { BELOW_HEADER, BUTTON } from "@/app/_components/ui";
 import { LibraryBrain } from "@/app/_components/workspace/library/library-brain";
 import { LibrarySidebar } from "@/app/_components/workspace/library/library-sidebar";
 import { StoodCard } from "@/app/_components/workspace/library/stood-card";
+import { UpcomingAppointments } from "@/app/_components/workspace/library/upcoming-appointments";
 import { WeekPanel } from "@/app/_components/workspace/library/week-panel";
 import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
 import { requireSession } from "@/lib/auth/session";
+import { getUpcomingAppointments } from "@/lib/agenda/agenda";
+import { buildTodayInBrasilia } from "@/lib/agenda/rules";
 import { buildFirstName, buildRelativeTime } from "@/lib/library/library";
 import { getWeekSummary } from "@/lib/pomodoro/pomodoro";
 import { getLibraryStoods, getRecentStoods } from "@/lib/stood/stood";
 import { getTags } from "@/lib/tag/tag";
 
-// Destino depois do login: a semana de estudo, os Stoods do Usuário, os abertos por último, a árvore de todos e as Tags
+// Destino depois do login: a semana de estudo, os próximos Compromissos, os Stoods do Usuário, os abertos por último,
+// a árvore de todos e as Tags
 export default async function LibraryPage() {
   const user = await requireSession();
-  const [library, recent, week, tags] = await Promise.all([
+  const now = new Date();
+  const [library, recent, week, tags, upcoming] = await Promise.all([
     getLibraryStoods(user.id),
     getRecentStoods(user.id),
-    getWeekSummary(user.id),
+    getWeekSummary(user.id, now),
     getTags(user.id),
+    getUpcomingAppointments(user.id, now),
   ]);
   const firstName = buildFirstName(user.name);
-  const now = new Date();
 
   return (
     <div className={`flex flex-col ${BELOW_HEADER.mdMinHeight} md:flex-row`}>
@@ -31,6 +36,8 @@ export default async function LibraryPage() {
         <h1 className="mb-8 text-3xl font-medium tracking-tight 2xl:text-4xl">{firstName ? `Olá, ${firstName}` : "Olá"}</h1>
 
         <WeekPanel summary={week} serverNow={now.getTime()} />
+
+        <UpcomingAppointments items={upcoming} today={buildTodayInBrasilia(now)} />
 
         <section aria-labelledby="recent-stoods">
           <h2 id="recent-stoods" className="mb-3.5 text-base font-medium">
