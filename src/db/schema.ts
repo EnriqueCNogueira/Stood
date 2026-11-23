@@ -9,6 +9,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -32,6 +33,7 @@ import {
   MIN_WEEKLY_GOAL_MINUTES,
   WEEKLY_GOAL_STEP_MINUTES,
 } from "../lib/pomodoro/limits.ts";
+import { MAX_TAG_NAME_LENGTH } from "../lib/tag/rules.ts";
 import { YOUTUBE_VIDEO_ID_PATTERN } from "../lib/video/link.ts";
 
 // --- Autenticação (Better Auth) ---
@@ -159,6 +161,53 @@ export const stoods = pgTable(
       "stoods_board_windows_check",
       sql`case when jsonb_typeof(${table.boardWindows}) = 'array' then jsonb_array_length(${table.boardWindows}) <= ${sql.raw(String(MAX_WINDOWS))} else false end`,
     ),
+  ],
+);
+
+// Tag: nome que o Usuário cria para agrupar Stoods; pode existir sem marcar nenhum Stood
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").default(sql`pg_catalog.gen_random_uuid()`).primaryKey(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+  },
+  (table) => [
+    // Alvo da FK composta da ligação com o Stood, que amarra o dono
+    unique("tags_id_owner_id_unique").on(table.id, table.ownerId),
+    // "Prova" e "prova" são a mesma Tag; o índice também serve para listar as Tags do dono
+    uniqueIndex("tags_owner_id_name_unique").on(table.ownerId, sql`lower(${table.name})`),
+    check(
+      "tags_name_check",
+      sql`char_length(${table.name}) between 1 and ${sql.raw(String(MAX_TAG_NAME_LENGTH))} and ${table.name} !~ ${sql.raw(`'${EDGE_WHITESPACE_PATTERN}'`)}`,
+    ),
+  ],
+);
+
+// Ligação entre Stood e Tag: só aceita os dois do mesmo dono e some com qualquer um deles
+export const stoodTags = pgTable(
+  "stood_tags",
+  {
+    ownerId: uuid("owner_id").notNull(),
+    stoodId: uuid("stood_id").notNull(),
+    tagId: uuid("tag_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ name: "stood_tags_pkey", columns: [table.stoodId, table.tagId] }),
+    foreignKey({
+      name: "stood_tags_stood_id_owner_id_stoods_fk",
+      columns: [table.stoodId, table.ownerId],
+      foreignColumns: [stoods.id, stoods.ownerId],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "stood_tags_tag_id_owner_id_tags_fk",
+      columns: [table.tagId, table.ownerId],
+      foreignColumns: [tags.id, tags.ownerId],
+    }).onDelete("cascade"),
+    // Contagem de Stoods por Tag e busca das ligações no cascade de apagar Tag
+    index("stood_tags_tag_id_idx").on(table.tagId),
   ],
 );
 

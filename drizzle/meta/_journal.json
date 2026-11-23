@@ -43,6 +43,13 @@
       "when": 1795390799014,
       "tag": "0005_create_pomodoro_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795392284998,
+      "tag": "0006_create_tag_tables",
+      "breakpoints": true
     }
   ]
 }
