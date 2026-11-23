@@ -36,7 +36,8 @@ export type UpdateStoodResult =
   | { ok: false; reason: StoodDetailsReason | "nome-repetido" | "stood-nao-encontrado" | TagsReason };
 
 // Sem tags, o Stood mantém as Tags que já tem
-type StoodInput = { name: string; description: string; tags?: StoodTagsInput };
+export type StoodInput = { name: string; description: string; tags?: StoodTagsInput };
+export type InsertStoodContent = (tx: Transaction, stoodId: string) => Promise<unknown>;
 
 const NAME_UNIQUE_CONSTRAINT = "stoods_owner_id_name_unique";
 const RECENT_STOODS_LIMIT = 3;
@@ -48,8 +49,13 @@ class TagsRefused extends Error {
   }
 }
 
-// Nome, descrição e Tags são gravados juntos: Tag recusada não deixa o Stood criado
-export async function createStood(ownerId: string, input: StoodInput): Promise<CreateStoodResult> {
+// Nome, descrição e Tags são gravados juntos: Tag recusada não deixa o Stood criado.
+// insertContent grava, na mesma transação, as Pastas e os Arquivos iniciais: nome repetido não deixa Arquivo solto
+export async function createStood(
+  ownerId: string,
+  input: StoodInput,
+  insertContent?: InsertStoodContent,
+): Promise<CreateStoodResult> {
   const validation = validateStoodDetails(input);
   if (!validation.ok) return validation;
 
@@ -59,6 +65,7 @@ export async function createStood(ownerId: string, input: StoodInput): Promise<C
         .insert(stoods)
         .values({ ownerId, ...validation.details })
         .returning({ id: stoods.id });
+      await insertContent?.(tx, stood.id);
       if (input.tags) await saveTagsOrRollback(tx, ownerId, stood.id, input.tags);
       return stood.id;
     });

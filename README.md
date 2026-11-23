@@ -1,5 +1,7 @@
 # Stood
 
+Acesse em [stood.dev](https://stood.dev).
+
 O Stood reúne seu estudo inteiro em uma tela só: a videoaula, as anotações, os slides, os PDFs, as imagens e os desenhos de uma matéria num único quadro. Você organiza do seu jeito e, quando volta, seus arquivos estão salvos, centralizados e prontos para você continuar o estudo. Menos tempo procurando arquivo, mais tempo aprendendo.
 
 ## O problema
@@ -37,6 +39,7 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 ### Funcionalidades
 
 - **Biblioteca**: Todos os seus Stoods num lugar só, numa lista sem pastas. Dentro de cada Stood, você organiza os arquivos em Pastas da forma que quiser.
+- **Matérias**: Na Biblioteca, Stoods prontos de Cálculo 1, Programação Orientada a Objetos e Engenharia de Software, com videoaulas do conteúdo. Um clique cria a sua cópia, que você edita à vontade sem mudar a Matéria.
 - **Tags**: Marque seus Stoods com Tags como "Prova" ou "Semestre 1" e filtre a Biblioteca para ver só os de um grupo.
 - **Salvamento automático**: Notas e desenhos são salvos enquanto você escreve, sem botão de salvar.
 - **Captura de tela**: Um clique no vídeo guarda aquele momento da aula como imagem, junto dos outros arquivos do estudo.
@@ -47,8 +50,24 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 
 ## Como rodar
 
-- **Requisitos**: Node 24, pnpm 12 (`npm install -g pnpm`) e PostgreSQL 18, instalado na máquina ou num container Docker.
-- **Instalar**: `pnpm install`.
-- **Configurar**: Copiar o `.env.example` para `.env.local` e preencher. A `DATABASE_URL` aponta para o seu Postgres e o `BETTER_AUTH_SECRET` precisa de 32 caracteres ou mais. Sem a `RESEND_API_KEY`, o link do e-mail de verificação sai no terminal.
-- **Banco**: `pnpm exec drizzle-kit migrate` cria as tabelas no banco da `DATABASE_URL`.
-- **Desenvolver**: `pnpm dev` e abrir `http://localhost:3000`.
+- **Requisitos**: Node 24, pnpm 12 e PostgreSQL 18.
+
+1. **Instalar as dependências**: `pnpm install`.
+2. **Subir o Postgres no Docker**: `docker run --name stood-postgres -e POSTGRES_USER=stood -e POSTGRES_PASSWORD=stood -e POSTGRES_DB=stood -p 5432:5432 -d postgres:18`.
+3. **Criar o `.env.local` e preencher como na tabela abaixo**: `cp .env.example .env.local`.
+4. **Criar as tabelas, de novo a cada migration nova**: `pnpm exec drizzle-kit migrate`.
+5. **Subir o site em `http://localhost:3000`**: `pnpm dev`.
+
+### Variáveis de ambiente
+
+| Variável | Obrigatória | Valor para rodar local |
+| --- | --- | --- |
+| `DATABASE_URL` | Sim | `postgres://stood:stood@localhost:5432/stood` |
+| `BETTER_AUTH_SECRET` | Sim | 32 caracteres ou mais |
+| `BETTER_AUTH_URL` | Sim | `http://localhost:3000` |
+| `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` | Sim | As suas, ou qualquer texto para rodar sem login pelo Google |
+| `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` | Sim | As suas, ou qualquer texto para rodar sem login pelo GitHub |
+| `RESEND_API_KEY` | Só em produção | Vazia: o link de confirmação do e-mail sai no terminal |
+
+- **Segredo**: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+- **OAuth**: Retorno em `http://localhost:3000/auth/callback/google` e `/auth/callback/github`.
