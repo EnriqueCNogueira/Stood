@@ -5,7 +5,8 @@ import { type KeyboardEvent, useId, useState } from "react";
 import { FIELD, FIELD_LABEL, FOCUS, INPUT, POPOVER } from "@/app/_components/ui";
 import { TAG_CHIP } from "@/app/_components/workspace/tag-chips";
 import { TAG_REASON_MESSAGES } from "@/app/_components/workspace/tag-messages";
-import { MAX_TAGS_PER_STOOD, type StoodTag, buildSortedTags, isSameTagName, validateTagName } from "@/lib/tag/rules";
+import { buildSortedByName } from "@/lib/stood/tree";
+import { MAX_TAGS_PER_STOOD, type StoodTag, isSameTagName, validateTagName } from "@/lib/tag/rules";
 
 // Tags escolhidas no diálogo: as que já existem e os nomes novos, que só viram Tag ao salvar o Stood
 export type TagSelection = { tags: StoodTag[]; newNames: string[] };
@@ -17,14 +18,16 @@ const ALREADY_CHOSEN_MESSAGE = "Esta Tag já está no Stood.";
 type TagFieldProps = {
   allTags: StoodTag[];
   selection: TagSelection;
+  // Texto digitado que ainda não virou escolha; fica no diálogo, que não salva enquanto houver um
+  query: string;
   isInvalid: boolean;
   describedBy?: string;
   onChange: (selection: TagSelection) => void;
+  onQueryChange: (query: string) => void;
 };
 
 // Campo de Tags com sugestões: Enter escolhe a sugestão destacada ou cria a Tag nova; o "x" tira a Tag
-export function TagField({ allTags, selection, isInvalid, describedBy, onChange }: TagFieldProps) {
-  const [query, setQuery] = useState("");
+export function TagField({ allTags, selection, query, isInvalid, describedBy, onChange, onQueryChange }: TagFieldProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const inputId = useId();
@@ -35,7 +38,7 @@ export function TagField({ allTags, selection, isInvalid, describedBy, onChange 
   const options = query.trim() === "" ? [] : buildOptions(allTags, selection, query);
   const isOpen = options.length > 0;
   const activeOption = options[Math.min(activeIndex, options.length - 1)];
-  const chosen = buildSortedTags([
+  const chosen = buildSortedByName([
     ...selection.tags.map((tag) => ({ key: tag.id, name: tag.name, isNew: false })),
     ...selection.newNames.map((name) => ({ key: `new:${name}`, name, isNew: true })),
   ]);
@@ -55,7 +58,7 @@ export function TagField({ allTags, selection, isInvalid, describedBy, onChange 
       }
       onChange({ ...selection, newNames: [...selection.newNames, validation.name] });
     }
-    setQuery("");
+    onQueryChange("");
     setActiveIndex(0);
     setHint(null);
   }
@@ -91,7 +94,7 @@ export function TagField({ allTags, selection, isInvalid, describedBy, onChange 
     if (event.key === "Escape" && query !== "") {
       // Esc limpa o campo antes de fechar o diálogo
       event.preventDefault();
-      setQuery("");
+      onQueryChange("");
     }
   }
 
@@ -114,7 +117,7 @@ export function TagField({ allTags, selection, isInvalid, describedBy, onChange 
           placeholder={isFull ? `Limite de ${MAX_TAGS_PER_STOOD} Tags` : "Digite para buscar ou criar"}
           autoComplete="off"
           onChange={(event) => {
-            setQuery(event.target.value);
+            onQueryChange(event.target.value);
             setActiveIndex(0);
             setHint(null);
           }}
@@ -180,9 +183,9 @@ export function TagField({ allTags, selection, isInvalid, describedBy, onChange 
 
 // Tags do dono que casam com o texto e ainda não foram escolhidas, mais a opção de criar quando o nome é novo
 function buildOptions(allTags: StoodTag[], selection: TagSelection, query: string): Option[] {
-  const search = normalize(query.trim());
+  const search = buildSearchText(query.trim());
   const chosenIds = new Set(selection.tags.map((tag) => tag.id));
-  const matches = buildSortedTags(allTags.filter((tag) => !chosenIds.has(tag.id) && normalize(tag.name).includes(search)));
+  const matches = buildSortedByName(allTags.filter((tag) => !chosenIds.has(tag.id) && buildSearchText(tag.name).includes(search)));
   const isTaken = [...allTags.map((tag) => tag.name), ...selection.newNames].some((name) => isSameTagName(name, query.trim()));
   const options: Option[] = matches.map((tag) => ({ kind: "existing", tag }));
   if (!isTaken) options.push({ kind: "new", name: query });
@@ -190,7 +193,7 @@ function buildOptions(allTags: StoodTag[], selection: TagSelection, query: strin
 }
 
 // Busca sem diferenciar acento nem maiúsculas
-function normalize(text: string) {
+function buildSearchText(text: string) {
   return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR");
 }
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
 import { type CreateStoodResult, type UpdateStoodResult, createStood, updateStood } from "@/lib/stood/stood";
+import { type CreateStoodFromSubjectResult, createStoodFromSubject } from "@/lib/subject/subject";
 
 // Teto só para barrar entrada abusiva; o limite de Tags por Stood fica no Service
 const MAX_TAG_ITEMS = 50;
@@ -15,10 +16,12 @@ const tagsInputSchema = z.object({
 });
 const detailsInputSchema = z.object({ name: z.string(), description: z.string(), tags: tagsInputSchema.optional() });
 const updateInputSchema = detailsInputSchema.extend({ stoodId: z.string() });
+const subjectInputSchema = detailsInputSchema.extend({ subjectSlug: z.string() });
 
 type InvalidInput = { ok: false; reason: "entrada-invalida" };
 export type CreateStoodActionResult = CreateStoodResult | InvalidInput;
 export type UpdateStoodActionResult = UpdateStoodResult | InvalidInput;
+export type CreateStoodFromSubjectActionResult = CreateStoodFromSubjectResult | InvalidInput;
 
 // Cria o Stood do Usuário da sessão e atualiza a Biblioteca, que passa a listá-lo; devolve o id para quem chamou
 export async function createStoodAction(input: unknown): Promise<CreateStoodActionResult> {
@@ -27,6 +30,17 @@ export async function createStoodAction(input: unknown): Promise<CreateStoodActi
   if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
 
   const result = await createStood(user.id, parsed.data);
+  if (result.ok) revalidatePath("/biblioteca");
+  return result;
+}
+
+// Copia a Matéria para um Stood do Usuário da sessão, que é o único dono possível da cópia
+export async function createStoodFromSubjectAction(input: unknown): Promise<CreateStoodFromSubjectActionResult> {
+  const user = await requireSession();
+  const parsed = subjectInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
+
+  const result = await createStoodFromSubject(user.id, parsed.data);
   if (result.ok) revalidatePath("/biblioteca");
   return result;
 }

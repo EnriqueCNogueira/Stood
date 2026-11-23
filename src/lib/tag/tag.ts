@@ -4,12 +4,12 @@ import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { stoodTags, stoods, tags } from "@/db/schema";
 import { isConstraintViolation } from "@/lib/constraint";
+import { buildSortedByName } from "@/lib/stood/tree";
 import {
   MAX_TAGS_PER_STOOD,
   MAX_TAGS_PER_USER,
   type StoodTag,
   type TagNameReason,
-  buildSortedTags,
   isSameTagName,
   validateTagName,
 } from "@/lib/tag/rules";
@@ -43,7 +43,7 @@ export async function getTags(ownerId: string): Promise<TagWithCount[]> {
     .leftJoin(stoodTags, eq(stoodTags.tagId, tags.id))
     .where(eq(tags.ownerId, ownerId))
     .groupBy(tags.id, tags.name);
-  return buildSortedTags(rows);
+  return buildSortedByName(rows);
 }
 
 export async function createTag(ownerId: string, name: string): Promise<CreateTagResult> {
@@ -70,12 +70,15 @@ export async function updateTagName(ownerId: string, tagId: string, name: string
   if (!validation.ok) return validation;
 
   try {
-    const updated = await db
-      .update(tags)
-      .set({ name: validation.name })
-      .where(and(eq(tags.id, tagId), eq(tags.ownerId, ownerId)))
-      .returning({ id: tags.id });
-    return updated.length > 0 ? { ok: true } : { ok: false, reason: "tag-nao-encontrada" };
+    return await db.transaction(async (tx): Promise<UpdateTagNameResult> => {
+      await lockOwnerTags(tx, ownerId);
+      const updated = await tx
+        .update(tags)
+        .set({ name: validation.name })
+        .where(and(eq(tags.id, tagId), eq(tags.ownerId, ownerId)))
+        .returning({ id: tags.id });
+      return updated.length > 0 ? { ok: true } : { ok: false, reason: "tag-nao-encontrada" };
+    });
   } catch (error) {
     if (isConstraintViolation(error, NAME_UNIQUE_CONSTRAINT)) return { ok: false, reason: "nome-da-tag-repetido" };
     throw error;
@@ -85,11 +88,14 @@ export async function updateTagName(ownerId: string, tagId: string, name: string
 // As ligações somem em cascata; os Stoods ficam
 export async function deleteTag(ownerId: string, tagId: string): Promise<DeleteTagResult> {
   if (!isUuid(tagId)) return { ok: false, reason: "tag-nao-encontrada" };
-  const deleted = await db
-    .delete(tags)
-    .where(and(eq(tags.id, tagId), eq(tags.ownerId, ownerId)))
-    .returning({ id: tags.id });
-  return deleted.length > 0 ? { ok: true } : { ok: false, reason: "tag-nao-encontrada" };
+  return db.transaction(async (tx): Promise<DeleteTagResult> => {
+    await lockOwnerTags(tx, ownerId);
+    const deleted = await tx
+      .delete(tags)
+      .where(and(eq(tags.id, tagId), eq(tags.ownerId, ownerId)))
+      .returning({ id: tags.id });
+    return deleted.length > 0 ? { ok: true } : { ok: false, reason: "tag-nao-encontrada" };
+  });
 }
 
 // Troca os Stoods marcados por uma Tag pela lista escolhida em "Gerenciar Tags".
@@ -117,7 +123,12 @@ export async function updateTagStoods(ownerId: string, tagId: string, stoodIds: 
           ).map((stood) => stood.id)
         : [];
     const markedIds = new Set(
-      (await tx.select({ stoodId: stoodTags.stoodId }).from(stoodTags).where(eq(stoodTags.tagId, tagId))).map((row) => row.stoodId),
+      (
+        await tx
+          .select({ stoodId: stoodTags.stoodId })
+          .from(stoodTags)
+          .where(and(eq(stoodTags.tagId, tagId), eq(stoodTags.ownerId, ownerId)))
+      ).map((row) => row.stoodId),
     );
     const addedIds = ownedStoodIds.filter((stoodId) => !markedIds.has(stoodId));
     if (await hasFullStood(tx, ownerId, addedIds)) return { ok: false, reason: "limite-de-tags-do-stood" };
@@ -172,7 +183,7 @@ export async function updateStoodTags(
   if (finalTags.length > 0) {
     await tx.insert(stoodTags).values(finalTags.map((tag) => ({ ownerId, stoodId, tagId: tag.id })));
   }
-  return { ok: true, tags: buildSortedTags(finalTags) };
+  return { ok: true, tags: buildSortedByName(finalTags) };
 }
 
 // Tags de cada Stood da lista, em ordem alfabética, numa consulta só
@@ -185,11 +196,12 @@ export async function getTagsByStoodId(ownerId: string, stoodIds: string[]): Pro
     .where(and(eq(stoodTags.ownerId, ownerId), inArray(stoodTags.stoodId, stoodIds)));
   const grouped = Map.groupBy(rows, (row) => row.stoodId);
   return new Map(
-    [...grouped].map(([stoodId, stoodRows]) => [stoodId, buildSortedTags(stoodRows.map(({ id, name }) => ({ id, name })))]),
+    [...grouped].map(([stoodId, stoodRows]) => [stoodId, buildSortedByName(stoodRows.map(({ id, name }) => ({ id, name })))]),
   );
 }
 
 // Serializa as escritas de Tag do mesmo Usuário, para duas abas não passarem juntas do limite
+// nem uma gravar com a lista de Tags que a outra acabou de mudar
 async function lockOwnerTags(tx: Transaction, ownerId: string) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`tags:${ownerId}`}, 0))`);
 }

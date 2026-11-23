@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { stoodTags, stoods, tags, users } from "@/db/schema";
@@ -24,6 +24,20 @@ async function createManyTags(ownerId: string, total: number) {
 
 function updateStoodTagsInTransaction(ownerId: string, stoodId: string, input: { tagIds: string[]; newTagNames: string[] }) {
   return db.transaction((tx) => updateStoodTags(tx, ownerId, stoodId, input));
+}
+
+// Espera o Postgres mostrar alguém parado atrás desta conexão; se a outra gravação terminar antes, o caso falha no expect
+async function waitUntilBlockedOrSettled(holderPid: number, isSettled: () => boolean) {
+  while (!isSettled() && !(await isBlockingSomeone(holderPid))) {
+    // Consulta de novo até a espera aparecer
+  }
+}
+
+async function isBlockingSomeone(holderPid: number) {
+  const { rows } = await db.execute<{ blocking: boolean }>(
+    sql`select exists (select 1 from pg_stat_activity where ${holderPid}::int = any(pg_blocking_pids(pid))) as blocking`,
+  );
+  return rows[0].blocking;
 }
 
 describe("createTag", () => {
@@ -285,6 +299,31 @@ describe("updateStoodTags", () => {
     await updateStoodTagsInTransaction(ownerId, stood.id, { tagIds: [otherTag.id], newTagNames: [] });
 
     expect(await getStoodTagIds(stood.id)).toEqual([]);
+  });
+});
+
+// Sem esperar, outra aba leria a lista de Tags antes da mudança e falharia ao gravar o Stood
+describe.each([
+  ["updateTagName", (ownerId: string, tagId: string) => updateTagName(ownerId, tagId, "Exame")],
+  ["deleteTag", deleteTag],
+])("%s em concorrência", (_name, write) => {
+  it("espera a gravação de Tags do mesmo Usuário que já começou", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo");
+    const tag = await createTagRow(ownerId, "Prova");
+    const order: string[] = [];
+    let pending: Promise<unknown> = Promise.resolve();
+
+    await db.transaction(async (tx) => {
+      await updateStoodTags(tx, ownerId, stood.id, { tagIds: [], newTagNames: [] });
+      const { rows } = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+      pending = write(ownerId, tag.id).then(() => order.push("segunda gravação"));
+      await waitUntilBlockedOrSettled(rows[0].pid, () => order.length > 0);
+      order.push("primeira gravação");
+    });
+    await pending;
+
+    expect(order).toEqual(["primeira gravação", "segunda gravação"]);
   });
 });
 

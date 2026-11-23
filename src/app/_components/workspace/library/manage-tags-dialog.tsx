@@ -186,7 +186,7 @@ export function ManageTagsDialog({ tags, stoods }: ManageTagsDialogProps) {
                   ) : rowMode?.tagId === tag.id && rowMode.kind === "confirm-delete" ? (
                     <div className="grid gap-2">
                       <p className="text-ui" role="status">
-                        A Tag <strong className="font-medium">{tag.name}</strong> marca {formatStoodCount(tag.stoodCount)}. Apagar mesmo
+                        A Tag <strong className="font-medium">{tag.name}</strong> marca {buildStoodCountLabel(tag.stoodCount)}. Apagar mesmo
                         assim? Os Stoods continuam existindo.
                       </p>
                       <div className="flex justify-end gap-2">
@@ -263,7 +263,7 @@ function TagRow({ tag, isOpen, isPending, onToggle, onRename, onDelete, children
           <span className="truncate">{tag.name}</span>
           <span className="sr-only">: escolher os Stoods</span>
         </button>
-        <span className="flex-none font-mono text-meta text-text-muted">{formatStoodCount(tag.stoodCount)}</span>
+        <span className="flex-none font-mono text-meta text-text-muted">{buildStoodCountLabel(tag.stoodCount)}</span>
         <button type="button" aria-label={`Renomear a Tag ${tag.name}`} onClick={onRename} className={ICON_BUTTON}>
           <Pencil size={14} aria-hidden />
         </button>
@@ -282,6 +282,6 @@ function TagRow({ tag, isOpen, isPending, onToggle, onRename, onDelete, children
   );
 }
 
-function formatStoodCount(count: number) {
+function buildStoodCountLabel(count: number) {
   return count === 1 ? "1 Stood" : `${count} Stoods`;
 }

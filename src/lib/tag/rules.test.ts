@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSortedTags, filterStoodsByTags, validateTagName } from "@/lib/tag/rules";
+import { filterStoodsByTags, validateTagName } from "@/lib/tag/rules";
 
 const EXAMS = { id: "prova", name: "Prova" };
 const SCIENCES = { id: "exatas", name: "Exatas" };
@@ -26,14 +26,6 @@ describe("validateTagName", () => {
     ["acima de 30 caracteres", "a".repeat(31), "nome-da-tag-longo"],
   ])("recusa nome %s", (_case, name, reason) => {
     expect(validateTagName(name)).toEqual({ ok: false, reason });
-  });
-});
-
-describe("buildSortedTags", () => {
-  it("ordena sem diferenciar acento nem maiúsculas", () => {
-    const sorted = buildSortedTags([{ name: "prova" }, { name: "Exatas" }, { name: "Álgebra" }]);
-
-    expect(sorted.map((tag) => tag.name)).toEqual(["Álgebra", "Exatas", "prova"]);
   });
 });
 
