@@ -2,6 +2,8 @@
 
 import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BELOW_HEADER } from "@/app/_components/ui";
+import { useAutosave } from "@/app/_components/workspace/board/autosave";
+import { updateBoardWindowsAction } from "@/app/_components/workspace/board/board-actions";
 import { BoardArea } from "@/app/_components/workspace/board/board-area";
 import { BoardBar } from "@/app/_components/workspace/board/board-bar";
 import { type Notice, BoardNotice } from "@/app/_components/workspace/board/board-notice";
@@ -20,6 +22,7 @@ import {
   type BoardAction,
   type BoardContext,
   type BoardFile,
+  type BoardContents,
   type BoardState,
   DEFAULT_WINDOW_SIZES,
   MAX_VIDEO_WINDOWS,
@@ -27,15 +30,18 @@ import {
   type Point,
   type Rect,
   type Size,
+  type StoredBoardWindow,
   buildBoardState,
   buildOpenRect,
   buildPlacedRect,
+  buildRestoredBoardState,
+  buildStoredWindows,
   buildWindowCounts,
   isMaximized,
   isSameRect,
 } from "@/lib/board/windows";
 import type { StoodDetails } from "@/lib/stood/details";
-import type { StoodTreeFile, StoodWithTree } from "@/lib/stood/tree";
+import { type StoodTreeFile, type StoodWithTree, buildTreeFiles, buildTreeWithFile } from "@/lib/stood/tree";
 
 // Distância mínima, em pixels, para um clique virar arrasto
 const DRAG_THRESHOLD = 4;
@@ -43,6 +49,9 @@ const DRAG_THRESHOLD = 4;
 const OPEN_GRAB_OFFSET_Y = 18;
 // Abaixo de md, as Janelas ficam em coluna e não se arrastam
 const COMPACT_QUERY = "(max-width: 47.9375rem)";
+// Curto para recarregar logo depois de mover não perder a mudança; o arrasto só muda o estado ao soltar
+const BOARD_SAVE_DELAY_MS = 300;
+const BOARD_SAVE_FAILED_MESSAGE = "Não foi possível salvar o Quadro. A próxima mudança tenta de novo.";
 
 const LIMIT_MESSAGES = {
   "limite-de-janelas": `O Quadro já tem ${MAX_WINDOWS} Janelas abertas. Feche uma para abrir outra.`,
@@ -57,10 +66,28 @@ type Drag =
 // Área medida uma vez no começo do arrasto, para não ler o layout a cada movimento
 type DragArea = { left: number; top: number; context: BoardContext; liveContext: BoardContext };
 
-// Raiz do Quadro: guarda as Janelas, que não são salvas, e liga a barra, a lateral e a área
-export function Board({ stood }: { stood: StoodWithTree }) {
+type BoardProps = {
+  stood: StoodWithTree & { boardWindows: StoredBoardWindow[] };
+  editableContents: Record<string, string>;
+};
+
+// Raiz do Quadro: abre com as Janelas salvas, salva cada mudança e liga a barra, a lateral e a área
+export function Board({ stood, editableContents }: BoardProps) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
-  const [state, setState] = useState<BoardState>({ windows: [] });
+  // O Arquivo criado entra direto na árvore, sem renderizar a página de novo
+  const [tree, setTree] = useState(stood.tree);
+  // Reabrir uma Nota mostra o que foi digitado nela, mesmo que a página não tenha sido carregada de novo
+  const contentsRef = useRef(new Map(Object.entries(editableContents)));
+  const contents = useMemo<BoardContents>(
+    () => ({
+      getContent: (fileId) => contentsRef.current.get(fileId) ?? "",
+      setContent: (fileId, content) => contentsRef.current.set(fileId, content),
+    }),
+    [],
+  );
+  const [state, setState] = useState<BoardState>(() =>
+    buildRestoredBoardState(stood.boardWindows, buildTreeFiles(stood.tree).map(buildBoardFile)),
+  );
   const stateRef = useRef(state);
   const [outline, setOutline] = useState<Rect | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -72,19 +99,33 @@ export function Board({ stood }: { stood: StoodWithTree }) {
   const areaRef = useRef<HTMLDivElement>(null);
   const stopDragRef = useRef<(() => void) | null>(null);
   const snap = buildBoardSnap(preferences);
+  const { status: saveStatus, schedule: scheduleSave } = useAutosave(
+    stood.boardWindows,
+    (windows: StoredBoardWindow[]) => updateBoardWindowsAction({ stoodId: stood.id, windows }),
+    { delayMs: BOARD_SAVE_DELAY_MS, warnOnLeave: false },
+  );
 
   // O reducer devolve o mesmo estado quando nada muda, e aí a tela não redesenha
-  const dispatch = useCallback((action: BoardAction, context: BoardContext) => {
-    const result = buildBoardState(stateRef.current, action, context);
-    if (!result.ok) {
-      // Objeto novo a cada recusa, para o aviso reiniciar o tempo mesmo com o mesmo texto
-      setNotice({ message: LIMIT_MESSAGES[result.reason] });
-      return;
-    }
-    if (result.state === stateRef.current) return;
-    stateRef.current = result.state;
-    setState(result.state);
-  }, []);
+  const dispatch = useCallback(
+    (action: BoardAction, context: BoardContext) => {
+      const result = buildBoardState(stateRef.current, action, context);
+      if (!result.ok) {
+        // Objeto novo a cada recusa, para o aviso reiniciar o tempo mesmo com o mesmo texto
+        setNotice({ message: LIMIT_MESSAGES[result.reason] });
+        return;
+      }
+      if (result.state === stateRef.current) return;
+      stateRef.current = result.state;
+      setState(result.state);
+      // Prender as Janelas numa tela menor não salva: abrir de novo numa tela maior mantém o Quadro como estava
+      if (action.type !== "fit-area") scheduleSave(buildStoredWindows(result.state));
+    },
+    [scheduleSave],
+  );
+
+  useEffect(() => {
+    if (saveStatus.kind === "error") setNotice({ message: BOARD_SAVE_FAILED_MESSAGE });
+  }, [saveStatus]);
 
   const dismissNotice = useCallback(() => setNotice(null), []);
 
@@ -184,11 +225,13 @@ export function Board({ stood }: { stood: StoodWithTree }) {
       window.removeEventListener("pointercancel", stop);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      delete document.body.dataset.boardDragging;
       stopDragRef.current = null;
       setOutline(null);
     }
 
     document.body.style.userSelect = "none";
+    document.body.dataset.boardDragging = "";
     if (drag.kind === "resize") document.body.style.cursor = "nwse-resize";
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
@@ -243,13 +286,15 @@ export function Board({ stood }: { stood: StoodWithTree }) {
   return (
     <div className={`flex ${BELOW_HEADER.mdHeight}`}>
       <BoardSidebar
-        tree={stood.tree}
+        stoodId={stood.id}
+        tree={tree}
         isCollapsed={storedCollapsed === "true"}
         isDrawerOpen={isDrawerOpen}
         onToggleCollapsed={() => setStoredCollapsed(String(storedCollapsed !== "true"))}
         onCloseDrawer={() => setIsDrawerOpen(false)}
         onFilePointerDown={startOpenDrag}
         onOpenFile={openFile}
+        onFileCreated={(file) => setTree((current) => buildTreeWithFile(current, file))}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -268,6 +313,7 @@ export function Board({ stood }: { stood: StoodWithTree }) {
             preferences={preferences}
             outline={outline}
             isCompact={isCompact}
+            contents={contents}
             onBarPointerDown={startMove}
             onResizePointerDown={startResize}
             onFocus={(fileId) => dispatch({ type: "focus", fileId }, getContext())}
@@ -292,7 +338,7 @@ export function Board({ stood }: { stood: StoodWithTree }) {
 }
 
 function buildBoardFile(file: StoodTreeFile): BoardFile {
-  return { id: file.id, type: file.type, name: file.name };
+  return { id: file.id, type: file.type, name: file.name, videoId: file.videoId };
 }
 
 function isCompactScreen() {

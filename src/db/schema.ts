@@ -3,8 +3,10 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  customType,
   foreignKey,
   index,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -13,12 +15,15 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 // Caminho relativo com extensão, porque o seed de dev roda este arquivo direto no Node
+import { MAX_WINDOWS, type StoredBoardWindow } from "../lib/board/windows.ts";
+import { IMAGE_TYPES, MAX_IMAGE_BYTES } from "../lib/file/image.ts";
 import {
   EDGE_WHITESPACE_PATTERN,
   MAX_DESCRIPTION_LENGTH,
   MAX_NAME_LENGTH,
   PATH_SEPARATOR_PATTERN,
 } from "../lib/stood/details.ts";
+import { YOUTUBE_VIDEO_ID_PATTERN } from "../lib/video/link.ts";
 
 // --- Autenticação (Better Auth) ---
 
@@ -107,7 +112,6 @@ export const verifications = pgTable(
 export const FILE_TYPES = ["note", "drawing", "image", "pdf", "video"] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 const TYPES_WITH_CONTENT: FileType[] = ["note", "drawing", "video"];
-const YOUTUBE_VIDEO_ID_PATTERN = "^[A-Za-z0-9_-]{11}$";
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
 // Stood: o estudo do Usuário, com Pastas e Arquivos sobre um assunto
@@ -122,6 +126,8 @@ export const stoods = pgTable(
     // Nula quando o Usuário não escreve nada
     description: text("description"),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }).defaultNow().notNull(),
+    // Janelas abertas no Quadro, com posição, tamanho e ordem; o formato é conferido por parseStoredWindows
+    boardWindows: jsonb("board_windows").$type<StoredBoardWindow[]>().default(sql`'[]'::jsonb`).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
@@ -138,6 +144,11 @@ export const stoods = pgTable(
     check(
       "stoods_description_check",
       sql`char_length(${table.description}) <= ${sql.raw(String(MAX_DESCRIPTION_LENGTH))}`,
+    ),
+    // case garante a ordem: jsonb_array_length dá erro, e não recusa, num valor que não é lista
+    check(
+      "stoods_board_windows_check",
+      sql`case when jsonb_typeof(${table.boardWindows}) = 'array' then jsonb_array_length(${table.boardWindows}) <= ${sql.raw(String(MAX_WINDOWS))} else false end`,
     ),
   ],
 );
@@ -212,6 +223,8 @@ export const files = pgTable(
       columns: [table.folderId, table.stoodId, table.ownerId],
       foreignColumns: [folders.id, folders.stoodId, folders.ownerId],
     }).onDelete("cascade"),
+    // Alvo da FK de file_blobs, que amarra o dono
+    unique("files_id_owner_id_unique").on(table.id, table.ownerId),
     // Busca dos Arquivos no cascade de apagar Pasta
     index("files_folder_id_idx").on(table.folderId),
     check("files_type_check", sql`${table.type} in (${buildSqlList(FILE_TYPES)})`),
@@ -231,6 +244,35 @@ export const files = pgTable(
       sql`lower(${table.name})`,
     ),
     buildNameCheck("files", table.name),
+  ],
+);
+
+// O pg devolve bytea como Buffer e aceita Buffer na escrita
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+
+// Bytes de um Arquivo enviado pelo Usuário, hoje só de Imagem; fora de files para a árvore nunca ler os bytes
+export const fileBlobs = pgTable(
+  "file_blobs",
+  {
+    fileId: uuid("file_id").primaryKey(),
+    ownerId: uuid("owner_id").notNull(),
+    // Conferido pelos primeiros bytes no Service, e não pelo que o navegador informa
+    mimeType: text("mime_type").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // Apagar o Arquivo, o Stood ou o Usuário apaga os bytes
+    foreignKey({
+      name: "file_blobs_file_id_owner_id_files_fk",
+      columns: [table.fileId, table.ownerId],
+      foreignColumns: [files.id, files.ownerId],
+    }).onDelete("cascade"),
+    check("file_blobs_mime_type_check", sql`${table.mimeType} in (${buildSqlList(IMAGE_TYPES)})`),
+    check(
+      "file_blobs_data_check",
+      sql`octet_length(${table.data}) between 1 and ${sql.raw(String(MAX_IMAGE_BYTES))}`,
+    ),
   ],
 );
 

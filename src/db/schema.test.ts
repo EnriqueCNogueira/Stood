@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { type FileType, files, folders, stoods, users } from "@/db/schema";
+import { type FileType, fileBlobs, files, folders, stoods, users } from "@/db/schema";
 import { createFile, createFolder, createStood, createUser } from "@/test/db";
 
 // Códigos de erro do Postgres conferidos nas recusas
@@ -386,6 +386,55 @@ describe("cascata", () => {
     const remainingStoods = await db.select({ id: stoods.id }).from(stoods).where(eq(stoods.id, stood.id));
     expect(remainingStoods).toEqual([]);
     await expectRemoved([folder.id], [file.id]);
+  });
+});
+
+describe("bytes da Imagem", () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  it("recusa bytes ligados ao Arquivo de outro Usuário", async () => {
+    const { userId: otherId, stood: otherStood } = await createUserWithStood();
+    const image = await createFile(otherId, otherStood.id, { type: "image", name: "Gráfico" });
+    const { userId } = await createUserWithStood();
+
+    await expectViolation(
+      db.insert(fileBlobs).values({ fileId: image.id, ownerId: userId, mimeType: "image/png", data: PNG }),
+      FOREIGN_KEY_VIOLATION,
+      "file_blobs_file_id_owner_id_files_fk",
+    );
+  });
+
+  it("recusa formato fora da lista", async () => {
+    const { userId, stood } = await createUserWithStood();
+    const image = await createFile(userId, stood.id, { type: "image", name: "Gráfico" });
+
+    await expectViolation(
+      db.insert(fileBlobs).values({ fileId: image.id, ownerId: userId, mimeType: "image/svg+xml", data: PNG }),
+      CHECK_VIOLATION,
+      "file_blobs_mime_type_check",
+    );
+  });
+
+  it("recusa bytes acima de 5 MB", async () => {
+    const { userId, stood } = await createUserWithStood();
+    const image = await createFile(userId, stood.id, { type: "image", name: "Gráfico" });
+    const data = Buffer.alloc(5 * 1024 * 1024 + 1);
+
+    await expectViolation(
+      db.insert(fileBlobs).values({ fileId: image.id, ownerId: userId, mimeType: "image/png", data }),
+      CHECK_VIOLATION,
+      "file_blobs_data_check",
+    );
+  });
+
+  it("apagar Usuário apaga os bytes das Imagens dele", async () => {
+    const { userId, stood } = await createUserWithStood();
+    const image = await createFile(userId, stood.id, { type: "image", name: "Gráfico" });
+    await db.insert(fileBlobs).values({ fileId: image.id, ownerId: userId, mimeType: "image/png", data: PNG });
+
+    await db.delete(users).where(eq(users.id, userId));
+
+    expect(await db.select({ fileId: fileBlobs.fileId }).from(fileBlobs).where(eq(fileBlobs.fileId, image.id))).toEqual([]);
   });
 });
 

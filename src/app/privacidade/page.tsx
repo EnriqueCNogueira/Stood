@@ -32,7 +32,7 @@ export default function PrivacyPage() {
             <strong>Sessão:</strong> um cookie de sessão que mantém você conectado por até 30 dias, com o endereço IP e o navegador (user agent) de cada sessão.
           </li>
           <li>
-            <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa.
+            <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa, e as Janelas abertas no Quadro de cada Stood, com posição e tamanho, para ele abrir como você deixou. As Imagens são guardadas como você envia, junto com os metadados que a câmera ou o celular gravou nelas, como a data e, se estava ligada, a localização.
           </li>
           <li>
             <strong>Preferências da tela:</strong> o tema do site, a largura e o estado das barras laterais e as opções do Quadro (fundo, grade e tema) ficam só no seu navegador (localStorage) e não são enviados para nós.
@@ -65,6 +65,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Google e GitHub:</strong> quando você escolhe entrar por eles.
+          </li>
+          <li>
+            <strong>YouTube:</strong> ao adicionar um Vídeo, o Stood envia ao YouTube só o link do vídeo para mostrar o título, o canal e a miniatura. A miniatura e o player do Vídeo aberto no Quadro, no modo de privacidade aprimorada (youtube-nocookie.com), carregam direto do YouTube no seu navegador, e o YouTube recebe o seu endereço IP e trata o que você assiste pela política de privacidade dele.
           </li>
         </LegalList>
         <p>O site e o banco de dados ficam em servidores nos Estados Unidos, então os seus dados são transferidos para fora do Brasil, como permite o art. 33 da LGPD.</p>

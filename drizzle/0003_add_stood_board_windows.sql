@@ -1,0 +1,2 @@
+ALTER TABLE "stoods" ADD COLUMN "board_windows" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "stoods" ADD CONSTRAINT "stoods_board_windows_check" CHECK (case when jsonb_typeof("stoods"."board_windows") = 'array' then jsonb_array_length("stoods"."board_windows") <= 10 else false end);
