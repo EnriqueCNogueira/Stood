@@ -4,19 +4,23 @@ import {
   boolean,
   check,
   customType,
+  date,
   foreignKey,
   index,
   integer,
   jsonb,
   pgTable,
   primaryKey,
+  smallint,
   text,
+  time,
   timestamp,
   unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 // Caminho relativo com extensão, porque o seed de dev roda este arquivo direto no Node
+import { MAX_APPOINTMENT_TITLE_LENGTH, RECURRENCES } from "../lib/agenda/rules.ts";
 import { MAX_WINDOWS, type StoredBoardWindow } from "../lib/board/windows.ts";
 import { IMAGE_TYPES, MAX_IMAGE_BYTES } from "../lib/file/image.ts";
 import {
@@ -387,6 +391,91 @@ export const weeklyGoals = pgTable(
     ),
   ],
 );
+
+// --- Agenda ---
+
+// Compromisso: data importante do Usuário, com a regra de repetição. As Ocorrências não viram linhas:
+// são calculadas a partir da regra, o que permite repetir sem fim. É dado do Usuário, com FK direta para users;
+// a FK (stood_id, owner_id) para stoods, com ON DELETE SET NULL só de stood_id, foi escrita à mão na migration.
+export const appointments = pgTable(
+  "appointments",
+  {
+    id: uuid("id").default(sql`pg_catalog.gen_random_uuid()`).primaryKey(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Nulo sem Stood ou depois que o Stood é apagado
+    stoodId: uuid("stood_id"),
+    title: text("title").notNull(),
+    // Dia no horário de Brasília; no recorrente, é o dia de início
+    day: date("day", { mode: "string" }).notNull(),
+    // Nulo quando vale o dia inteiro
+    timeOfDay: time("time_of_day"),
+    recurrence: text("recurrence", { enum: RECURRENCES }).default("none").notNull(),
+    // 0 é domingo e 6 é sábado; preenchido só na repetição semanal
+    weekdays: smallint("weekdays").array().default(sql`'{}'`).notNull(),
+    // Nulo quando repete sem fim ou não se repete
+    endsOn: date("ends_on", { mode: "string" }),
+  },
+  (table) => [
+    // Alvo da FK composta das mudanças em Ocorrências, que amarra o dono
+    unique("appointments_id_owner_id_unique").on(table.id, table.ownerId),
+    // Agenda do mês, limite por Usuário e próximos Compromissos
+    index("appointments_owner_id_idx").on(table.ownerId),
+    // Busca dos Compromissos no SET NULL de apagar Stood
+    index("appointments_stood_id_idx").on(table.stoodId),
+    buildTitleCheck("appointments", table.title),
+    check("appointments_recurrence_check", sql`${table.recurrence} in (${buildSqlList(RECURRENCES)})`),
+    check(
+      "appointments_weekdays_check",
+      sql`${table.weekdays} <@ '{0,1,2,3,4,5,6}'::smallint[] and (${table.recurrence} = 'weekly') = (cardinality(${table.weekdays}) > 0)`,
+    ),
+    check(
+      "appointments_ends_on_check",
+      sql`${table.endsOn} is null or (${table.recurrence} <> 'none' and ${table.endsOn} >= ${table.day})`,
+    ),
+  ],
+);
+
+// Ocorrência mudada ou apagada à mão, pelo dia em que a repetição a criaria. Mudada, guarda todos os dados que valem
+// para ela. A FK (stood_id, owner_id) para stoods, com ON DELETE SET NULL só de stood_id, foi escrita à mão na migration.
+export const appointmentChanges = pgTable(
+  "appointment_changes",
+  {
+    ownerId: uuid("owner_id").notNull(),
+    appointmentId: uuid("appointment_id").notNull(),
+    originalDay: date("original_day", { mode: "string" }).notNull(),
+    isDeleted: boolean("is_deleted").default(false).notNull(),
+    title: text("title"),
+    day: date("day", { mode: "string" }),
+    timeOfDay: time("time_of_day"),
+    stoodId: uuid("stood_id"),
+  },
+  (table) => [
+    primaryKey({ name: "appointment_changes_pkey", columns: [table.appointmentId, table.originalDay] }),
+    // Apagar o Compromisso ou o Usuário apaga as mudanças
+    foreignKey({
+      name: "appointment_changes_appointment_id_owner_id_appointments_fk",
+      columns: [table.appointmentId, table.ownerId],
+      foreignColumns: [appointments.id, appointments.ownerId],
+    }).onDelete("cascade"),
+    index("appointment_changes_stood_id_idx").on(table.stoodId),
+    buildTitleCheck("appointment_changes", table.title),
+    // Apagada não tem dados; mudada tem pelo menos título e dia
+    check(
+      "appointment_changes_values_check",
+      sql`(${table.isDeleted} and ${table.title} is null and ${table.day} is null and ${table.timeOfDay} is null and ${table.stoodId} is null) or (not ${table.isDeleted} and ${table.title} is not null and ${table.day} is not null)`,
+    ),
+  ],
+);
+
+// Título de 1 a 100 caracteres, sem espaço nas pontas; a coluna pode ser nula na Ocorrência apagada
+function buildTitleCheck(tableName: string, title: AnyPgColumn) {
+  return check(
+    `${tableName}_title_check`,
+    sql`char_length(${title}) between 1 and ${sql.raw(String(MAX_APPOINTMENT_TITLE_LENGTH))} and ${title} !~ ${sql.raw(`'${EDGE_WHITESPACE_PATTERN}'`)}`,
+  );
+}
 
 function buildNameCheck(tableName: string, name: AnyPgColumn) {
   return check(

@@ -50,6 +50,13 @@
       "when": 1795392284998,
       "tag": "0006_create_tag_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795397097501,
+      "tag": "0007_create_agenda_tables",
+      "breakpoints": true
     }
   ]
 }
