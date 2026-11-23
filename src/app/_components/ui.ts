@@ -16,6 +16,7 @@ export const BUTTON = {
   primary: "border-transparent bg-accent text-on-accent shadow-glow hover:not-disabled:brightness-110",
   secondary: "border-border bg-surface text-text hover:not-disabled:bg-surface-2",
   ghost: "border-transparent text-text-muted hover:not-disabled:bg-surface-2 hover:not-disabled:text-text",
+  danger: "border-danger/40 bg-danger/12 text-danger hover:not-disabled:bg-danger/20",
 };
 
 // Botão só de ícone, quadrado, como o do tema no cabeçalho

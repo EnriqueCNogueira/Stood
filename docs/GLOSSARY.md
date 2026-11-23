@@ -92,6 +92,24 @@ _Evitar_: Horas de estudo, tempo de foco
 O Tempo estudado que o Usuário quer alcançar em cada semana, de segunda a domingo.
 _Evitar_: Objetivo, alvo
 
+### Agenda
+
+**Agenda**:
+A tela com os dias do mês, onde o Usuário vê o Tempo estudado de cada dia e os seus Compromissos.
+_Evitar_: Calendário, planner
+
+**Compromisso**:
+Uma data importante que o Usuário anota na Agenda, como uma prova ou uma entrega, com horário opcional e ligada ou não a um Stood.
+_Evitar_: Evento, prazo, lembrete
+
+**Compromisso recorrente**:
+Um Compromisso que se repete todo dia, toda semana ou todo mês, a partir de um dia de início e até uma data final opcional.
+_Evitar_: Rotina, lembrete recorrente
+
+**Ocorrência**:
+Cada dia em que um Compromisso recorrente aparece na Agenda, que o Usuário pode alterar ou apagar sem mudar as outras.
+_Evitar_: Repetição, instância
+
 ### GitHub
 
 **Repositório**:

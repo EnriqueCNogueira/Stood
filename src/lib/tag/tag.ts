@@ -1,9 +1,10 @@
 import "server-only";
 
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { stoodTags, stoods, tags } from "@/db/schema";
 import { isConstraintViolation } from "@/lib/constraint";
+import { requireOwnerLock } from "@/lib/lock";
 import { buildSortedByName } from "@/lib/stood/tree";
 import {
   MAX_TAGS_PER_STOOD,
@@ -52,7 +53,7 @@ export async function createTag(ownerId: string, name: string): Promise<CreateTa
 
   try {
     return await db.transaction(async (tx) => {
-      await lockOwnerTags(tx, ownerId);
+      await requireOwnerLock(tx, ownerId, "tags");
       if ((await countOwnerTags(tx, ownerId)) >= MAX_TAGS_PER_USER) return { ok: false, reason: "limite-de-tags" };
       const [tag] = await tx.insert(tags).values({ ownerId, name: validation.name }).returning({ id: tags.id, name: tags.name });
       return { ok: true, tag };
@@ -71,7 +72,7 @@ export async function updateTagName(ownerId: string, tagId: string, name: string
 
   try {
     return await db.transaction(async (tx): Promise<UpdateTagNameResult> => {
-      await lockOwnerTags(tx, ownerId);
+      await requireOwnerLock(tx, ownerId, "tags");
       const updated = await tx
         .update(tags)
         .set({ name: validation.name })
@@ -89,7 +90,7 @@ export async function updateTagName(ownerId: string, tagId: string, name: string
 export async function deleteTag(ownerId: string, tagId: string): Promise<DeleteTagResult> {
   if (!isUuid(tagId)) return { ok: false, reason: "tag-nao-encontrada" };
   return db.transaction(async (tx): Promise<DeleteTagResult> => {
-    await lockOwnerTags(tx, ownerId);
+    await requireOwnerLock(tx, ownerId, "tags");
     const deleted = await tx
       .delete(tags)
       .where(and(eq(tags.id, tagId), eq(tags.ownerId, ownerId)))
@@ -105,7 +106,7 @@ export async function updateTagStoods(ownerId: string, tagId: string, stoodIds: 
   const requestedIds = [...new Set(stoodIds.filter(isUuid))];
 
   return db.transaction(async (tx): Promise<UpdateTagStoodsResult> => {
-    await lockOwnerTags(tx, ownerId);
+    await requireOwnerLock(tx, ownerId, "tags");
     const [tag] = await tx
       .select({ id: tags.id })
       .from(tags)
@@ -156,7 +157,7 @@ export async function updateStoodTags(
     if (!newNames.some((existing) => isSameTagName(existing, validation.name))) newNames.push(validation.name);
   }
 
-  await lockOwnerTags(tx, ownerId);
+  await requireOwnerLock(tx, ownerId, "tags");
   const ownedTags = await tx.select({ id: tags.id, name: tags.name }).from(tags).where(eq(tags.ownerId, ownerId));
   const requestedIds = new Set(input.tagIds.filter(isUuid));
   const chosen = new Map(ownedTags.filter((tag) => requestedIds.has(tag.id)).map((tag) => [tag.id, tag]));
@@ -198,12 +199,6 @@ export async function getTagsByStoodId(ownerId: string, stoodIds: string[]): Pro
   return new Map(
     [...grouped].map(([stoodId, stoodRows]) => [stoodId, buildSortedByName(stoodRows.map(({ id, name }) => ({ id, name })))]),
   );
-}
-
-// Serializa as escritas de Tag do mesmo Usuário, para duas abas não passarem juntas do limite
-// nem uma gravar com a lista de Tags que a outra acabou de mudar
-async function lockOwnerTags(tx: Transaction, ownerId: string) {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`tags:${ownerId}`}, 0))`);
 }
 
 // Algum dos Stoods que vão ganhar a Tag já está no limite de Tags?

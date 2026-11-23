@@ -32,7 +32,7 @@ export default function PrivacyPage() {
             <strong>Sessão:</strong> um cookie de sessão que mantém você conectado por até 30 dias, com o endereço IP e o navegador (user agent) de cada sessão.
           </li>
           <li>
-            <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa, as Tags que você cria para agrupar os Stoods e as Janelas abertas no Quadro de cada Stood, com posição e tamanho, para ele abrir como você deixou. As Imagens são guardadas como você envia, junto com os metadados que a câmera ou o celular gravou nelas, como a data e, se estava ligada, a localização.
+            <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa, as Tags que você cria para agrupar os Stoods, os Compromissos da Agenda (título, dia, horário, Stood e repetição) e as Janelas abertas no Quadro de cada Stood, com posição e tamanho, para ele abrir como você deixou. As Imagens são guardadas como você envia, junto com os metadados que a câmera ou o celular gravou nelas, como a data e, se estava ligada, a localização.
           </li>
           <li>
             <strong>Pomodoro:</strong> cada Foco que você faz, com o horário de início, a duração, a hora em que foi interrompido e o Stood em que começou, e a Meta semanal, se você definir uma.
@@ -49,7 +49,8 @@ export default function PrivacyPage() {
           <li>Identificar você ao entrar e manter a sua sessão.</li>
           <li>Enviar e-mails de confirmação de cadastro e de troca de senha.</li>
           <li>Guardar e mostrar os seus Stoods, só para você.</li>
-          <li>Mostrar o seu Tempo estudado na semana, no total e em cada Stood, e o progresso da Meta semanal.</li>
+          <li>Mostrar o seu Tempo estudado na semana e em cada dia da Agenda, no total e em cada Stood, e o progresso da Meta semanal.</li>
+          <li>Guardar os seus Compromissos, mostrá-los na Agenda e lembrar os próximos na Biblioteca, só para você.</li>
           <li>Proteger o serviço contra abuso, como tentativas repetidas de login.</li>
         </LegalList>
         <p>A base legal é a execução do serviço que você pediu ao criar a sua Conta (art. 7º, V, da LGPD). Não vendemos nem alugamos dados pessoais.</p>

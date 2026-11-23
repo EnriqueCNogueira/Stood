@@ -1,10 +1,12 @@
+import { CalendarDays } from "lucide-react";
 import { ThemeMenu } from "@/app/_components/header/theme-menu";
 import { BUTTON, FOCUS } from "@/app/_components/ui";
 import { UserMenu } from "@/app/_components/header/user-menu";
 import { StoodLogo } from "@/app/_components/logo";
 import { findCurrentSessionUser } from "@/lib/auth/session";
 
-// Cabeçalho de todas as páginas: o logo leva quem entrou à Biblioteca e o visitante ao Início da landing page
+// Cabeçalho de todas as páginas: o logo leva quem entrou à Biblioteca e o visitante ao Início da landing page;
+// quem entrou também tem o link da Agenda
 export async function Header() {
   const user = await findCurrentSessionUser();
 
@@ -14,6 +16,12 @@ export async function Header() {
         <StoodLogo className="h-11" />
       </a>
       <div className="ml-auto flex items-center gap-2">
+        {user && (
+          <a href="/agenda" className={`${BUTTON.base} ${BUTTON.sm} ${BUTTON.ghost}`}>
+            <CalendarDays size={16} aria-hidden />
+            Agenda
+          </a>
+        )}
         <ThemeMenu />
         {user ? (
           <UserMenu name={user.name} email={user.email} image={user.image} />

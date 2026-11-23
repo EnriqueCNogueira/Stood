@@ -1,12 +1,21 @@
-// Seed de dev: cria Stoods com Pastas aninhadas, Arquivos dos 5 tipos, Tags, Focos encerrados e a Meta semanal
-// para um Usuário que já existe.
+// Seed de dev: cria Stoods com Pastas aninhadas, Arquivos dos 5 tipos, Tags, Focos encerrados, a Meta semanal
+// e Compromissos na Agenda para um Usuário que já existe.
 // Uso: pnpm seed:dev <email>. Só para conferir as telas no navegador; nenhum teste depende dele.
 
 import { existsSync } from "node:fs";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import { type FileType, files, focuses, folders, stoodTags, stoods, tags, users, weeklyGoals } from "../src/db/schema.ts";
+import { buildShiftedDay, buildTodayInBrasilia } from "../src/lib/agenda/rules.ts";
+import { type FileType, appointments, files, focuses, folders, stoodTags, stoods, tags, users, weeklyGoals } from "../src/db/schema.ts";
+
+// Compromissos de exemplo, a partir de hoje; o simulado se repete todo sábado, sem data final
+const SATURDAY = 6;
+const SEED_APPOINTMENTS = [
+  { title: "Prova de Cálculo I", daysFromToday: 5, timeOfDay: "10:00", stoodName: "Cálculo I" },
+  { title: "Entrega do relatório de Física", daysFromToday: 9, timeOfDay: null, stoodName: "Física II" },
+  { title: "Simulado", daysFromToday: null, timeOfDay: "09:00", stoodName: null },
+];
 
 // Tags de exemplo e os Stoods que cada uma marca, pelo nome
 const SEED_TAGS: Record<string, string[]> = {
@@ -127,8 +136,9 @@ async function main(email: string | undefined) {
     }
     await createSeedTags(db, user.id);
     const createdFocuses = await createSeedFocuses(db, user.id);
+    const createdAppointments = await createSeedAppointments(db, user.id);
     await db.insert(weeklyGoals).values({ ownerId: user.id, minutes: SEED_WEEKLY_GOAL_MINUTES }).onConflictDoNothing();
-    console.log("seed done", { created, skipped: SEED_STOODS.length - created, createdFocuses });
+    console.log("seed done", { created, skipped: SEED_STOODS.length - created, createdFocuses, createdAppointments });
   } finally {
     await pool.end();
   }
@@ -215,6 +225,33 @@ async function createSeedTags(db: ReturnType<typeof drizzle>, ownerId: string) {
       .map((stood) => ({ ownerId, stoodId: stood.id, tagId: tag.id })),
   );
   if (links.length > 0) await db.insert(stoodTags).values(links).onConflictDoNothing();
+}
+
+// Cria os Compromissos de exemplo só se o Usuário ainda não tem nenhum, para rodar de novo não duplicar
+async function createSeedAppointments(db: ReturnType<typeof drizzle>, ownerId: string) {
+  const [existing] = await db.select({ id: appointments.id }).from(appointments).where(eq(appointments.ownerId, ownerId)).limit(1);
+  if (existing) return 0;
+
+  const stoodRows = await db.select({ id: stoods.id, name: stoods.name }).from(stoods).where(eq(stoods.ownerId, ownerId));
+  const stoodIdByName = new Map(stoodRows.map((stood) => [stood.name, stood.id]));
+  const today = buildTodayInBrasilia(new Date());
+  // O primeiro simulado é no próximo sábado; se hoje é sábado, no seguinte
+  const daysUntilSaturday = (SATURDAY - new Date(`${today}T00:00:00Z`).getUTCDay() + 7) % 7 || 7;
+
+  const rows = SEED_APPOINTMENTS.map((appointment) => {
+    const isWeekly = appointment.daysFromToday === null;
+    return {
+      ownerId,
+      title: appointment.title,
+      day: buildShiftedDay(today, appointment.daysFromToday ?? daysUntilSaturday),
+      timeOfDay: appointment.timeOfDay,
+      stoodId: appointment.stoodName ? (stoodIdByName.get(appointment.stoodName) ?? null) : null,
+      recurrence: isWeekly ? ("weekly" as const) : ("none" as const),
+      weekdays: isWeekly ? [SATURDAY] : [],
+    };
+  });
+  await db.insert(appointments).values(rows);
+  return rows.length;
 }
 
 function fail(message: string): never {
