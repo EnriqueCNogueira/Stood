@@ -13,7 +13,8 @@ O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquiv
 - **Conta**: Login por Google, GitHub ou e-mail e senha.
 - **Pomodoro**: Na barra do Quadro, o Usuário alterna Focos e Pausas com durações que escolhe. Há um Foco por vez por Usuário, guardado no banco e ligado ao Stood em que começou; a Pausa fica só no navegador. A Biblioteca mostra o Tempo estudado da semana (de segunda a domingo, no horário de Brasília), o de cada Stood e a Meta semanal.
 - **Tags**: O Usuário cria Tags e marca cada Stood com até 10 delas no diálogo do Stood. Na Biblioteca, filtra a lista de Stoods por uma ou mais Tags (mostra quem tem qualquer uma) e gerencia as Tags em "Gerenciar Tags"; os cartões e o Quadro mostram as Tags de cada Stood.
-- **Fora do escopo inicial**: Agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, sugestões de Stoods predefinidos na Biblioteca, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
+- **Agenda**: Página `/agenda`, aberta pelo link do cabeçalho, com a grade do mês (de domingo a sábado, no horário de Brasília), o Tempo estudado de cada dia e os Compromissos do Usuário, ligados ou não a um Stood. Um Compromisso pode se repetir todo dia, toda semana ou todo mês, e cada Ocorrência pode ser mudada ou apagada sozinha. A Biblioteca mostra os próximos Compromissos; não há lembrete por e-mail.
+- **Fora do escopo inicial**: Flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, sugestões de Stoods predefinidos na Biblioteca, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
 
 ## Mentalidade
 

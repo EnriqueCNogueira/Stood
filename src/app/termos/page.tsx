@@ -28,7 +28,7 @@ export default function TermsPage() {
 
       <LegalSection title="Seu conteúdo">
         <p>
-          Os Stoods, Pastas, Arquivos e Tags que você cria continuam seus. Usamos esse conteúdo só para guardá-lo e mostrá-lo a você. Você é responsável pelo que envia e deve ter o direito de usar as
+          Os Stoods, Pastas, Arquivos, Tags e Compromissos que você cria continuam seus. Usamos esse conteúdo só para guardá-lo e mostrá-lo a você. Você é responsável pelo que envia e deve ter o direito de usar as
           Imagens, PDFs e demais Arquivos que importar.
         </p>
       </LegalSection>
