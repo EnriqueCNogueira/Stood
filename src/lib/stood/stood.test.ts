@@ -216,14 +216,14 @@ describe("getRecentStoods", () => {
     const folderId = (await createFolder(ownerId, stoodId, { name: "Aulas" })).id;
     await createFile(ownerId, stoodId, { name: "Resumo", type: "note", content: "# Limites" });
     await createFile(ownerId, stoodId, { name: "Exercícios", type: "note", content: "# Lista", folderId });
-    await createFile(ownerId, stoodId, { name: "Lista 1", type: "pdf", folderId });
+    await createFile(ownerId, stoodId, { name: "Lousa", type: "image", folderId });
 
     const [stood] = await getRecentStoods(ownerId);
 
     expect(stood).toMatchObject({
       name: "Cálculo I",
       description: "Limites",
-      fileCounts: { note: 2, drawing: 0, image: 0, pdf: 1, video: 0 },
+      fileCounts: { note: 2, drawing: 0, image: 1, video: 0 },
     });
   });
 
@@ -240,13 +240,13 @@ describe("findBoardStood", () => {
   it("devolve nome, descrição e a árvore do Stood", async () => {
     const ownerId = await createUser();
     const stoodId = (await createStoodRow(ownerId, "Cálculo I", { description: "Limites" })).id;
-    await createFile(ownerId, stoodId, { name: "Lista 1", type: "pdf" });
+    await createFile(ownerId, stoodId, { name: "Lousa", type: "image" });
 
     await expect(findBoardStood(ownerId, stoodId)).resolves.toMatchObject({
       id: stoodId,
       name: "Cálculo I",
       description: "Limites",
-      tree: [{ kind: "file", name: "Lista 1", type: "pdf" }],
+      tree: [{ kind: "file", name: "Lousa", type: "image" }],
     });
   });
 
@@ -473,7 +473,7 @@ describe("buildStoodTree", () => {
         { id: "aulas", name: "aulas", parentId: null },
       ],
       [
-        { id: "b", name: "Exercícios", type: "pdf", folderId: null },
+        { id: "b", name: "Exercícios", type: "drawing", folderId: null },
         { id: "a", name: "Álgebra", type: "note", folderId: null },
       ],
     );

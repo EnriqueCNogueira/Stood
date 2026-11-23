@@ -86,12 +86,12 @@ describe("buildBoardState: abrir", () => {
   });
 
   it("prende a Janela nova dentro da área", () => {
-    const state = open(EMPTY, buildFile("pdf", "pdf"), { x: 5000, y: -40 });
+    const state = open(EMPTY, buildFile("image", "image"), { x: 5000, y: -40 });
 
     expect(state.windows[0].rect).toEqual({
-      x: AREA.width - DEFAULT_WINDOW_SIZES.pdf.width,
+      x: AREA.width - DEFAULT_WINDOW_SIZES.image.width,
       y: 0,
-      ...DEFAULT_WINDOW_SIZES.pdf,
+      ...DEFAULT_WINDOW_SIZES.image,
     });
   });
 

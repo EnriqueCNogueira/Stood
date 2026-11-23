@@ -14,8 +14,6 @@ import { SIDEBAR_WIDTH_STORAGE_KEYS } from "@/lib/board/preferences";
 import type { FileType, StoodTreeFile, StoodTreeNode } from "@/lib/stood/tree";
 
 const DEFAULT_WIDTH = 248;
-// Tipos que já se criam pelo menu; os outros aparecem desabilitados até a etapa de cada um
-const CREATABLE_TYPES = new Set<FileType>(["note", "drawing", "video", "image"]);
 
 type BoardSidebarProps = {
   stoodId: string;
@@ -136,26 +134,21 @@ function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreate
       </button>
       {isOpen && (
         <div role="menu" aria-label="Novo Arquivo" className={`absolute top-11 right-0 left-0 z-10 p-1 ${POPOVER}`}>
-          {FILE_TYPE_ORDER.map((type) => {
-            const isEnabled = CREATABLE_TYPES.has(type);
-            return (
-              <button
-                key={type}
-                type="button"
-                role="menuitem"
-                disabled={!isEnabled}
-                onClick={() => {
-                  setIsOpen(false);
-                  setDialogType(type);
-                }}
-                className={`${MENU_ITEM} cursor-pointer gap-2 hover:not-disabled:bg-surface-2 ${FOCUS}`}
-              >
-                <FileTypeIcon type={type} className={isEnabled ? "" : "opacity-45"} />
-                {FILE_TYPE_LABELS[type]}
-              </button>
-            );
-          })}
-          <p className="px-2.5 pt-1 pb-1.5 text-xs text-text-muted">Os outros tipos chegam nas próximas versões.</p>
+          {FILE_TYPE_ORDER.map((type) => (
+            <button
+              key={type}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setIsOpen(false);
+                setDialogType(type);
+              }}
+              className={`${MENU_ITEM} cursor-pointer gap-2 hover:bg-surface-2 ${FOCUS}`}
+            >
+              <FileTypeIcon type={type} />
+              {FILE_TYPE_LABELS[type]}
+            </button>
+          ))}
         </div>
       )}
       {/* Fora do menu, que desmonta ao fechar */}

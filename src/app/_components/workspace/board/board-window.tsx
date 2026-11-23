@@ -10,7 +10,7 @@ import { type BoardFile, type BoardContents, type BoardWindow as BoardWindowStat
 import { buildImageUrl } from "@/lib/file/image";
 import { buildYouTubeEmbedUrl } from "@/lib/video/link";
 
-const COMPACT_HEIGHTS = { note: "h-110", pdf: "h-110", image: "h-60", video: "h-75", drawing: "h-110" };
+const COMPACT_HEIGHTS = { note: "h-110", image: "h-60", video: "h-75", drawing: "h-110" };
 
 type BoardWindowProps = {
   window: BoardWindowState;
@@ -25,7 +25,7 @@ type BoardWindowProps = {
   onClose: () => void;
 };
 
-// Janela com barra, botões de maximizar e fechar e canto de redimensionar; o PDF ainda é placeholder
+// Janela com barra, botões de maximizar e fechar e canto de redimensionar
 export function BoardWindow({
   window,
   zIndex,

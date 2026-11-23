@@ -3,7 +3,7 @@ import type { StoodTreeNode } from "@/lib/stood/tree";
 
 // Regras da exportação do Stood sem I/O: o Quadro monta o .zip no navegador com o que já tem carregado
 
-// Vídeo e PDF não são exportados; a ordem é a dos checks do modal
+// O Vídeo não é exportado; a ordem é a dos checks do modal
 export const EXPORT_TYPES = ["note", "drawing", "image"] as const satisfies FileType[];
 export type ExportType = (typeof EXPORT_TYPES)[number];
 export type ExportTypeCount = { type: ExportType; count: number };

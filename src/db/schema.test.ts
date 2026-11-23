@@ -239,11 +239,11 @@ describe("tipo e conteúdo do Arquivo", () => {
     );
   });
 
-  it.each<FileType>(["image", "pdf"])("recusa %s com conteúdo no banco", async (type) => {
+  it("recusa Imagem com conteúdo no banco", async () => {
     const { userId, stood } = await createUserWithStood();
 
     await expectViolation(
-      createFile(userId, stood.id, { type, name: "Aula 1", content: "binário" }),
+      createFile(userId, stood.id, { type: "image", name: "Aula 1", content: "binário" }),
       CHECK_VIOLATION,
       "files_content_check",
     );

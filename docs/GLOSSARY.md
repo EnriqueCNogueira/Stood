@@ -1,6 +1,6 @@
 # Stood
 
-O Stood é um site para organizar estudos: cada Stood reúne em pastas os vídeos, notas, desenhos, imagens e PDFs de um assunto, abertos lado a lado num quadro, e pode ser versionado no GitHub.
+O Stood é um site para organizar estudos: cada Stood reúne em pastas os vídeos, notas, desenhos e imagens de um assunto, abertos lado a lado num quadro, e pode ser versionado no GitHub.
 
 ## Linguagem
 
@@ -41,7 +41,7 @@ Um agrupamento de Arquivos e de outras Pastas dentro de um Stood.
 _Evitar_: Diretório
 
 **Arquivo**:
-Um item de conteúdo de um Stood, de um dos tipos Nota, Desenho, Imagem, PDF ou Vídeo.
+Um item de conteúdo de um Stood, de um dos tipos Nota, Desenho, Imagem ou Vídeo.
 _Evitar_: Documento, item, anexo
 
 **Tag**:
@@ -61,10 +61,6 @@ _Evitar_: Excalidraw, rabisco
 **Imagem**:
 Um Arquivo de foto ou print, que pode ser importado ou capturado de um Vídeo.
 _Evitar_: Foto, print, captura
-
-**PDF**:
-Um Arquivo PDF, como apostila, livro, artigo ou slides da aula.
-_Evitar_: Documento, slides
 
 **Vídeo**:
 Um Arquivo que aponta para um vídeo do YouTube.

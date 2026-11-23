@@ -27,14 +27,8 @@ describe("buildExportTypeCounts", () => {
     expect(buildExportTypeCounts(tree)).toEqual([{ type: "drawing", count: 1 }]);
   });
 
-  it("não conta Vídeo nem PDF, que não são exportados", () => {
-    const tree = buildStoodTree(
-      [],
-      [
-        { id: "aula", name: "Aula", type: "video", folderId: null, videoId: "dQw4w9WgXcQ" },
-        { id: "apostila", name: "Apostila", type: "pdf", folderId: null },
-      ],
-    );
+  it("não conta Vídeo, que não é exportado", () => {
+    const tree = buildStoodTree([], [{ id: "aula", name: "Aula", type: "video", folderId: null, videoId: "dQw4w9WgXcQ" }]);
 
     expect(buildExportTypeCounts(tree)).toEqual([]);
   });
