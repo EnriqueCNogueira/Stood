@@ -12,7 +12,8 @@ O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquiv
 - **Arquivos**: A captura de tela do Vídeo vira Imagem no Stood. Importa Imagem, PDF, Nota, Desenho e link do YouTube; exporta um Arquivo, o Stood inteiro em `.zip` ou uma versão no GitHub.
 - **Conta**: Login por Google, GitHub ou e-mail e senha.
 - **Pomodoro**: Na barra do Quadro, o Usuário alterna Focos e Pausas com durações que escolhe. Há um Foco por vez por Usuário, guardado no banco e ligado ao Stood em que começou; a Pausa fica só no navegador. A Biblioteca mostra o Tempo estudado da semana (de segunda a domingo, no horário de Brasília), o de cada Stood e a Meta semanal.
-- **Fora do escopo inicial**: Agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, tags, sugestões de Stoods predefinidos na Biblioteca, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
+- **Tags**: O Usuário cria Tags e marca cada Stood com até 10 delas no diálogo do Stood. Na Biblioteca, filtra a lista de Stoods por uma ou mais Tags (mostra quem tem qualquer uma) e gerencia as Tags em "Gerenciar Tags"; os cartões e o Quadro mostram as Tags de cada Stood.
+- **Fora do escopo inicial**: Agenda, flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, sugestões de Stoods predefinidos na Biblioteca, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
 
 ## Mentalidade
 
