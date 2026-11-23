@@ -1,18 +1,24 @@
 "use client";
 
-import { PanelLeft, Pencil } from "lucide-react";
+import { Download, PanelLeft, Pencil } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ICON_BUTTON } from "@/app/_components/ui";
+import { ExportDialog } from "@/app/_components/workspace/board/export-dialog";
 import { PomodoroControl } from "@/app/_components/workspace/board/pomodoro-control";
 import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
 import { TagChips } from "@/app/_components/workspace/tag-chips";
 import { MAX_VIDEO_WINDOWS, MAX_WINDOWS, type WindowCounts } from "@/lib/board/windows";
+import { buildExportTypeCounts } from "@/lib/export/export";
 import type { ActiveFocus } from "@/lib/pomodoro/pomodoro";
 import type { StoodDetails } from "@/lib/stood/details";
+import type { StoodTreeNode } from "@/lib/stood/tree";
 import type { StoodTag } from "@/lib/tag/rules";
 
 type BoardBarProps = {
   stoodId: string;
   details: StoodDetails;
+  tree: StoodTreeNode[];
+  getContent: (fileId: string) => string;
   tags: StoodTag[];
   allTags: StoodTag[];
   counts: WindowCounts;
@@ -22,10 +28,13 @@ type BoardBarProps = {
   onOpenDrawer: () => void;
 };
 
-// Barra do Quadro, à direita da lateral: nome com o lápis de editar, descrição, Tags, Pomodoro e contador de Janelas
+// Barra do Quadro, à direita da lateral: nome com o lápis de editar e o botão de exportar, descrição, Tags,
+// Pomodoro e contador de Janelas
 export function BoardBar({
   stoodId,
   details,
+  tree,
+  getContent,
   tags,
   allTags,
   counts,
@@ -34,6 +43,10 @@ export function BoardBar({
   onDetailsSaved,
   onOpenDrawer,
 }: BoardBarProps) {
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const exportTypeCounts = useMemo(() => buildExportTypeCounts(tree), [tree]);
+  const canExport = exportTypeCounts.length > 0;
+
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 sm:px-5">
       <button type="button" aria-label="Abrir os Arquivos" onClick={onOpenDrawer} className={`${ICON_BUTTON} md:hidden`}>
@@ -55,6 +68,25 @@ export function BoardBar({
           >
             <Pencil size={14} aria-hidden />
           </StoodDialog>
+          <button
+            type="button"
+            aria-label="Exportar Stood"
+            title={canExport ? "Exportar Stood" : "Crie uma Nota, um Desenho ou uma Imagem para exportar o Stood"}
+            disabled={!canExport}
+            onClick={() => setIsExportOpen(true)}
+            className={`${ICON_BUTTON} flex-none`}
+          >
+            <Download size={14} aria-hidden />
+          </button>
+          {isExportOpen && (
+            <ExportDialog
+              stoodName={details.name}
+              tree={tree}
+              typeCounts={exportTypeCounts}
+              getContent={getContent}
+              onClose={() => setIsExportOpen(false)}
+            />
+          )}
         </div>
         {details.description && (
           <p title={details.description} className="truncate text-ui text-text-muted">

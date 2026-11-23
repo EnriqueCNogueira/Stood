@@ -34,10 +34,12 @@ import {
   type ShapeKind,
   type StrokeWidth,
   TEXT_FONT_SIZE,
+  buildArrowHead,
   buildDrawingContent,
   buildDrawingHistory,
   buildElementBounds,
   buildMovedElement,
+  buildPenPath,
   buildShapeElement,
   findElementAt,
   parseDrawingScene,
@@ -50,7 +52,6 @@ const PEN_MIN_STEP = 2;
 // Forma menor que isto, em pixels, é um clique sem querer e não vira elemento
 const MIN_SHAPE_SIZE = 3;
 const SELECTION_PADDING = 6;
-const ARROW_HEAD_ANGLE = Math.PI / 7;
 const RETRY_MESSAGE = "Não foi possível salvar. A próxima mudança tenta de novo.";
 const TRAILING_WHITESPACE = /\s+$/;
 
@@ -552,19 +553,8 @@ function SelectionOutline({ element }: { element: DrawingElement }) {
   );
 }
 
-// Um ponto só vira um traço mínimo, para o clique do lápis deixar uma marca
-function buildPenPath(points: [number, number][]) {
-  const [[firstX, firstY], ...rest] = points;
-  if (rest.length === 0) return `M ${firstX} ${firstY} l 0.01 0`;
-  return `M ${firstX} ${firstY} ${rest.map(([x, y]) => `L ${x} ${y}`).join(" ")}`;
-}
-
-// As duas abas da ponta da seta, com tamanho que acompanha a espessura
 function buildArrowHeadPoints(start: Point, end: Point, strokeWidth: number) {
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  const size = 10 + strokeWidth * 2;
-  const left = { x: end.x - size * Math.cos(angle - ARROW_HEAD_ANGLE), y: end.y - size * Math.sin(angle - ARROW_HEAD_ANGLE) };
-  const right = { x: end.x - size * Math.cos(angle + ARROW_HEAD_ANGLE), y: end.y - size * Math.sin(angle + ARROW_HEAD_ANGLE) };
+  const { left, right } = buildArrowHead(start, end, strokeWidth);
   return `${left.x},${left.y} ${end.x},${end.y} ${right.x},${right.y}`;
 }
 

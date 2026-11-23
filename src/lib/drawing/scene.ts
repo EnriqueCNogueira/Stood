@@ -24,6 +24,8 @@ const HIT_TOLERANCE = 6;
 // Medida aproximada das letras, sem ler o layout: largura média e altura da linha em relação ao tamanho da fonte
 const CHARACTER_WIDTH_RATIO = 0.6;
 export const LINE_HEIGHT_RATIO = 1.25;
+const ARROW_HEAD_ANGLE = Math.PI / 7;
+const ARROW_HEAD_BASE_SIZE = 10;
 
 type Style = { color: DrawingColor; strokeWidth: StrokeWidth };
 export type ShapeKind = "line" | "arrow" | "rectangle" | "ellipse";
@@ -141,6 +143,23 @@ export function buildShapeElement(kind: ShapeKind, id: string, start: Point, end
     width: Math.abs(end.x - start.x),
     height: Math.abs(end.y - start.y),
     ...style,
+  };
+}
+
+// Caminho SVG do traço do lápis; um ponto só vira um traço mínimo, para o clique do lápis deixar uma marca
+export function buildPenPath(points: [number, number][]) {
+  const [[firstX, firstY], ...rest] = points;
+  if (rest.length === 0) return `M ${firstX} ${firstY} l 0.01 0`;
+  return `M ${firstX} ${firstY} ${rest.map(([x, y]) => `L ${x} ${y}`).join(" ")}`;
+}
+
+// As duas abas da ponta da seta, com tamanho que acompanha a espessura
+export function buildArrowHead(start: Point, end: Point, strokeWidth: number): { left: Point; right: Point } {
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+  const size = ARROW_HEAD_BASE_SIZE + strokeWidth * 2;
+  return {
+    left: { x: end.x - size * Math.cos(angle - ARROW_HEAD_ANGLE), y: end.y - size * Math.sin(angle - ARROW_HEAD_ANGLE) },
+    right: { x: end.x - size * Math.cos(angle + ARROW_HEAD_ANGLE), y: end.y - size * Math.sin(angle + ARROW_HEAD_ANGLE) },
   };
 }
 
