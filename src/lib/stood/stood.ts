@@ -7,7 +7,6 @@ import { type StoredBoardWindow, parseStoredWindows } from "@/lib/board/windows"
 import { isConstraintViolation } from "@/lib/constraint";
 import { type StoodDetailsReason, validateStoodDetails } from "@/lib/stood/details";
 import { type StoodWithTree, buildSortedByName, buildStoodTree } from "@/lib/stood/tree";
-import { isUuid } from "@/lib/uuid";
 import type { StoodTag } from "@/lib/tag/rules";
 import {
   type StoodTagsInput,
@@ -16,6 +15,7 @@ import {
   getTagsByStoodId,
   updateStoodTags,
 } from "@/lib/tag/tag";
+import { isUuid } from "@/lib/uuid";
 
 type RecentStood = {
   id: string;

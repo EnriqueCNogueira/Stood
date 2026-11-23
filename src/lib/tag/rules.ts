@@ -11,19 +11,12 @@ export type TagNameReason = "nome-da-tag-vazio" | "nome-da-tag-longo";
 
 type ValidateTagNameResult = { ok: true; name: string } | { ok: false; reason: TagNameReason };
 
-const NAME_COLLATOR = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
-
 // O nome é aparado nas pontas antes de conferir o tamanho
 export function validateTagName(name: string): ValidateTagNameResult {
   const trimmed = name.trim();
   if (trimmed.length === 0) return { ok: false, reason: "nome-da-tag-vazio" };
   if (trimmed.length > MAX_TAG_NAME_LENGTH) return { ok: false, reason: "nome-da-tag-longo" };
   return { ok: true, name: trimmed };
-}
-
-// Mesmo critério da lista de Stoods: ordem alfabética sem diferenciar acento nem maiúsculas
-export function buildSortedTags<T extends { name: string }>(tags: T[]): T[] {
-  return [...tags].sort((a, b) => NAME_COLLATOR.compare(a.name, b.name));
 }
 
 // "Prova" e "prova" são a mesma Tag

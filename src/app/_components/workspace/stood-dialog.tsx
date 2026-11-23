@@ -22,12 +22,25 @@ import {
   validateStoodDetails,
 } from "@/lib/stood/details";
 import type { StoodTag } from "@/lib/tag/rules";
+import type { UpdateStoodTagsResult } from "@/lib/tag/tag";
 
 const UNEXPECTED_MESSAGE = "Não foi possível salvar. Tente de novo.";
+
+// Recusas que aparecem no campo de Tags: as do Service e o texto digitado que não virou escolha
+type TagsReason = Extract<UpdateStoodTagsResult, { ok: false }>["reason"] | "tag-nao-escolhida";
+
+const TAGS_MESSAGES: Record<TagsReason, string> = {
+  "nome-da-tag-vazio": TAG_REASON_MESSAGES["nome-da-tag-vazio"],
+  "nome-da-tag-longo": TAG_REASON_MESSAGES["nome-da-tag-longo"],
+  "limite-de-tags": TAG_REASON_MESSAGES["limite-de-tags"],
+  "limite-de-tags-do-stood": TAG_REASON_MESSAGES["limite-de-tags-do-stood"],
+  "tag-nao-escolhida": "Aperte Enter para escolher a Tag digitada, ou apague o texto.",
+};
 
 // Toda recusa possível do diálogo tem mensagem: um reason novo sem texto não compila
 type DialogReason =
   | Exclude<CreateStoodActionResult | UpdateStoodActionResult | CreateStoodFromSubjectActionResult, { ok: true }>["reason"]
+  | TagsReason
   | "inesperado";
 
 const REASON_MESSAGES: Record<DialogReason, string> = {
@@ -38,16 +51,11 @@ const REASON_MESSAGES: Record<DialogReason, string> = {
   "nome-repetido": "Você já tem um Stood com esse nome.",
   "descricao-longa": `A descrição pode ter até ${MAX_DESCRIPTION_LENGTH} caracteres.`,
   "stood-nao-encontrado": "Este Stood não existe mais.",
-  "nome-da-tag-vazio": TAG_REASON_MESSAGES["nome-da-tag-vazio"],
-  "nome-da-tag-longo": TAG_REASON_MESSAGES["nome-da-tag-longo"],
-  "limite-de-tags": TAG_REASON_MESSAGES["limite-de-tags"],
-  "limite-de-tags-do-stood": TAG_REASON_MESSAGES["limite-de-tags-do-stood"],
+  ...TAGS_MESSAGES,
   "materia-nao-encontrada": "Esta Matéria não existe mais.",
   "entrada-invalida": UNEXPECTED_MESSAGE,
   inesperado: UNEXPECTED_MESSAGE,
 };
-
-const TAG_REASONS = new Set<DialogReason>(["nome-da-tag-vazio", "nome-da-tag-longo", "limite-de-tags", "limite-de-tags-do-stood"]);
 
 type StoodDialogProps = {
   triggerClassName: string;
@@ -78,20 +86,36 @@ export function StoodDialog(props: StoodDialogProps) {
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description ?? "");
   const [selection, setSelection] = useState<TagSelection>({ tags: initialTags, newNames: [] });
+  const [tagQuery, setTagQuery] = useState("");
+  // Muda a cada abertura, para o campo de Tags começar sem o aviso da abertura anterior
+  const [openCount, setOpenCount] = useState(0);
   const [reason, setReason] = useState<DialogReason | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const title = props.mode === "edit" ? "Editar Stood" : "Novo Stood";
-  const isNameError = reason !== null && reason.startsWith("nome-") && !TAG_REASONS.has(reason);
+  const isTagsError = reason !== null && reason in TAGS_MESSAGES;
+  const isNameError = reason !== null && reason.startsWith("nome-") && !isTagsError;
   const isDescriptionError = reason === "descricao-longa";
-  const isTagsError = reason !== null && TAG_REASONS.has(reason);
+
+  const errorMessage = reason && (
+    <FormMessage tone="error" id={errorId}>
+      {REASON_MESSAGES[reason]}
+    </FormMessage>
+  );
 
   function open() {
     setName(initial.name);
     setDescription(initial.description ?? "");
     setSelection({ tags: initialTags, newNames: [] });
+    setTagQuery("");
+    setOpenCount((count) => count + 1);
     setReason(null);
     dialogRef.current?.showModal();
+  }
+
+  function changeTagQuery(query: string) {
+    setTagQuery(query);
+    setReason((current) => (current === "tag-nao-escolhida" ? null : current));
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -99,6 +123,10 @@ export function StoodDialog(props: StoodDialogProps) {
     const validation = validateStoodDetails({ name, description });
     if (!validation.ok) {
       setReason(validation.reason);
+      return;
+    }
+    if (tagQuery.trim() !== "") {
+      setReason("tag-nao-escolhida");
       return;
     }
 
@@ -181,19 +209,21 @@ export function StoodDialog(props: StoodDialogProps) {
             <Counter length={description.trim().length} max={MAX_DESCRIPTION_LENGTH} />
           </label>
 
+          {/* Acima do campo, porque a lista de sugestões aberta cobre o que vem abaixo */}
+          {isTagsError && errorMessage}
+
           <TagField
+            key={openCount}
             allTags={props.allTags}
             selection={selection}
+            query={tagQuery}
             isInvalid={isTagsError}
             describedBy={isTagsError ? errorId : undefined}
             onChange={setSelection}
+            onQueryChange={changeTagQuery}
           />
 
-          {reason && (
-            <FormMessage tone="error" id={errorId}>
-              {REASON_MESSAGES[reason]}
-            </FormMessage>
-          )}
+          {!isTagsError && errorMessage}
 
           <div className="flex justify-end gap-2">
             <button

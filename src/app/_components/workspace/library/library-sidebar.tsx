@@ -8,8 +8,8 @@ import { Sidebar } from "@/app/_components/workspace/sidebar";
 import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
 import { FileLabel, TREE_CHILDREN, TREE_ROW, TreeChevron, TreeList } from "@/app/_components/workspace/tree";
 import { SIDEBAR_WIDTH_STORAGE_KEYS } from "@/lib/board/preferences";
-import type { StoodWithTree } from "@/lib/stood/tree";
-import { type StoodTag, buildSortedTags, filterStoodsByTags } from "@/lib/tag/rules";
+import { type StoodWithTree, buildSortedByName } from "@/lib/stood/tree";
+import { type StoodTag, filterStoodsByTags } from "@/lib/tag/rules";
 
 const DEFAULT_WIDTH = 264;
 const TOOLTIP_WIDTH = 240;
@@ -217,5 +217,5 @@ function DescriptionHint({ name, description }: { name: string; description: str
 // Só as Tags que marcam algum Stood entram no filtro: ligar uma Tag sem Stood sempre esvaziaria a lista
 function buildFilterTags(stoods: StoodWithTree[]): StoodTag[] {
   const byId = new Map(stoods.flatMap((stood) => stood.tags).map((tag) => [tag.id, tag]));
-  return buildSortedTags([...byId.values()]);
+  return buildSortedByName([...byId.values()]);
 }
