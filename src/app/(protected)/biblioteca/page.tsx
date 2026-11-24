@@ -14,6 +14,7 @@ import { buildFirstName, buildRelativeTime } from "@/lib/library/library";
 import { getWeekSummary } from "@/lib/pomodoro/pomodoro";
 import { getLibraryStoods, getRecentStoods } from "@/lib/stood/stood";
 import { SUBJECTS } from "@/lib/subject/catalog";
+import { filterStoodsByTags } from "@/lib/tag/rules";
 import { getTags } from "@/lib/tag/tag";
 
 // Linha e respiro entre as seções da Biblioteca
@@ -21,8 +22,9 @@ const SECTION_DIVIDER = "mt-10 border-t border-border pt-8 2xl:mt-12 2xl:pt-10";
 
 // Destino depois do login: a semana de estudo, os próximos Compromissos, as Matérias, os Stoods abertos por último,
 // a árvore de todos e as Tags
-export default async function LibraryPage() {
+export default async function LibraryPage({ searchParams }: { searchParams: Promise<{ tags?: string | string[] }> }) {
   const user = await requireSession();
+  const selectedTagIds = buildSelectedTagIds((await searchParams).tags);
   const now = new Date();
   const [library, recent, week, tags, upcoming] = await Promise.all([
     getLibraryStoods(user.id),
@@ -32,11 +34,13 @@ export default async function LibraryPage() {
     getUpcomingAppointments(user.id, now),
   ]);
   const allTags = tags.map(({ id, name }) => ({ id, name }));
+  // Id de Tag que não é do dono não casa com nenhum Stood e só esvazia o filtro dele
+  const visibleRecent = filterStoodsByTags(recent, new Set(selectedTagIds));
   const firstName = buildFirstName(user.name);
 
   return (
     <div className={`flex flex-col ${BELOW_HEADER.mdMinHeight} md:flex-row`}>
-      <LibrarySidebar stoods={library} tags={tags} />
+      <LibrarySidebar stoods={library} tags={tags} selectedTagIds={selectedTagIds} />
 
       <main className="min-w-0 flex-1 px-4 pt-7 pb-16 md:px-12 md:pt-10 2xl:pt-14">
         <h1 className="mb-8 text-3xl font-medium tracking-tight 2xl:text-4xl">{firstName ? `Olá, ${firstName}` : "Olá"}</h1>
@@ -71,9 +75,9 @@ export default async function LibraryPage() {
             Continuar de onde parou
           </h2>
 
-          {recent.length > 0 ? (
+          {visibleRecent.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {recent.map((stood) => (
+              {visibleRecent.map((stood) => (
                 <StoodCard
                   key={stood.id}
                   id={stood.id}
@@ -85,6 +89,8 @@ export default async function LibraryPage() {
                 />
               ))}
             </div>
+          ) : recent.length > 0 ? (
+            <p className="text-ui text-text-muted">Nenhum Stood recente com essas Tags.</p>
           ) : (
             <div className="grid justify-items-start gap-3 rounded-lg border border-dashed border-border p-6">
               <p className="font-medium">Você ainda não tem nenhum Stood.</p>
@@ -105,4 +111,10 @@ export default async function LibraryPage() {
       <LibraryBrain />
     </div>
   );
+}
+
+// ?tags= traz os ids separados por vírgula; repetido ou vazio vira lista sem eles
+function buildSelectedTagIds(param: string | string[] | undefined): string[] {
+  const value = Array.isArray(param) ? param.join(",") : (param ?? "");
+  return [...new Set(value.split(",").filter((id) => id !== ""))];
 }

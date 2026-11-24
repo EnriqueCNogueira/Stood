@@ -24,6 +24,7 @@ type ManageTagsDialogProps = { tags: ManagedTag[]; stoods: PickerStood[] };
 // "Gerenciar Tags" da Biblioteca: criar, renomear, apagar e escolher os Stoods de cada Tag; a lista vem da página, que a Action revalida
 export function ManageTagsDialog({ tags, stoods }: ManageTagsDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const newNameRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const newNameId = useId();
   const [newName, setNewName] = useState("");
@@ -37,6 +38,8 @@ export function ManageTagsDialog({ tags, stoods }: ManageTagsDialogProps) {
     setRowMode(null);
     setMessage(null);
     dialogRef.current?.showModal();
+    // Sem isto, o foco cai no "Fechar", o primeiro botão do diálogo
+    newNameRef.current?.focus();
   }
 
   function create(event: FormEvent<HTMLFormElement>) {
@@ -136,6 +139,7 @@ export function ManageTagsDialog({ tags, stoods }: ManageTagsDialogProps) {
                 Nova Tag
               </label>
               <input
+                ref={newNameRef}
                 id={newNameId}
                 value={newName}
                 autoComplete="off"

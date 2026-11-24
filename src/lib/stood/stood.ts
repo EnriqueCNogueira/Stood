@@ -35,6 +35,8 @@ export type UpdateStoodResult =
   | { ok: true; tags?: StoodTag[] }
   | { ok: false; reason: StoodDetailsReason | "nome-repetido" | "stood-nao-encontrado" | TagsReason };
 
+export type DeleteStoodResult = { ok: true } | { ok: false; reason: "stood-nao-encontrado" };
+
 // Sem tags, o Stood mantém as Tags que já tem
 export type StoodInput = { name: string; description: string; tags?: StoodTagsInput };
 export type InsertStoodContent = (tx: Transaction, stoodId: string) => Promise<unknown>;
@@ -99,6 +101,17 @@ export async function updateStood(ownerId: string, stoodId: string, input: Stood
     if (isConstraintViolation(error, NAME_UNIQUE_CONSTRAINT)) return { ok: false, reason: "nome-repetido" };
     throw error;
   }
+}
+
+// Pastas, Arquivos, bytes e Tags ligadas saem em cascata no banco; Focos e Compromissos ficam, sem Stood
+export async function deleteStood(ownerId: string, stoodId: string): Promise<DeleteStoodResult> {
+  if (!isUuid(stoodId)) return { ok: false, reason: "stood-nao-encontrado" };
+
+  const deleted = await db
+    .delete(stoods)
+    .where(and(eq(stoods.id, stoodId), eq(stoods.ownerId, ownerId)))
+    .returning({ id: stoods.id });
+  return deleted.length > 0 ? { ok: true } : { ok: false, reason: "stood-nao-encontrado" };
 }
 
 // Quatro queries no total, sem N+1: Stoods, Pastas, Arquivos e Tags do dono

@@ -6,55 +6,77 @@ import { FormMessage } from "@/app/_components/auth/auth-card";
 import { BUTTON, FIELD, FIELD_LABEL, ICON_BUTTON, INPUT } from "@/app/_components/ui";
 import {
   type CreateDrawingFileActionResult,
+  type CreateFolderActionResult,
   type CreateNoteFileActionResult,
   createDrawingFileAction,
+  createFolderAction,
   createNoteFileAction,
 } from "@/app/_components/workspace/board/file-actions";
+import { FOLDER_NOT_FOUND_MESSAGE, FolderField, type FolderOption } from "@/app/_components/workspace/board/folder-field";
 import { MAX_NAME_LENGTH, validateName } from "@/lib/stood/details";
-import type { StoodTreeFile } from "@/lib/stood/tree";
+import type { StoodTreeNode } from "@/lib/stood/tree";
 
-type NamedFileType = "note" | "drawing";
+type NamedType = "note" | "drawing" | "folder";
 
 // Toda recusa possível do modal tem mensagem: um reason novo sem texto não compila
 type DialogReason =
-  | Exclude<CreateNoteFileActionResult | CreateDrawingFileActionResult, { ok: true }>["reason"]
+  | Exclude<CreateNoteFileActionResult | CreateDrawingFileActionResult | CreateFolderActionResult, { ok: true }>["reason"]
   | "inesperado";
 
-// O que muda entre Nota e Desenho: título, botão, gênero das frases e a action que cria
+type CreateInput = { stoodId: string; folderId: string | null; name: string };
+type CreateResult = { ok: true; node: StoodTreeNode } | { ok: false; reason: DialogReason };
+
+// O que muda entre Nota, Desenho e Pasta: título, botão, rótulo do lugar, gênero das frases e a action que cria
 const DIALOGS = {
   note: {
     title: "Nova Nota",
     submitLabel: "Criar Nota",
+    folderLabel: "Pasta",
     emptyName: "Dê um nome à Nota.",
-    repeatedName: "Este Stood já tem uma Nota com esse nome.",
+    repeatedName: "Já existe uma Nota com esse nome nesse lugar.",
     unexpected: "Não foi possível criar a Nota. Tente de novo.",
-    create: createNoteFileAction,
+    create: async (input: CreateInput): Promise<CreateResult> => buildFileResult(await createNoteFileAction(input)),
   },
   drawing: {
     title: "Novo Desenho",
     submitLabel: "Criar Desenho",
+    folderLabel: "Pasta",
     emptyName: "Dê um nome ao Desenho.",
-    repeatedName: "Este Stood já tem um Desenho com esse nome.",
+    repeatedName: "Já existe um Desenho com esse nome nesse lugar.",
     unexpected: "Não foi possível criar o Desenho. Tente de novo.",
-    create: createDrawingFileAction,
+    create: async (input: CreateInput): Promise<CreateResult> => buildFileResult(await createDrawingFileAction(input)),
   },
-} satisfies Record<NamedFileType, unknown>;
+  folder: {
+    title: "Nova Pasta",
+    submitLabel: "Criar Pasta",
+    folderLabel: "Dentro de",
+    emptyName: "Dê um nome à Pasta.",
+    repeatedName: "Já existe uma Pasta com esse nome nesse lugar.",
+    unexpected: "Não foi possível criar a Pasta. Tente de novo.",
+    create: async ({ folderId, ...input }: CreateInput): Promise<CreateResult> => {
+      const result = await createFolderAction({ ...input, parentId: folderId });
+      return result.ok ? { ok: true, node: result.folder } : result;
+    },
+  },
+} satisfies Record<NamedType, unknown>;
 
 type NamedFileDialogProps = {
-  type: NamedFileType;
+  type: NamedType;
   stoodId: string;
-  onAdded: (file: StoodTreeFile) => void;
+  folders: FolderOption[];
+  onAdded: (node: StoodTreeNode, folderId: string | null) => void;
   onClose: () => void;
 };
 
-// Modal de "Novo Arquivo" dos tipos que só pedem nome; monta já aberto e desmonta ao fechar
-export function NamedFileDialog({ type, stoodId, onAdded, onClose }: NamedFileDialogProps) {
+// Modal de "Novo Arquivo" dos tipos que só pedem nome, e de "Nova Pasta"; monta já aberto e desmonta ao fechar
+export function NamedFileDialog({ type, stoodId, folders, onAdded, onClose }: NamedFileDialogProps) {
   const dialog = DIALOGS[type];
   const dialogRef = useRef<HTMLDialogElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const errorId = useId();
   const [name, setName] = useState("");
+  const [folderId, setFolderId] = useState<string | null>(null);
   const [reason, setReason] = useState<DialogReason | null>(null);
   const [isPending, startTransition] = useTransition();
   const isNameError = reason !== null && reason.startsWith("nome");
@@ -66,6 +88,7 @@ export function NamedFileDialog({ type, stoodId, onAdded, onClose }: NamedFileDi
     "nome-com-espaco-nas-pontas": "Tire o espaço do começo ou do fim do nome.",
     "nome-repetido": dialog.repeatedName,
     "stood-nao-encontrado": "Este Stood não existe mais.",
+    "pasta-nao-encontrada": FOLDER_NOT_FOUND_MESSAGE,
     "entrada-invalida": dialog.unexpected,
     inesperado: dialog.unexpected,
   };
@@ -85,12 +108,12 @@ export function NamedFileDialog({ type, stoodId, onAdded, onClose }: NamedFileDi
 
     startTransition(async () => {
       try {
-        const result = await dialog.create({ stoodId, name });
+        const result = await dialog.create({ stoodId, folderId, name });
         if (!result.ok) {
           setReason(result.reason);
           return;
         }
-        onAdded(result.file);
+        onAdded(result.node, folderId);
         dialogRef.current?.close();
       } catch {
         setReason("inesperado");
@@ -135,6 +158,8 @@ export function NamedFileDialog({ type, stoodId, onAdded, onClose }: NamedFileDi
           </span>
         </label>
 
+        <FolderField label={dialog.folderLabel} folders={folders} value={folderId} onChange={setFolderId} />
+
         {reason && (
           <FormMessage tone="error" id={errorId}>
             {messages[reason]}
@@ -150,10 +175,14 @@ export function NamedFileDialog({ type, stoodId, onAdded, onClose }: NamedFileDi
             Cancelar
           </button>
           <button type="submit" disabled={isPending} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
-            {dialog.submitLabel}
+            {isPending ? "Criando…" : dialog.submitLabel}
           </button>
         </div>
       </form>
     </dialog>
   );
+}
+
+function buildFileResult(result: CreateNoteFileActionResult | CreateDrawingFileActionResult): CreateResult {
+  return result.ok ? { ok: true, node: result.file } : result;
 }

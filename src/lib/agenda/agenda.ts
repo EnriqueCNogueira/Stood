@@ -62,6 +62,11 @@ export type OccurrenceUpdate = { title: string; day: string; timeOfDay: string |
 
 export type AppointmentScope = { kind: "all" } | { kind: "one"; originalDay: string };
 
+// "Todas" salvo a partir de uma Ocorrência: o formulário como o Usuário deixou, para a Ocorrência mudada à mão
+// também receber o que ele mudou; o dia do formulário não vale para "Todas"
+export type EditedOccurrence = OccurrenceUpdate & { originalDay: string };
+type SeriesScope = { kind: "all"; editedOccurrence?: EditedOccurrence };
+
 export type CreateAppointmentResult =
   | { ok: true; id: string }
   | { ok: false; reason: AppointmentInputReason | "stood-nao-encontrado" | "limite-de-compromissos" };
@@ -144,7 +149,7 @@ export async function createAppointment(ownerId: string, input: AppointmentInput
 export async function updateAppointment(
   ownerId: string,
   appointmentId: string,
-  scope: { kind: "all" },
+  scope: SeriesScope,
   input: AppointmentInput,
 ): Promise<UpdateAppointmentResult>;
 export async function updateAppointment(
@@ -156,7 +161,7 @@ export async function updateAppointment(
 export async function updateAppointment(
   ownerId: string,
   appointmentId: string,
-  scope: AppointmentScope,
+  scope: SeriesScope | { kind: "one"; originalDay: string },
   input: AppointmentInput | OccurrenceUpdate,
 ): Promise<UpdateAppointmentResult> {
   if (!isUuid(appointmentId)) return { ok: false, reason: "compromisso-nao-encontrado" };
@@ -167,7 +172,7 @@ export async function updateAppointment(
     if (!rule) return { ok: false, reason: "compromisso-nao-encontrado" };
     if (input.stoodId !== null && !(await isOwnedStood(tx, ownerId, input.stoodId))) return { ok: false, reason: "stood-nao-encontrado" };
 
-    if (scope.kind === "all") return updateSeries(tx, ownerId, rule, input as AppointmentInput);
+    if (scope.kind === "all") return updateSeries(tx, ownerId, rule, input as AppointmentInput, scope.editedOccurrence);
 
     const validation = validateOccurrenceInput(input);
     if (!validation.ok) return validation;
@@ -224,10 +229,15 @@ async function updateSeries(
   ownerId: string,
   rule: AppointmentRule,
   input: AppointmentInput,
+  editedOccurrence: EditedOccurrence | undefined,
 ): Promise<UpdateAppointmentResult> {
   const validation = validateAppointmentInput(input);
   if (!validation.ok) return validation;
   const next = validation.input;
+  const occurrence = editedOccurrence && validateOccurrenceInput(editedOccurrence);
+  if (occurrence && !occurrence.ok) return occurrence;
+  const occurrenceStoodId = editedOccurrence?.stoodId ?? null;
+  if (occurrenceStoodId !== null && !(await isOwnedStood(tx, ownerId, occurrenceStoodId))) return { ok: false, reason: "stood-nao-encontrado" };
 
   await tx
     .update(appointments)
@@ -237,6 +247,22 @@ async function updateSeries(
     await tx
       .delete(appointmentChanges)
       .where(and(eq(appointmentChanges.appointmentId, rule.id), eq(appointmentChanges.ownerId, ownerId)));
+    return { ok: true };
+  }
+
+  // A Ocorrência aberta que já era mudada à mão guarda os próprios dados: recebe o formulário, menos o dia
+  if (editedOccurrence && occurrence?.ok) {
+    await tx
+      .update(appointmentChanges)
+      .set({ title: occurrence.input.title, timeOfDay: occurrence.input.timeOfDay, stoodId: occurrenceStoodId })
+      .where(
+        and(
+          eq(appointmentChanges.appointmentId, rule.id),
+          eq(appointmentChanges.originalDay, editedOccurrence.originalDay),
+          eq(appointmentChanges.ownerId, ownerId),
+          eq(appointmentChanges.isDeleted, false),
+        ),
+      );
   }
   return { ok: true };
 }

@@ -5,6 +5,7 @@ import { type ClipboardEvent, type DragEvent, type FormEvent, useEffect, useId, 
 import { FormMessage } from "@/app/_components/auth/auth-card";
 import { BUTTON, FIELD, FIELD_LABEL, ICON_BUTTON, INPUT } from "@/app/_components/ui";
 import { type CreateImageFileActionResult, createImageFileAction } from "@/app/_components/workspace/board/file-actions";
+import { FOLDER_NOT_FOUND_MESSAGE, FolderField, type FolderOption } from "@/app/_components/workspace/board/folder-field";
 import {
   IMAGE_ACCEPT,
   IMAGE_HEADER_BYTES,
@@ -29,8 +30,9 @@ const REASON_MESSAGES: Record<DialogReason, string> = {
   "nome-longo": `O nome pode ter até ${MAX_NAME_LENGTH} caracteres.`,
   "nome-com-separador": "O nome não pode ter / nem \\.",
   "nome-com-espaco-nas-pontas": "Tire o espaço do começo ou do fim do nome.",
-  "nome-repetido": "Este Stood já tem uma Imagem com esse nome.",
+  "nome-repetido": "Já existe uma Imagem com esse nome nesse lugar.",
   "stood-nao-encontrado": "Este Stood não existe mais.",
+  "pasta-nao-encontrada": FOLDER_NOT_FOUND_MESSAGE,
   "entrada-invalida": UNEXPECTED_MESSAGE,
   inesperado: UNEXPECTED_MESSAGE,
 };
@@ -39,12 +41,14 @@ type Picked = { file: File; previewUrl: string };
 
 type ImageDialogProps = {
   stoodId: string;
-  onAdded: (file: StoodTreeFile) => void;
+  folders: FolderOption[];
+  onAdded: (file: StoodTreeFile, folderId: string | null) => void;
   onClose: () => void;
 };
 
 // Modal de "Novo Arquivo > Imagem": escolher, arrastar ou colar; monta já aberto e desmonta ao fechar
-export function ImageDialog({ stoodId, onAdded, onClose }: ImageDialogProps) {
+export function ImageDialog({ stoodId, folders, onAdded, onClose }: ImageDialogProps) {
+  const [folderId, setFolderId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pickerRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
@@ -106,6 +110,7 @@ export function ImageDialog({ stoodId, onAdded, onClose }: ImageDialogProps) {
     const formData = new FormData();
     formData.set("stoodId", stoodId);
     formData.set("name", name);
+    if (folderId) formData.set("folderId", folderId);
     formData.set("image", picked.file);
     startTransition(async () => {
       try {
@@ -114,7 +119,7 @@ export function ImageDialog({ stoodId, onAdded, onClose }: ImageDialogProps) {
           setReason(result.reason);
           return;
         }
-        onAdded(result.file);
+        onAdded(result.file, folderId);
         dialogRef.current?.close();
       } catch {
         setReason("inesperado");
@@ -198,6 +203,8 @@ export function ImageDialog({ stoodId, onAdded, onClose }: ImageDialogProps) {
           </label>
         )}
 
+        <FolderField label="Pasta" folders={folders} value={folderId} onChange={setFolderId} />
+
         {reason && (
           <FormMessage tone="error" id={errorId}>
             {REASON_MESSAGES[reason]}
@@ -213,7 +220,7 @@ export function ImageDialog({ stoodId, onAdded, onClose }: ImageDialogProps) {
             Cancelar
           </button>
           <button type="submit" disabled={!picked || isPending} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
-            Adicionar
+            {isPending ? "Enviando…" : "Adicionar"}
           </button>
         </div>
       </form>

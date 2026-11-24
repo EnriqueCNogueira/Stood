@@ -8,9 +8,11 @@ import { BUTTON, DIALOG, FIELD, FIELD_LABEL, ICON_BUTTON, INPUT } from "@/app/_c
 import {
   type CreateStoodActionResult,
   type CreateStoodFromSubjectActionResult,
+  type DeleteStoodActionResult,
   type UpdateStoodActionResult,
   createStoodAction,
   createStoodFromSubjectAction,
+  deleteStoodAction,
   updateStoodAction,
 } from "@/app/_components/workspace/stood-actions";
 import { TagField, type TagSelection } from "@/app/_components/workspace/tag-field";
@@ -39,7 +41,10 @@ const TAGS_MESSAGES: Record<TagsReason, string> = {
 
 // Toda recusa possível do diálogo tem mensagem: um reason novo sem texto não compila
 type DialogReason =
-  | Exclude<CreateStoodActionResult | UpdateStoodActionResult | CreateStoodFromSubjectActionResult, { ok: true }>["reason"]
+  | Exclude<
+      CreateStoodActionResult | UpdateStoodActionResult | CreateStoodFromSubjectActionResult | DeleteStoodActionResult,
+      { ok: true }
+    >["reason"]
   | TagsReason
   | "inesperado";
 
@@ -79,6 +84,7 @@ type StoodDialogProps = {
 // Mantém o que foi digitado quando há erro.
 export function StoodDialog(props: StoodDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const errorId = useId();
   const initial = props.mode === "create" ? { name: "", description: null } : props.details;
@@ -90,9 +96,11 @@ export function StoodDialog(props: StoodDialogProps) {
   // Muda a cada abertura, para o campo de Tags começar sem o aviso da abertura anterior
   const [openCount, setOpenCount] = useState(0);
   const [reason, setReason] = useState<DialogReason | null>(null);
+  // Só no modo "edit": a confirmação de apagar toma o lugar do formulário
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const title = props.mode === "edit" ? "Editar Stood" : "Novo Stood";
+  const title = isConfirmingDelete ? "Apagar Stood" : props.mode === "edit" ? "Editar Stood" : "Novo Stood";
   const isTagsError = reason !== null && reason in TAGS_MESSAGES;
   const isNameError = reason !== null && reason.startsWith("nome-") && !isTagsError;
   const isDescriptionError = reason === "descricao-longa";
@@ -110,7 +118,25 @@ export function StoodDialog(props: StoodDialogProps) {
     setTagQuery("");
     setOpenCount((count) => count + 1);
     setReason(null);
+    setIsConfirmingDelete(false);
     dialogRef.current?.showModal();
+    // Sem isto, o foco cai no "Fechar", o primeiro botão do diálogo, e Enter fecha em vez de escrever o nome
+    nameRef.current?.focus();
+  }
+
+  // Sem o Stood, o Quadro não tem o que mostrar: volta para a Biblioteca sem deixar o Quadro no histórico
+  function deleteStood() {
+    if (props.mode !== "edit") return;
+    const { stoodId } = props;
+    startTransition(async () => {
+      try {
+        const result = await deleteStoodAction({ stoodId });
+        if (result.ok) router.replace("/biblioteca");
+        else setReason(result.reason);
+      } catch {
+        setReason("inesperado");
+      }
+    });
   }
 
   function changeTagQuery(query: string) {
@@ -181,68 +207,114 @@ export function StoodDialog(props: StoodDialogProps) {
             </button>
           </div>
 
-          <label className={FIELD}>
-            <span className={FIELD_LABEL}>Nome</span>
-            <input
-              name="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              autoComplete="off"
-              aria-invalid={isNameError}
-              aria-describedby={isNameError ? errorId : undefined}
-              className={INPUT}
+          {isConfirmingDelete && props.mode === "edit" ? (
+            <div className="grid gap-4">
+              <p className="text-ui text-text-muted">
+                <span className="font-medium text-text">{props.details.name}</span> sai da Biblioteca com todas as Pastas e
+                Arquivos dele. Os Focos e Compromissos ficam, sem Stood. Não dá para desfazer.
+              </p>
+              {errorMessage}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => {
+                    setReason(null);
+                    setIsConfirmingDelete(false);
+                  }}
+                  className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.secondary}`}
+                >
+                  Voltar
+                </button>
+                <button type="button" disabled={isPending} onClick={deleteStood} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.danger}`}>
+                  {isPending ? "Apagando…" : "Apagar Stood"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+            <label className={FIELD}>
+              <span className={FIELD_LABEL}>Nome</span>
+              <input
+                ref={nameRef}
+                name="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                autoComplete="off"
+                aria-invalid={isNameError}
+                aria-describedby={isNameError ? errorId : undefined}
+                className={INPUT}
+              />
+              <Counter length={name.length} max={MAX_NAME_LENGTH} />
+            </label>
+
+            <label className={FIELD}>
+              <span className={FIELD_LABEL}>Descrição (opcional)</span>
+              <textarea
+                name="description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                // Cresce com o texto e mostra a descrição inteira; rows é a altura no navegador sem field-sizing
+                rows={5}
+                aria-invalid={isDescriptionError}
+                aria-describedby={isDescriptionError ? errorId : undefined}
+                // h-auto! vence o h-9 do INPUT, que prendia o campo numa linha
+                className={`${INPUT} h-auto! min-h-20 resize-none py-2 [field-sizing:content]`}
+              />
+              <Counter length={description.trim().length} max={MAX_DESCRIPTION_LENGTH} />
+            </label>
+
+            {/* Acima do campo, porque a lista de sugestões aberta cobre o que vem abaixo */}
+            {isTagsError && errorMessage}
+
+            <TagField
+              key={openCount}
+              allTags={props.allTags}
+              selection={selection}
+              query={tagQuery}
+              isInvalid={isTagsError}
+              describedBy={isTagsError ? errorId : undefined}
+              onChange={setSelection}
+              onQueryChange={changeTagQuery}
             />
-            <Counter length={name.length} max={MAX_NAME_LENGTH} />
-          </label>
 
-          <label className={FIELD}>
-            <span className={FIELD_LABEL}>Descrição (opcional)</span>
-            <textarea
-              name="description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              // Cresce com o texto e mostra a descrição inteira; rows é a altura no navegador sem field-sizing
-              rows={5}
-              aria-invalid={isDescriptionError}
-              aria-describedby={isDescriptionError ? errorId : undefined}
-              // h-auto! vence o h-9 do INPUT, que prendia o campo numa linha
-              className={`${INPUT} h-auto! min-h-20 resize-none py-2 [field-sizing:content]`}
-            />
-            <Counter length={description.trim().length} max={MAX_DESCRIPTION_LENGTH} />
-          </label>
+            {!isTagsError && errorMessage}
 
-          {/* Acima do campo, porque a lista de sugestões aberta cobre o que vem abaixo */}
-          {isTagsError && errorMessage}
-
-          <TagField
-            key={openCount}
-            allTags={props.allTags}
-            selection={selection}
-            query={tagQuery}
-            isInvalid={isTagsError}
-            describedBy={isTagsError ? errorId : undefined}
-            onChange={setSelection}
-            onQueryChange={changeTagQuery}
-          />
-
-          {!isTagsError && errorMessage}
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => dialogRef.current?.close()}
-              className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.secondary}`}
-            >
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
-              {props.mode === "edit" ? "Salvar" : "Criar Stood"}
-            </button>
-          </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {props.mode === "edit" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReason(null);
+                    setIsConfirmingDelete(true);
+                  }}
+                  className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.ghost} mr-auto hover:not-disabled:text-danger`}
+                >
+                  Apagar Stood
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => dialogRef.current?.close()}
+                className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.secondary}`}
+              >
+                Cancelar
+              </button>
+              <button type="submit" disabled={isPending} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
+                {buildSubmitLabel(props.mode, isPending)}
+              </button>
+            </div>
+            </>
+          )}
         </form>
       </dialog>
     </>
   );
+}
+
+function buildSubmitLabel(mode: StoodDialogProps["mode"], isPending: boolean) {
+  if (mode === "edit") return isPending ? "Salvando…" : "Salvar";
+  return isPending ? "Criando…" : "Criar Stood";
 }
 
 function Counter({ length, max }: { length: number; max: number }) {

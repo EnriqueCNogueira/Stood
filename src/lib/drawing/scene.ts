@@ -16,9 +16,11 @@ export const MAX_DRAWING_ELEMENTS = 2_000;
 export const MAX_HISTORY_STEPS = 100;
 // Teto do JSON gravado: cabe no limite de corpo das Server Actions
 export const MAX_DRAWING_LENGTH = 2_000_000;
-const MAX_PEN_POINTS = 5_000;
-const MAX_TEXT_LENGTH = 2_000;
-const MAX_COORDINATE = 100_000;
+export const MAX_PEN_POINTS = 5_000;
+export const MAX_TEXT_LENGTH = 2_000;
+export const MAX_COORDINATE = 100_000;
+// O ponto desenhado é a posição na Janela menos o deslocamento da área; a metade do limite sobra para o tamanho da Janela
+export const MAX_PAN = MAX_COORDINATE / 2;
 // Distância, em pixels, em que o clique ainda acerta o traço
 const HIT_TOLERANCE = 6;
 // Medida aproximada das letras, sem ler o layout: largura média e altura da linha em relação ao tamanho da fonte
@@ -192,9 +194,10 @@ export function buildDrawingHistory(history: DrawingHistory, action: DrawingActi
       return { elements: next, past: [...history.past, history.elements], future };
     }
     case "add": {
-      // O mesmo gesto confirmado duas vezes não duplica o id, que a cena salva recusa
+      // O mesmo gesto confirmado duas vezes não duplica o id, e a cena cheia não cresce: a cena salva recusa os dois
       const isAlreadyAdded = history.elements.some((element) => element.id === action.element.id);
-      return isAlreadyAdded ? history : buildStep(history, [...history.elements, action.element]);
+      if (isAlreadyAdded || isDrawingFull(history.elements)) return history;
+      return buildStep(history, [...history.elements, action.element]);
     }
     case "replace":
       return buildStep(
@@ -215,6 +218,19 @@ export function buildDrawingHistory(history: DrawingHistory, action: DrawingActi
       return remaining.length === history.elements.length ? history : buildStep(history, remaining);
     }
   }
+}
+
+export function isDrawingFull(elements: DrawingElement[]) {
+  return elements.length >= MAX_DRAWING_ELEMENTS;
+}
+
+// Deslocamento da área preso em ±MAX_PAN, para todo ponto desenhado caber na cena salva
+export function buildLimitedPan(pan: Point): Point {
+  return { x: buildClamped(pan.x, MAX_PAN), y: buildClamped(pan.y, MAX_PAN) };
+}
+
+function buildClamped(value: number, limit: number) {
+  return Math.min(Math.max(value, -limit), limit);
 }
 
 function buildStep(history: DrawingHistory, elements: DrawingElement[]): DrawingHistory {

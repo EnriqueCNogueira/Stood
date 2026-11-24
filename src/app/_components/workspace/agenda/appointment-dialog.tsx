@@ -91,6 +91,7 @@ type AppointmentDialogProps = {
 // Diálogo do Compromisso: cria com o dia escolhido ou edita; na Ocorrência de um recorrente, pergunta "Só esta" ou "Todas"
 export function AppointmentDialog(props: AppointmentDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const errorId = useId();
   const [values, setValues] = useState<FormValues>(() => buildInitialValues(props));
@@ -107,6 +108,8 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
     setStep("form");
     setReason(null);
     dialogRef.current?.showModal();
+    // Sem isto, o foco cai no "Fechar", o primeiro botão do diálogo, e Enter fecha em vez de escrever o título
+    titleRef.current?.focus();
   }
 
   function close() {
@@ -157,12 +160,13 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
         kind: "one",
         appointmentId: entry.appointmentId,
         originalDay: entry.originalDay,
-        input: { title: values.title, day: values.day, timeOfDay: values.timeOfDay || null, stoodId: values.stoodId || null },
+        input: buildOccurrenceInput(values),
       }),
     );
   }
 
-  // "Todas" leva para a série só o que mudou no formulário; o dia só vale para "Só esta"
+  // "Todas" leva para a série só o que mudou no formulário; o dia só vale para "Só esta".
+  // A Ocorrência aberta, se já era mudada à mão, recebe o formulário como o Usuário deixou.
   function saveAll() {
     if (!entry || !series) return;
     run(() =>
@@ -170,6 +174,7 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
         kind: "all",
         appointmentId: entry.appointmentId,
         input: buildSeriesInput(buildActionInput(values), entry, series),
+        editedOccurrence: { originalDay: entry.originalDay, ...buildOccurrenceInput(values) },
       }),
     );
   }
@@ -220,6 +225,7 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
               <label className={FIELD}>
                 <span className={FIELD_LABEL}>Título</span>
                 <input
+                  ref={titleRef}
                   value={values.title}
                   onChange={(event) => change("title", event.target.value)}
                   autoComplete="off"
@@ -339,7 +345,12 @@ export function AppointmentDialog(props: AppointmentDialogProps) {
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {step === "form" && entry && (
+            {isPending && (
+              <span role="status" className="mr-auto font-mono text-meta text-text-muted">
+                {step === "delete" ? "Apagando…" : "Salvando…"}
+              </span>
+            )}
+            {step === "form" && entry && !isPending && (
               <button
                 type="button"
                 onClick={() => {
@@ -450,6 +461,10 @@ function buildRuleInput(values: FormValues) {
 
 function buildActionInput(values: FormValues) {
   return { ...buildRuleInput(values), stoodId: values.stoodId || null };
+}
+
+function buildOccurrenceInput(values: FormValues) {
+  return { title: values.title, day: values.day, timeOfDay: values.timeOfDay || null, stoodId: values.stoodId || null };
 }
 
 // 0 é domingo; o dia do formulário pode estar vazio enquanto o Usuário digita

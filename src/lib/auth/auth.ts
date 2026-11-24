@@ -68,6 +68,7 @@ function createAuth(env: Env) {
 const PASSWORD_FIELD_BY_PATH: Record<string, string> = {
   "/sign-up/email": "password",
   "/reset-password": "newPassword",
+  "/change-password": "newPassword",
 };
 
 const enforceSignUpAndPasswordRules = createAuthMiddleware(async (ctx) => {

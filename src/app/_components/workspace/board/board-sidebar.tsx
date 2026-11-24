@@ -1,17 +1,19 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
-import { type KeyboardEvent, type PointerEvent, useCallback, useRef, useState } from "react";
+import { ArrowLeft, ChevronDown, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from "react";
 import { useDismiss } from "@/app/_components/dismiss";
-import { BUTTON, FOCUS, ICON_BUTTON, MENU_ITEM, POPOVER } from "@/app/_components/ui";
+import { BUTTON, FOCUS, ICON_BUTTON, MENU_ITEM, MENU_SEPARATOR, POPOVER } from "@/app/_components/ui";
 import { FILE_TYPE_LABELS, FILE_TYPE_ORDER, FileTypeIcon } from "@/app/_components/workspace/file-type-icon";
+import { FileRowMenu } from "@/app/_components/workspace/board/file-row-menu";
+import type { FolderOption } from "@/app/_components/workspace/board/folder-field";
 import { ImageDialog } from "@/app/_components/workspace/board/image-dialog";
 import { NamedFileDialog } from "@/app/_components/workspace/board/named-file-dialog";
 import { VideoDialog } from "@/app/_components/workspace/board/video-dialog";
 import { Sidebar } from "@/app/_components/workspace/sidebar";
 import { FileLabel, TREE_ROW, TREE_ROW_HOVER, TreeList } from "@/app/_components/workspace/tree";
 import { SIDEBAR_WIDTH_STORAGE_KEYS } from "@/lib/board/preferences";
-import type { FileType, StoodTreeFile, StoodTreeNode } from "@/lib/stood/tree";
+import { type FileType, type StoodTreeFile, type StoodTreeNode, buildFolderOptions } from "@/lib/stood/tree";
 
 const DEFAULT_WIDTH = 248;
 
@@ -24,7 +26,10 @@ type BoardSidebarProps = {
   onCloseDrawer: () => void;
   onFilePointerDown: (file: StoodTreeFile, event: PointerEvent<HTMLElement>) => void;
   onOpenFile: (file: StoodTreeFile) => void;
-  onFileCreated: (file: StoodTreeFile) => void;
+  // folderId nulo é a raiz do Stood; a Pasta nova também chega por aqui
+  onNodeCreated: (node: StoodTreeNode, folderId: string | null) => void;
+  onFileRenamed: (fileId: string, name: string) => void;
+  onFileDeleted: (fileId: string) => void;
 };
 
 // Barra lateral do Quadro: recolhe no computador e vira gaveta no celular
@@ -37,8 +42,12 @@ export function BoardSidebar({
   onCloseDrawer,
   onFilePointerDown,
   onOpenFile,
-  onFileCreated,
+  onNodeCreated,
+  onFileRenamed,
+  onFileDeleted,
 }: BoardSidebarProps) {
+  const folders = useMemo(() => buildFolderOptions(tree), [tree]);
+
   function openWithKeyboard(file: StoodTreeFile, event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
@@ -72,7 +81,7 @@ export function BoardSidebar({
             Voltar
           </a>
           <div className="flex items-center gap-1">
-            <NewFileMenu stoodId={stoodId} onFileCreated={onFileCreated} />
+            <NewFileMenu stoodId={stoodId} folders={folders} onNodeCreated={onNodeCreated} />
             <button type="button" aria-label="Recolher a barra lateral" onClick={onToggleCollapsed} className={`${ICON_BUTTON} hidden md:inline-flex`}>
               <PanelLeftClose size={18} strokeWidth={1.75} aria-hidden />
             </button>
@@ -90,15 +99,18 @@ export function BoardSidebar({
               <TreeList
                 nodes={tree}
                 renderFile={(file) => (
-                  <button
-                    type="button"
-                    onPointerDown={(event) => onFilePointerDown(file, event)}
-                    onDoubleClick={() => onOpenFile(file)}
-                    onKeyDown={(event) => openWithKeyboard(file, event)}
-                    className={`${TREE_ROW} ${TREE_ROW_HOVER} select-none md:cursor-grab md:touch-none ${FOCUS}`}
-                  >
-                    <FileLabel file={file} />
-                  </button>
+                  <div className="group flex min-w-0 items-center">
+                    <button
+                      type="button"
+                      onPointerDown={(event) => onFilePointerDown(file, event)}
+                      onDoubleClick={() => onOpenFile(file)}
+                      onKeyDown={(event) => openWithKeyboard(file, event)}
+                      className={`${TREE_ROW} ${TREE_ROW_HOVER} min-w-0 flex-1 select-none md:cursor-grab md:touch-none ${FOCUS}`}
+                    >
+                      <FileLabel file={file} />
+                    </button>
+                    <FileRowMenu file={file} onRenamed={onFileRenamed} onDeleted={onFileDeleted} />
+                  </div>
                 )}
               />
             ) : (
@@ -111,9 +123,15 @@ export function BoardSidebar({
   );
 }
 
-function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreated: (file: StoodTreeFile) => void }) {
+type NewFileMenuProps = {
+  stoodId: string;
+  folders: FolderOption[];
+  onNodeCreated: BoardSidebarProps["onNodeCreated"];
+};
+
+function NewFileMenu({ stoodId, folders, onNodeCreated }: NewFileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<FileType | null>(null);
+  const [dialogType, setDialogType] = useState<FileType | "folder" | null>(null);
   const closeDialog = useCallback(() => setDialogType(null), []);
   const containerRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setIsOpen(false), []);
@@ -149,14 +167,27 @@ function NewFileMenu({ stoodId, onFileCreated }: { stoodId: string; onFileCreate
               {FILE_TYPE_LABELS[type]}
             </button>
           ))}
+          <div role="separator" className={MENU_SEPARATOR} />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setIsOpen(false);
+              setDialogType("folder");
+            }}
+            className={`${MENU_ITEM} cursor-pointer gap-2 hover:bg-surface-2 ${FOCUS}`}
+          >
+            <FolderPlus size={16} strokeWidth={1.75} aria-hidden className="text-text-muted" />
+            Pasta
+          </button>
         </div>
       )}
       {/* Fora do menu, que desmonta ao fechar */}
-      {dialogType === "video" && <VideoDialog stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />}
-      {(dialogType === "note" || dialogType === "drawing") && (
-        <NamedFileDialog type={dialogType} stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />
+      {dialogType === "video" && <VideoDialog stoodId={stoodId} folders={folders} onAdded={onNodeCreated} onClose={closeDialog} />}
+      {(dialogType === "note" || dialogType === "drawing" || dialogType === "folder") && (
+        <NamedFileDialog type={dialogType} stoodId={stoodId} folders={folders} onAdded={onNodeCreated} onClose={closeDialog} />
       )}
-      {dialogType === "image" && <ImageDialog stoodId={stoodId} onAdded={onFileCreated} onClose={closeDialog} />}
+      {dialogType === "image" && <ImageDialog stoodId={stoodId} folders={folders} onAdded={onNodeCreated} onClose={closeDialog} />}
     </div>
   );
 }

@@ -6,11 +6,18 @@ import { findActiveFocus } from "@/lib/pomodoro/pomodoro";
 import { findBoardStood, updateStoodLastOpenedAt } from "@/lib/stood/stood";
 import { getTags } from "@/lib/tag/tag";
 
-// Quadro de um Stood: abre com as Janelas salvas, registra a hora de abertura, mostra o Foco em andamento
+// Quadro de um Stood: abre com as Janelas salvas (e o Arquivo de ?arquivo=, vindo da Biblioteca), registra a hora de abertura, mostra o Foco em andamento
 // e traz as Tags do dono para o diálogo
-export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BoardPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ arquivo?: string | string[] }>;
+}) {
   const user = await requireSession();
   const { id } = await params;
+  const { arquivo } = await searchParams;
   // Ler e gravar a hora de abertura juntos: todas filtram pelo dono e não acham nada se o Stood não for dele
   const [stood, editableContents, activeFocus, tags] = await Promise.all([
     findBoardStood(user.id, id),
@@ -27,6 +34,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
       activeFocus={activeFocus ?? null}
       serverNow={Date.now()}
       allTags={tags.map((tag) => ({ id: tag.id, name: tag.name }))}
+      fileToOpen={typeof arquivo === "string" ? arquivo : undefined}
     />
   );
 }

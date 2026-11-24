@@ -102,6 +102,22 @@ describe("buildBoardState: abrir", () => {
   });
 });
 
+describe("buildBoardState: renomear", () => {
+  it("troca o nome do Arquivo na Janela aberta", () => {
+    const state = open(open(EMPTY, buildFile("a", "note")), buildFile("b", "note"));
+
+    const renamed = apply(state, { type: "rename", fileId: "a", name: "Resumo" });
+
+    expect(renamed.windows.map((window) => window.file.name)).toEqual(["Resumo", "b"]);
+  });
+
+  it("devolve o mesmo estado quando o Arquivo não está aberto", () => {
+    const state = open(EMPTY, buildFile("a", "note"));
+
+    expect(apply(state, { type: "rename", fileId: "outro", name: "Resumo" })).toBe(state);
+  });
+});
+
 describe("buildBoardState: focar", () => {
   it("traz a Janela clicada para a frente", () => {
     const state = open(open(EMPTY, buildFile("a", "note")), buildFile("b", "note"));

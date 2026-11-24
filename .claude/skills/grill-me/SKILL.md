@@ -65,8 +65,8 @@ Crie arquivos de forma preguiçosa: só quando tiver algo para escrever. Se não
 - **Afie a linguagem vaga**: Quando o usuário usar termos vagos ou sobrecarregados, proponha um termo canônico preciso. "Você está dizendo 'conta': quer dizer o Cliente ou o Usuário? São coisas diferentes."
 - **Discuta cenários concretos**: Quando relações de domínio estiverem sendo discutidas, teste-as sob pressão com cenários específicos. Invente cenários que sondem edge cases e forcem o usuário a ser preciso sobre as fronteiras entre os conceitos.
 - **Cruze com o código**: Quando o usuário afirmar como algo funciona, verifique se o código concorda. Se encontrar uma contradição, exponha: "Seu código cancela Pedidos inteiros, mas você acabou de dizer que cancelamento parcial é possível. Qual está certo?"
-- **Atualize o `GLOSSARY.md` na hora**: Quando um termo for resolvido, atualize o `GLOSSARY.md` ali mesmo, sem acumular, no padrão de [GLOSSARY-PATTERN.md](./GLOSSARY-PATTERN.md). O `GLOSSARY.md` deve ser totalmente livre de detalhes de implementação: não é spec, rascunho nem repositório de decisões de implementação. É um glossário e nada mais.
-- **Ofereça ADRs com parcimônia**: Só ofereça criar um ADR quando as três condições forem verdadeiras, no padrão de [ADR-PATTERN.md](./ADR-PATTERN.md). Se qualquer uma faltar, pule o ADR.
+- **Atualize o `GLOSSARY.md` na hora**: Quando um termo for resolvido, atualize o `GLOSSARY.md` ali mesmo, sem acumular, no padrão de [glossary-pattern.md](./references/glossary-pattern.md). O `GLOSSARY.md` deve ser totalmente livre de detalhes de implementação: não é spec, rascunho nem repositório de decisões de implementação. É um glossário e nada mais.
+- **Ofereça ADRs com parcimônia**: Só ofereça criar um ADR quando as três condições forem verdadeiras, no padrão de [adr-pattern.md](./references/adr-pattern.md). Se qualquer uma faltar, pule o ADR.
   1. Difícil de reverter: o custo de mudar de ideia depois é significativo.
   2. Surpreendente sem contexto: um leitor futuro vai se perguntar "por que fizeram assim?".
   3. Resultado de um trade-off real: havia alternativas genuínas e você escolheu uma por motivos específicos.

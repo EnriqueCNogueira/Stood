@@ -80,7 +80,8 @@ export default function PrivacyPage() {
 
       <LegalSection title="Por quanto tempo guardamos">
         <p>
-          Os dados ficam guardados enquanto você usar o Stood. A sessão expira em 30 dias ou quando você sai. Para apagar os seus dados, escreva para <ContactEmail />.
+          Os dados ficam guardados enquanto você usar o Stood. A sessão expira em 30 dias ou quando você sai. Você mesmo apaga um Stood, com as Pastas e
+          os Arquivos dele, ou um Arquivo sozinho, no Quadro. Para apagar a conta e todos os seus dados, escreva para <ContactEmail />.
         </p>
       </LegalSection>
 
