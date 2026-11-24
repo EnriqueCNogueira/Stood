@@ -8,7 +8,7 @@ import { SessionsSection } from "@/app/_components/profile/sessions-section";
 import { getAccounts } from "@/lib/auth/accounts";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 import { isFreshSession } from "@/lib/auth/freshness";
-import { getSessions } from "@/lib/auth/profile";
+import { getSessions } from "@/lib/auth/owned-sessions";
 import { CREDENTIAL_PROVIDER_ID } from "@/lib/auth/providers";
 import { requireCurrentSession } from "@/lib/auth/session";
 import { buildLastUsedLabel } from "@/lib/auth/user-agent";

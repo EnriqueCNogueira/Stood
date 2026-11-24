@@ -1,4 +1,5 @@
 export const MIN_PASSWORD_LENGTH = 8;
+export const PASSWORD_HINT = `Pelo menos ${MIN_PASSWORD_LENGTH} caracteres, com letra maiúscula, número e caractere especial.`;
 
 const UPPERCASE_LETTER = /[A-Z]/;
 const DIGIT = /\d/;

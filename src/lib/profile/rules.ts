@@ -24,17 +24,18 @@ export type Mood = (typeof MOODS)[number];
 export type MoodId = Mood["id"];
 export const MOOD_IDS = MOODS.map(({ id }) => id) as [MoodId, ...MoodId[]];
 
-export type NicknameReason = "apelido-longo" | "apelido-com-quebra";
-export type BioReason = "bio-longa" | "bio-com-quebra";
+export type NicknameReason = "apelido-longo" | "apelido-com-controle";
+export type BioReason = "bio-longa" | "bio-com-controle";
 export type PhotoReason = "foto-vazia" | "foto-grande" | "foto-invalida";
 
-const LINE_BREAK = /[\r\n]/;
+// Quebra de linha e caractere invisível de controle, que o banco também recusa
+const CONTROL_CHARACTER = /[\p{Cc}\p{Zl}\p{Zp}]/u;
 
 // Vazio quer dizer sem Apelido
 export function validateNickname(nickname: string): { ok: true; nickname: string | null } | { ok: false; reason: NicknameReason } {
   const trimmed = nickname.trim();
   if (trimmed.length > MAX_NICKNAME_LENGTH) return { ok: false, reason: "apelido-longo" };
-  if (LINE_BREAK.test(trimmed)) return { ok: false, reason: "apelido-com-quebra" };
+  if (CONTROL_CHARACTER.test(trimmed)) return { ok: false, reason: "apelido-com-controle" };
   return { ok: true, nickname: trimmed || null };
 }
 
@@ -42,7 +43,7 @@ export function validateNickname(nickname: string): { ok: true; nickname: string
 export function validateBio(bio: string): { ok: true; bio: string | null } | { ok: false; reason: BioReason } {
   const trimmed = bio.trim();
   if (trimmed.length > MAX_BIO_LENGTH) return { ok: false, reason: "bio-longa" };
-  if (LINE_BREAK.test(trimmed)) return { ok: false, reason: "bio-com-quebra" };
+  if (CONTROL_CHARACTER.test(trimmed)) return { ok: false, reason: "bio-com-controle" };
   return { ok: true, bio: trimmed || null };
 }
 

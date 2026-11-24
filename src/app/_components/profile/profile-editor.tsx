@@ -1,19 +1,16 @@
 "use client";
 
-import { type ComponentProps, type FormEvent, useId, useState, useTransition } from "react";
+import { type ComponentProps, type FormEvent, type TransitionStartFunction, useId, useState } from "react";
 import { FormMessage } from "@/app/_components/auth/auth-card";
-import { type PhotoChange, PhotoField, type PhotoFieldReason } from "@/app/_components/profile/photo-field";
-import {
-  deletePhotoAction,
-  type UpdateProfileDetailsActionResult,
-  updateProfileDetailsAction,
-  upsertPhotoAction,
-} from "@/app/_components/profile/profile-actions";
+import { buildPhoto, type PhotoChange, PhotoField, type PhotoFieldReason } from "@/app/_components/profile/photo-field";
+import { type UpdateProfileActionResult, updateProfileAction } from "@/app/_components/profile/profile-actions";
 import { BUTTON, FIELD, FIELD_LABEL, INPUT } from "@/app/_components/ui";
 import { MAX_USER_NAME_LENGTH } from "@/lib/auth/name";
-import { MAX_BIO_LENGTH, MAX_NICKNAME_LENGTH } from "@/lib/profile/rules";
+import { MAX_BIO_LENGTH, MAX_NICKNAME_LENGTH, type PhotoReason } from "@/lib/profile/rules";
 
-type Reason = Extract<UpdateProfileDetailsActionResult, { ok: false }>["reason"] | "inesperado";
+type ActionReason = Extract<UpdateProfileActionResult, { ok: false }>["reason"];
+// A recusa da Foto aparece no campo dela
+type Reason = Exclude<ActionReason, PhotoReason> | "inesperado";
 
 const UNEXPECTED_MESSAGE = "Não foi possível salvar. Tente de novo.";
 
@@ -21,9 +18,9 @@ const REASON_MESSAGES: Record<Reason, string> = {
   "nome-vazio": "Digite o seu nome.",
   "nome-longo": `O nome pode ter até ${MAX_USER_NAME_LENGTH} caracteres.`,
   "apelido-longo": `O Apelido pode ter até ${MAX_NICKNAME_LENGTH} caracteres.`,
-  "apelido-com-quebra": "O Apelido fica numa linha só.",
+  "apelido-com-controle": "O Apelido não pode ter quebra de linha nem caractere invisível.",
   "bio-longa": `A Bio pode ter até ${MAX_BIO_LENGTH} caracteres.`,
-  "bio-com-quebra": "A Bio fica numa linha só.",
+  "bio-com-controle": "A Bio não pode ter quebra de linha nem caractere invisível.",
   "entrada-invalida": UNEXPECTED_MESSAGE,
   inesperado: UNEXPECTED_MESSAGE,
 };
@@ -34,47 +31,64 @@ type ProfileEditorProps = Details & {
   email: string;
   photoVersion: number | null;
   providerImage: string | null;
+  isSaving: boolean;
+  startSaving: TransitionStartFunction;
   onClose: (result: { hasSaved: boolean }) => void;
 };
 
-// Edição dos Dados: um "Salvar" grava a Foto, o nome, o Apelido e a Bio; "Cancelar" descarta tudo
-export function ProfileEditor({ name, nickname, bio, email, photoVersion, providerImage, onClose }: ProfileEditorProps) {
+// Edição dos Dados: um "Salvar" grava juntos a Foto, o nome, o Apelido e a Bio; "Cancelar" descarta tudo
+export function ProfileEditor({
+  name,
+  nickname,
+  bio,
+  email,
+  photoVersion,
+  providerImage,
+  isSaving,
+  startSaving,
+  onClose,
+}: ProfileEditorProps) {
   const [draft, setDraft] = useState<Details>({ name, nickname, bio });
   const [photoChange, setPhotoChange] = useState<PhotoChange | null>(null);
   const [reason, setReason] = useState<Reason | null>(null);
   const [photoReason, setPhotoReason] = useState<PhotoFieldReason | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPreparing, setIsPreparing] = useState(false);
 
   function change(next: Partial<Details>) {
     setDraft((current) => ({ ...current, ...next }));
     setReason(null);
   }
 
-  function changePhoto(next: PhotoChange | null, refusal: PhotoFieldReason | null) {
-    setPhotoReason(refusal);
-    if (!refusal) setPhotoChange(next);
+  function changePhoto(next: PhotoChange | null) {
+    setPhotoReason(null);
+    setPhotoChange(next);
   }
 
-  // Os textos vão antes porque são eles que costumam ser recusados; salvar de novo depois de uma falha é seguro
+  // O "Salvar" espera o recorte; a recusa mantém a mudança que havia antes
+  async function pickPhoto(file: File) {
+    setIsPreparing(true);
+    const result = await buildPhoto(file);
+    setIsPreparing(false);
+    if (result.ok) changePhoto({ kind: "picked", jpeg: result.jpeg, previewUrl: URL.createObjectURL(result.jpeg) });
+    else setPhotoReason(result.reason);
+  }
+
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    startTransition(async () => {
+    startSaving(async () => {
       try {
-        const details = await updateProfileDetailsAction(draft);
-        if (!details.ok) {
-          setReason(details.reason);
-          return;
-        }
-        const refusal = await savePhoto(photoChange);
-        if (refusal) {
-          setPhotoReason(refusal);
-          return;
-        }
-        onClose({ hasSaved: true });
+        const result = await updateProfileAction(buildFormData(draft, photoChange));
+        if (result.ok) onClose({ hasSaved: true });
+        else showRefusal(result.reason);
       } catch {
         setReason("inesperado");
       }
     });
+  }
+
+  function showRefusal(refusal: ActionReason) {
+    if (isPhotoReason(refusal)) setPhotoReason(refusal);
+    else setReason(refusal);
   }
 
   // A recusa aparece no campo a que pertence; a inesperada, acima do botão
@@ -92,7 +106,9 @@ export function ProfileEditor({ name, nickname, bio, email, photoVersion, provid
         providerImage={providerImage}
         change={photoChange}
         reason={photoReason}
-        isDisabled={isPending}
+        isPreparing={isPreparing}
+        isDisabled={isSaving || isPreparing}
+        onPick={(file) => void pickPhoto(file)}
         onChange={changePhoto}
       />
       <TextField
@@ -124,31 +140,33 @@ export function ProfileEditor({ name, nickname, bio, email, photoVersion, provid
       <div className="flex flex-wrap justify-center gap-2 pt-1">
         <button
           type="button"
-          disabled={isPending}
+          disabled={isSaving}
           onClick={() => onClose({ hasSaved: false })}
           className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.secondary}`}
         >
           Cancelar
         </button>
-        <button type="submit" disabled={isPending} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
-          {isPending ? "Salvando…" : "Salvar"}
+        <button type="submit" disabled={isSaving || isPreparing} className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}>
+          {isSaving ? "Salvando…" : "Salvar"}
         </button>
       </div>
     </form>
   );
 }
 
-// Grava o que mudou na Foto e devolve a recusa, ou nulo quando deu certo
-async function savePhoto(change: PhotoChange | null): Promise<PhotoFieldReason | null> {
-  if (!change) return null;
-  if (change.kind === "removed") {
-    await deletePhotoAction();
-    return null;
-  }
+function isPhotoReason(reason: ActionReason): reason is PhotoReason {
+  return reason.startsWith("foto");
+}
+
+// Sem campo de Foto, a que está salva continua
+function buildFormData({ name, nickname, bio }: Details, photoChange: PhotoChange | null) {
   const formData = new FormData();
-  formData.set("photo", change.jpeg, "foto.jpg");
-  const result = await upsertPhotoAction(formData);
-  return result.ok ? null : result.reason;
+  formData.set("name", name);
+  formData.set("nickname", nickname);
+  formData.set("bio", bio);
+  if (photoChange?.kind === "picked") formData.set("photo", photoChange.jpeg, "foto.jpg");
+  if (photoChange?.kind === "removed") formData.set("isPhotoRemoved", "true");
+  return formData;
 }
 
 type TextFieldProps = Omit<ComponentProps<"input">, "value"> & {

@@ -7,41 +7,48 @@ import { z } from "zod";
 import { type DeleteAccountResult, deleteAccount } from "@/lib/auth/accounts";
 import { type DeleteUserResult, deleteUserWithCode } from "@/lib/auth/deletion";
 import { buildSignInPath, PROFILE_PATH } from "@/lib/auth/destination";
-import { type RevokeOwnedSessionResult, revokeOtherSessions, revokeOwnedSession } from "@/lib/auth/profile";
+import { type RevokeOwnedSessionResult, revokeOtherSessions, revokeOwnedSession } from "@/lib/auth/owned-sessions";
 import { requireCurrentSession, requireSession, revokeSession } from "@/lib/auth/session";
-import {
-  deletePhoto,
-  type UpdateMoodResult,
-  type UpdateProfileDetailsResult,
-  type UpsertPhotoResult,
-  updateMood,
-  updateProfileDetails,
-  upsertPhoto,
-} from "@/lib/profile/profile";
+import { type UpdateMoodResult, type UpdateProfileResult, updateMood, updateProfile } from "@/lib/profile/profile";
 import { MAX_PHOTO_BYTES } from "@/lib/profile/rules";
 
-const detailsInputSchema = z.object({ name: z.string(), nickname: z.string(), bio: z.string() });
+const profileInputSchema = z.object({
+  name: z.string(),
+  nickname: z.string(),
+  bio: z.string(),
+  photo: z.instanceof(File).nullable(),
+  isPhotoRemoved: z.boolean(),
+});
 const moodInputSchema = z.object({ moodId: z.string().nullable() });
-const photoInputSchema = z.object({ photo: z.instanceof(File) });
 const accountInputSchema = z.object({ accountId: z.string() });
 const sessionInputSchema = z.object({ sessionId: z.string() });
 const codeInputSchema = z.object({ code: z.string() });
 
 type InvalidInput = { ok: false; reason: "entrada-invalida" };
-export type UpdateProfileDetailsActionResult = UpdateProfileDetailsResult | InvalidInput;
+export type UpdateProfileActionResult = UpdateProfileResult | InvalidInput;
 export type UpdateMoodActionResult = UpdateMoodResult | InvalidInput;
-export type UpsertPhotoActionResult = UpsertPhotoResult | InvalidInput;
 export type DeleteAccountActionResult = DeleteAccountResult | InvalidInput;
 export type RevokeOwnedSessionActionResult = RevokeOwnedSessionResult | InvalidInput;
 export type DeleteUserActionResult = DeleteUserResult | InvalidInput;
 
 // Nome, Apelido, Bio, Humor e Foto aparecem no cabeçalho de todas as páginas, então a revalidação é do layout
-export async function updateProfileDetailsAction(input: unknown): Promise<UpdateProfileDetailsActionResult> {
+export async function updateProfileAction(formData: unknown): Promise<UpdateProfileActionResult> {
   const user = await requireSession();
-  const parsed = detailsInputSchema.safeParse(input);
+  if (!(formData instanceof FormData)) return { ok: false, reason: "entrada-invalida" };
+  const parsed = profileInputSchema.safeParse({
+    name: formData.get("name"),
+    nickname: formData.get("nickname"),
+    bio: formData.get("bio"),
+    photo: formData.get("photo"),
+    isPhotoRemoved: formData.has("isPhotoRemoved"),
+  });
   if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
 
-  const result = await updateProfileDetails(user.id, parsed.data);
+  const { photo, isPhotoRemoved, ...details } = parsed.data;
+  // Recusa antes de ler os bytes para a memória
+  if (photo && photo.size > MAX_PHOTO_BYTES) return { ok: false, reason: "foto-grande" };
+  const bytes = photo ? new Uint8Array(await photo.arrayBuffer()) : undefined;
+  const result = await updateProfile(user.id, { ...details, photo: isPhotoRemoved ? null : bytes });
   if (result.ok) revalidatePath("/", "layout");
   return result;
 }
@@ -54,26 +61,6 @@ export async function updateMoodAction(input: unknown): Promise<UpdateMoodAction
   const result = await updateMood(user.id, parsed.data.moodId);
   if (result.ok) revalidatePath("/", "layout");
   return result;
-}
-
-export async function upsertPhotoAction(formData: unknown): Promise<UpsertPhotoActionResult> {
-  const user = await requireSession();
-  if (!(formData instanceof FormData)) return { ok: false, reason: "entrada-invalida" };
-  const parsed = photoInputSchema.safeParse({ photo: formData.get("photo") });
-  if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
-
-  const { photo } = parsed.data;
-  // Recusa antes de ler os bytes para a memória
-  if (photo.size > MAX_PHOTO_BYTES) return { ok: false, reason: "foto-grande" };
-  const result = await upsertPhoto(user.id, new Uint8Array(await photo.arrayBuffer()));
-  if (result.ok) revalidatePath("/", "layout");
-  return result;
-}
-
-export async function deletePhotoAction(): Promise<void> {
-  const user = await requireSession();
-  await deletePhoto(user.id);
-  revalidatePath("/", "layout");
 }
 
 export async function deleteAccountAction(input: unknown): Promise<DeleteAccountActionResult> {

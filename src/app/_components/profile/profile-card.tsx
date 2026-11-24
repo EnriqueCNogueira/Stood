@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { MoodPicker } from "@/app/_components/mood-picker";
 import { ProfileEditor } from "@/app/_components/profile/profile-editor";
 import { CARD, ICON_BUTTON } from "@/app/_components/ui";
@@ -22,19 +22,28 @@ type ProfileCardProps = {
 export function ProfileCard({ name, nickname, bio, mood, email, photoVersion, providerImage }: ProfileCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, startSaving] = useTransition();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
 
   function toggle() {
     setIsSaved(false);
     setIsEditing((editing) => !editing);
   }
 
-  // Os botões da edição somem, então o foco volta ao lápis
   function closeEditor({ hasSaved }: { hasSaved: boolean }) {
     setIsSaved(hasSaved);
     setIsEditing(false);
-    toggleRef.current?.focus();
   }
+
+  // Os botões da edição somem ao fechar, então o foco volta ao lápis, que fica desligado durante o salvar
+  useEffect(() => {
+    if (wasEditing.current && !isEditing && !isSaving) {
+      wasEditing.current = false;
+      toggleRef.current?.focus();
+    }
+    if (isEditing) wasEditing.current = true;
+  }, [isEditing, isSaving]);
 
   return (
     <section aria-labelledby="profile-data" className={`${CARD} relative grid grid-cols-1 gap-4 bg-surface p-4 md:p-5`}>
@@ -46,6 +55,7 @@ export function ProfileCard({ name, nickname, bio, mood, email, photoVersion, pr
         type="button"
         aria-label={isEditing ? "Cancelar a edição" : "Editar Perfil"}
         aria-expanded={isEditing}
+        disabled={isSaving}
         onClick={toggle}
         className={`${ICON_BUTTON} absolute top-3 right-3`}
       >
@@ -60,6 +70,8 @@ export function ProfileCard({ name, nickname, bio, mood, email, photoVersion, pr
           email={email}
           photoVersion={photoVersion}
           providerImage={providerImage}
+          isSaving={isSaving}
+          startSaving={startSaving}
           onClose={closeEditor}
         />
       ) : (

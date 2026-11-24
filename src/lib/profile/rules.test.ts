@@ -29,7 +29,9 @@ describe("validateNickname", () => {
 
   it.each([
     ["longo", "a".repeat(MAX_NICKNAME_LENGTH + 1), "apelido-longo"],
-    ["com quebra de linha", "Jo\nhny", "apelido-com-quebra"],
+    ["com quebra de linha", "Jo\nhny", "apelido-com-controle"],
+    ["com caractere nulo", "Jo\u0000hny", "apelido-com-controle"],
+    ["com a quebra U+0085 na ponta", "\u0085Johny", "apelido-com-controle"],
   ])("recusa o Apelido %s", (_case, nickname, reason) => {
     expect(validateNickname(nickname)).toEqual({ ok: false, reason });
   });
@@ -44,7 +46,8 @@ describe("validateBio", () => {
 
   it.each([
     ["longa", "a".repeat(MAX_BIO_LENGTH + 1), "bio-longa"],
-    ["com quebra de linha", "Estudante\nda Unifesp", "bio-com-quebra"],
+    ["com quebra de linha", "Estudante\nda Unifesp", "bio-com-controle"],
+    ["com o separador de linha U+2028", "Estudante\u2028da Unifesp", "bio-com-controle"],
   ])("recusa a Bio %s", (_case, bio, reason) => {
     expect(validateBio(bio)).toEqual({ ok: false, reason });
   });

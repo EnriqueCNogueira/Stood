@@ -3,11 +3,16 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db";
 import { accounts, users } from "@/db/schema";
 import { getAuth } from "@/lib/auth/auth";
-import { requireSessionFromHeaders } from "@/lib/auth/session";
+import { REQUEST_DELETION_PATH } from "@/lib/auth/destination";
+import { MAX_USER_NAME_LENGTH } from "@/lib/auth/name";
+import { findSessionUser, requireSessionFromHeaders } from "@/lib/auth/session";
+import { updateProfile } from "@/lib/profile/profile";
 import {
   buildCookieHeaders,
   buildUniqueEmail,
+  buildUniqueProviderAccountId,
   createGitHubOnlyUser,
+  createOtherSession,
   createSignedInUser,
   createUnverifiedUser,
   TEST_PASSWORD,
@@ -17,6 +22,8 @@ import { findLink, stubResend } from "@/test/email";
 import { GITHUB_ACCESS_TOKEN, type Provider, signInWithProvider } from "@/test/providers";
 
 beforeAll(warmUpAuth);
+
+const NEW_PASSWORD = "Senha-nova-456";
 
 describe("getAuth: login social", () => {
   it.each<Provider>(["github", "google"])(
@@ -134,6 +141,40 @@ describe("getAuth: cadastro por e-mail e senha", () => {
 });
 
 describe("getAuth: troca de senha", () => {
+  it("troca a senha, encerra as outras Sessões, mantém o Usuário conectado e avisa por e-mail", async () => {
+    const { email, headers } = await createSignedInUser();
+    const otherHeaders = await createOtherSession(email);
+    const outbox = stubResend();
+
+    const response = await changePassword(headers, NEW_PASSWORD);
+
+    expect((await findSessionUser(buildCookieHeaders(response.headers)))?.email).toBe(email);
+    expect(await findSessionUser(otherHeaders)).toBeUndefined();
+    expect(await createOtherSession(email, "", NEW_PASSWORD)).toBeDefined();
+    expect(outbox).toMatchObject([{ to: [email], subject: "A senha do seu Stood mudou" }]);
+  });
+
+  it("recusa a senha atual errada, sem encerrar Sessões nem avisar", async () => {
+    const { email, headers } = await createSignedInUser();
+    const otherHeaders = await createOtherSession(email);
+    const outbox = stubResend();
+
+    await expect(changePassword(headers, NEW_PASSWORD, "Senha-errada-123")).rejects.toMatchObject({ body: { code: "INVALID_PASSWORD" } });
+    expect(await findSessionUser(otherHeaders)).toBeDefined();
+    expect(outbox).toEqual([]);
+  });
+
+  it("mantém a senha trocada quando o aviso não pode ser enviado", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { email, headers } = await createSignedInUser();
+    vi.stubEnv("RESEND_API_KEY", "re_123456789_chave_de_teste");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
+
+    await changePassword(headers, NEW_PASSWORD);
+
+    expect(await createOtherSession(email, "", NEW_PASSWORD)).toBeDefined();
+  });
+
   it("recusa a senha nova fraca, com o código que a tela traduz", async () => {
     const { headers } = await createSignedInUser();
 
@@ -143,16 +184,60 @@ describe("getAuth: troca de senha", () => {
   });
 });
 
+describe("getAuth: nome no login pelo provedor", () => {
+  it("não troca de volta o nome mudado no Perfil", async () => {
+    const email = buildUniqueEmail();
+    const providerAccountId = buildUniqueProviderAccountId();
+    await signInWithProvider("google", email, { providerAccountId });
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+
+    await updateProfile(user.id, { name: "Aninha", nickname: "", bio: "" });
+    const response = await signInWithProvider("google", email, { providerAccountId });
+
+    expect((await findSessionUser(buildCookieHeaders(response.headers)))?.name).toBe("Aninha");
+  });
+});
+
+describe("getAuth: nome no cadastro", () => {
+  it("grava o nome aparado", async () => {
+    const email = buildUniqueEmail();
+
+    await signUp(email, TEST_PASSWORD, "  Ana  ");
+
+    const [user] = await db.select({ name: users.name }).from(users).where(eq(users.email, email));
+    expect(user.name).toBe("Ana");
+  });
+
+  it.each(["   ", "a".repeat(MAX_USER_NAME_LENGTH + 1)])("recusa o nome %j, com o código que a tela traduz", async (name) => {
+    await expect(signUp(buildUniqueEmail(), TEST_PASSWORD, name)).rejects.toMatchObject({ body: { code: "USER_NAME_INVALID" } });
+  });
+});
+
+describe("getAuth: limite de tentativas", () => {
+  it.each([
+    ["trocar a senha", "/change-password", { currentPassword: "Senha-errada-123", newPassword: NEW_PASSWORD }],
+    ["pedir o link de apagar", REQUEST_DELETION_PATH, { email: "outra@stood.test" }],
+  ])("recusa a quarta tentativa de %s em 10 segundos", async (_case, path, body) => {
+    const { headers } = await createSignedInUser();
+    const handle = await buildProductionHandler();
+
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 4; attempt++) statuses.push((await handle(headers, path, body)).status);
+
+    expect(statuses.map((status) => status === 429)).toEqual([false, false, false, true]);
+  });
+});
+
 // --- Funções auxiliares ---
 
-function signUp(email: string, password = TEST_PASSWORD) {
+function signUp(email: string, password = TEST_PASSWORD, name = "Ana Souza") {
   return getAuth().api.signUpEmail({
-    body: { name: "Ana Souza", email, password, callbackURL: "/biblioteca" },
+    body: { name, email, password, callbackURL: "/biblioteca" },
   });
 }
 
 function changePassword(headers: Headers, newPassword: string, currentPassword = TEST_PASSWORD) {
-  return getAuth().api.changePassword({ body: { currentPassword, newPassword }, headers });
+  return getAuth().api.changePassword({ body: { currentPassword, newPassword }, headers, returnHeaders: true });
 }
 
 function signIn(email: string) {
@@ -167,4 +252,26 @@ async function findAccount(email: string, provider: Provider) {
     .where(and(eq(users.email, email), eq(accounts.providerId, provider)))
     .limit(1);
   return account;
+}
+
+// A lib só limita tentativas em produção, então o caso monta uma instância nova como se estivesse nela
+async function buildProductionHandler() {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("RESEND_API_KEY", "re_123456789_chave_de_teste");
+  vi.resetModules();
+  const { getAuth: getProductionAuth } = await import("@/lib/auth/auth");
+  const ip = `203.0.113.${Math.floor(Math.random() * 254) + 1}`;
+  return (headers: Headers, path: string, body: object) =>
+    getProductionAuth().handler(
+      new Request(`${process.env.BETTER_AUTH_URL}/auth${path}`, {
+        method: "POST",
+        headers: {
+          cookie: headers.get("cookie")!,
+          "content-type": "application/json",
+          origin: process.env.BETTER_AUTH_URL!,
+          "x-forwarded-for": ip,
+        },
+        body: JSON.stringify(body),
+      }),
+    );
 }
