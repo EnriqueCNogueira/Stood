@@ -137,6 +137,20 @@ describe("getAuth: cadastro por e-mail e senha", () => {
   });
 });
 
+describe("getAuth: troca de senha", () => {
+  // A tela não troca senha, mas o endpoint /auth/change-password existe por HTTP para quem tem sessão
+  it("recusa a senha nova fraca, com o código que a tela traduz", async () => {
+    const { headers } = await createSignedInUser();
+
+    await expect(
+      getAuth().api.changePassword({
+        body: { currentPassword: TEST_PASSWORD, newPassword: "senha-sem-maiuscula-1" },
+        headers,
+      }),
+    ).rejects.toMatchObject({ body: { code: "PASSWORD_TOO_WEAK" } });
+  });
+});
+
 // --- Funções auxiliares ---
 
 function signUp(email: string, password = TEST_PASSWORD) {
