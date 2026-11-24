@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   type DrawingElement,
   type DrawingHistory,
+  MAX_COORDINATE,
   MAX_DRAWING_ELEMENTS,
   MAX_HISTORY_STEPS,
+  MAX_PAN,
   buildDrawingContent,
   buildDrawingHistory,
+  buildLimitedPan,
   buildMovedElement,
   buildShapeElement,
   findElementAt,
@@ -106,6 +109,20 @@ describe("buildShapeElement", () => {
   });
 });
 
+describe("buildLimitedPan", () => {
+  it("mantém o deslocamento dentro do limite", () => {
+    expect(buildLimitedPan({ x: -300, y: 120 })).toEqual({ x: -300, y: 120 });
+  });
+
+  // O ponto desenhado é a posição na tela menos o deslocamento, e a cena salva recusa coordenada fora de ±MAX_COORDINATE
+  it.each([
+    [{ x: 10 * MAX_COORDINATE, y: 0 }, { x: MAX_PAN, y: 0 }],
+    [{ x: 0, y: -10 * MAX_COORDINATE }, { x: 0, y: -MAX_PAN }],
+  ])("prende o deslocamento %o em %o", (pan, limited) => {
+    expect(buildLimitedPan(pan)).toEqual(limited);
+  });
+});
+
 describe("buildDrawingHistory", () => {
   const EMPTY: DrawingHistory = { elements: [], past: [], future: [] };
 
@@ -162,6 +179,14 @@ describe("buildDrawingHistory", () => {
     const opened: DrawingHistory = { elements: [LINE], past: [], future: [] };
 
     expect(buildDrawingHistory(opened, action)).toBe(opened);
+  });
+
+  // A cena salva recusa mais elementos que isso, e daí em diante todo salvamento falharia
+  it(`não adiciona elemento na cena que já tem ${MAX_DRAWING_ELEMENTS}`, () => {
+    const elements = Array.from({ length: MAX_DRAWING_ELEMENTS }, (_, index) => ({ ...LINE, id: `line-${index}` }));
+    const full: DrawingHistory = { elements, past: [], future: [] };
+
+    expect(buildDrawingHistory(full, { type: "add", element: TEXT })).toBe(full);
   });
 
   it(`guarda no máximo ${MAX_HISTORY_STEPS} passos para desfazer`, () => {
