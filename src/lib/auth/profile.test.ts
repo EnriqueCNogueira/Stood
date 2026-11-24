@@ -5,8 +5,9 @@ import { users } from "@/db/schema";
 import { getAuth } from "@/lib/auth/auth";
 import { REQUEST_DELETION_PATH } from "@/lib/auth/destination";
 import { MAX_USER_NAME_LENGTH } from "@/lib/auth/name";
-import { getSessions, revokeOtherSessions, revokeOwnedSession, updateUserName } from "@/lib/auth/profile";
+import { getSessions, revokeOtherSessions, revokeOwnedSession } from "@/lib/auth/profile";
 import { findSessionUser, requireCurrentSessionFromHeaders } from "@/lib/auth/session";
+import { updateProfileDetails } from "@/lib/profile/profile";
 import {
   buildCookieHeaders,
   buildUniqueEmail,
@@ -25,28 +26,17 @@ beforeAll(warmUpAuth);
 const FIREFOX_ON_LINUX = "Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0";
 const NEW_PASSWORD = "Senha-nova-456";
 
-describe("updateUserName", () => {
-  it("muda o nome aparando as pontas, e o login pelo provedor não o troca de volta", async () => {
+describe("login pelo provedor: nome", () => {
+  it("não troca de volta o nome mudado no Perfil", async () => {
     const email = buildUniqueEmail();
     const providerAccountId = buildUniqueProviderAccountId();
     await signInWithProvider("google", email, { providerAccountId });
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
 
-    const result = await updateUserName(user.id, "  Aninha  ");
+    await updateProfileDetails(user.id, { name: "Aninha", nickname: "", bio: "" });
     const response = await signInWithProvider("google", email, { providerAccountId });
 
-    expect(result).toEqual({ ok: true, name: "Aninha" });
     expect((await findSessionUser(buildCookieHeaders(response.headers)))?.name).toBe("Aninha");
-  });
-
-  it.each([
-    ["vazio", "   ", "nome-vazio"],
-    ["com 81 caracteres", "a".repeat(MAX_USER_NAME_LENGTH + 1), "nome-longo"],
-  ])("recusa o nome %s e mantém o atual", async (_case, name, reason) => {
-    const { userId, headers } = await createSignedInUser();
-
-    await expect(updateUserName(userId, name)).resolves.toEqual({ ok: false, reason });
-    expect((await findSessionUser(headers))?.name).toBe("Ana Souza");
   });
 });
 

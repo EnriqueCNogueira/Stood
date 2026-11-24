@@ -2,23 +2,14 @@ import "server-only";
 
 import { and, desc, eq, gt, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { sessions, users } from "@/db/schema";
-import { type UserNameReason, validateUserName } from "@/lib/auth/name";
+import { sessions } from "@/db/schema";
 import type { CurrentSession } from "@/lib/auth/session";
 import { type Device, parseUserAgent } from "@/lib/auth/user-agent";
 import { isUuid } from "@/lib/uuid";
 
 export type OwnedSession = Device & { id: string; lastUsedAt: Date; isCurrent: boolean };
 
-export type UpdateUserNameResult = { ok: true; name: string } | { ok: false; reason: UserNameReason };
 export type RevokeOwnedSessionResult = { ok: true } | { ok: false; reason: "sessao-nao-encontrada" };
-
-export async function updateUserName(userId: string, name: string): Promise<UpdateUserNameResult> {
-  const validation = validateUserName(name);
-  if (!validation.ok) return validation;
-  await db.update(users).set({ name: validation.name }).where(eq(users.id, userId));
-  return validation;
-}
 
 // Sessões válidas do Usuário, a atual primeiro e depois da mais usada para a menos; o token nunca sai daqui
 export async function getSessions({ user, session }: CurrentSession, now = new Date()): Promise<OwnedSession[]> {

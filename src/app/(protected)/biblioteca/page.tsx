@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { MoodPicker } from "@/app/_components/mood-picker";
 import { BELOW_HEADER, BUTTON } from "@/app/_components/ui";
 import { LibraryBrain } from "@/app/_components/workspace/library/library-brain";
 import { LibrarySidebar } from "@/app/_components/workspace/library/library-sidebar";
@@ -10,8 +11,10 @@ import { StoodDialog } from "@/app/_components/workspace/stood-dialog";
 import { requireSession } from "@/lib/auth/session";
 import { getUpcomingAppointments } from "@/lib/agenda/agenda";
 import { buildTodayInBrasilia } from "@/lib/agenda/rules";
-import { buildFirstName, buildRelativeTime } from "@/lib/library/library";
+import { buildRelativeTime } from "@/lib/library/library";
 import { getWeekSummary } from "@/lib/pomodoro/pomodoro";
+import { getRequestProfile } from "@/lib/profile/profile";
+import { buildGreetingName } from "@/lib/profile/rules";
 import { getLibraryStoods, getRecentStoods } from "@/lib/stood/stood";
 import { SUBJECTS } from "@/lib/subject/catalog";
 import { filterStoodsByTags } from "@/lib/tag/rules";
@@ -26,24 +29,30 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const user = await requireSession();
   const selectedTagIds = buildSelectedTagIds((await searchParams).tags);
   const now = new Date();
-  const [library, recent, week, tags, upcoming] = await Promise.all([
+  const [library, recent, week, tags, upcoming, profile] = await Promise.all([
     getLibraryStoods(user.id),
     getRecentStoods(user.id),
     getWeekSummary(user.id, now),
     getTags(user.id),
     getUpcomingAppointments(user.id, now),
+    getRequestProfile(user.id),
   ]);
   const allTags = tags.map(({ id, name }) => ({ id, name }));
   // Id de Tag que não é do dono não casa com nenhum Stood e só esvazia o filtro dele
   const visibleRecent = filterStoodsByTags(recent, new Set(selectedTagIds));
-  const firstName = buildFirstName(user.name);
+  const greetingName = buildGreetingName({ name: user.name, nickname: profile.nickname });
 
   return (
     <div className={`flex flex-col ${BELOW_HEADER.mdMinHeight} md:flex-row`}>
       <LibrarySidebar stoods={library} tags={tags} selectedTagIds={selectedTagIds} />
 
       <main className="min-w-0 flex-1 px-4 pt-7 pb-16 md:px-12 md:pt-10 2xl:pt-14">
-        <h1 className="mb-8 text-3xl font-medium tracking-tight 2xl:text-4xl">{firstName ? `Olá, ${firstName}` : "Olá"}</h1>
+        <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <h1 className="min-w-0 text-3xl font-medium tracking-tight wrap-anywhere 2xl:text-4xl">
+            {greetingName ? `Olá, ${greetingName}` : "Olá"}
+          </h1>
+          <MoodPicker mood={profile.mood} />
+        </div>
 
         <WeekPanel summary={week} serverNow={now.getTime()} />
 

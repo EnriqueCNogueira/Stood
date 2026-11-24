@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { AccountsSection } from "@/app/_components/profile/accounts-section";
 import { DeletionSection } from "@/app/_components/profile/deletion-section";
-import { NameForm } from "@/app/_components/profile/name-form";
 import { PasswordForm } from "@/app/_components/profile/password-form";
+import { ProfileCard } from "@/app/_components/profile/profile-card";
 import { ProfileSection } from "@/app/_components/profile/profile-section";
 import { SessionsSection } from "@/app/_components/profile/sessions-section";
-import { UserAvatar } from "@/app/_components/user-avatar";
 import { getAccounts } from "@/lib/auth/accounts";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 import { isFreshSession } from "@/lib/auth/freshness";
@@ -13,6 +12,7 @@ import { getSessions } from "@/lib/auth/profile";
 import { CREDENTIAL_PROVIDER_ID } from "@/lib/auth/providers";
 import { requireCurrentSession } from "@/lib/auth/session";
 import { buildLastUsedLabel } from "@/lib/auth/user-agent";
+import { getRequestProfile } from "@/lib/profile/profile";
 
 export const metadata: Metadata = { title: "Perfil · Stood" };
 
@@ -23,7 +23,12 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const current = await requireCurrentSession();
   const { error } = await searchParams;
   const now = new Date();
-  const [accounts, sessions] = await Promise.all([getAccounts(current.user.id), getSessions(current, now)]);
+  const { user } = current;
+  const [accounts, sessions, profile] = await Promise.all([
+    getAccounts(user.id),
+    getSessions(current, now),
+    getRequestProfile(user.id),
+  ]);
   const isFresh = isFreshSession(current.session.createdAt, now);
   const hasPassword = accounts.some((account) => account.providerId === CREDENTIAL_PROVIDER_ID);
 
@@ -31,20 +36,19 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     <main className="mx-auto grid w-full max-w-2xl grid-cols-1 gap-5 px-4 pt-7 pb-16 md:pt-10 2xl:pt-14">
       <h1 className="text-3xl font-medium tracking-tight 2xl:text-4xl">Perfil</h1>
 
-      <ProfileSection id="profile-data" title="Dados">
-        <div className="flex items-center gap-3">
-          <UserAvatar name={current.user.name} email={current.user.email} image={current.user.image} className="size-12 text-lg" />
-          <div className="min-w-0">
-            <p className="text-meta text-text-muted">E-mail</p>
-            <p className="truncate text-ui">{current.user.email}</p>
-          </div>
-        </div>
-        <NameForm name={current.user.name} />
-      </ProfileSection>
+      <ProfileCard
+        name={user.name}
+        nickname={profile.nickname}
+        bio={profile.bio}
+        mood={profile.mood}
+        email={user.email}
+        photoVersion={profile.photoVersion}
+        providerImage={user.image}
+      />
 
       <AccountsSection
         accounts={accounts}
-        userEmail={current.user.email}
+        userEmail={user.email}
         isFresh={isFresh}
         linkError={typeof error === "string" ? buildAuthErrorMessage({ code: error }) : undefined}
       />
@@ -64,7 +68,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         }))}
       />
 
-      <DeletionSection email={current.user.email} isFresh={isFresh} />
+      <DeletionSection email={user.email} isFresh={isFresh} />
     </main>
   );
 }
