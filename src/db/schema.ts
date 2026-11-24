@@ -93,6 +93,9 @@ export const accounts = pgTable(
     refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
     scope: text("scope"),
     password: text("password"),
+    // E-mail que o provedor envia, em minúsculas; nulo na Conta de e-mail e senha e nas ligadas antes desta coluna.
+    // Um gatilho escrito à mão na migration recusa o e-mail que é de outro Usuário, e o contrário em users.
+    email: text("email"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .$onUpdate(() => new Date())
@@ -100,6 +103,9 @@ export const accounts = pgTable(
   },
   (table) => [
     index("accounts_userId_idx").on(table.userId),
+    // Busca do e-mail no cadastro e no gatilho
+    index("accounts_email_idx").on(table.email),
+    check("accounts_email_check", sql`${table.email} = lower(${table.email})`),
     // A mesma conta do provedor nunca fica ligada a duas linhas, nem com dois callbacks ao mesmo tempo
     unique("accounts_provider_id_account_id_unique").on(table.providerId, table.accountId),
   ],
