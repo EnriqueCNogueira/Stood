@@ -65,6 +65,7 @@ export type BoardAction =
   | { type: "resize"; fileId: string; size: Size }
   | { type: "toggle-maximize"; fileId: string }
   | { type: "close"; fileId: string }
+  | { type: "rename"; fileId: string; name: string }
   | { type: "close-all" }
   | { type: "fit-area" };
 
@@ -87,6 +88,11 @@ export function buildBoardState(state: BoardState, action: BoardAction, context:
       return { ok: true, state: buildUpdatedState(state, action.fileId, (window) => buildToggledWindow(window, context)) };
     case "close":
       return { ok: true, state: { windows: state.windows.filter((window) => window.file.id !== action.fileId) } };
+    case "rename":
+      return {
+        ok: true,
+        state: buildUpdatedState(state, action.fileId, (window) => ({ ...window, file: { ...window.file, name: action.name } })),
+      };
     case "close-all":
       return { ok: true, state: { windows: [] } };
     case "fit-area":

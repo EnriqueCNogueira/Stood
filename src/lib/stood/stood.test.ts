@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { stoodTags, stoods, tags } from "@/db/schema";
+import { files, folders, stoodTags, stoods, tags } from "@/db/schema";
 import {
   createStood,
+  deleteStood,
   findBoardStood,
   getLibraryStoods,
   getRecentStoods,
@@ -400,6 +401,37 @@ describe("listas de Stoods: Tags", () => {
     const stoodId = (await createStoodRow(ownerId, "Cálculo I")).id;
 
     await expect(findBoardStood(ownerId, stoodId)).resolves.toMatchObject({ tags: [] });
+  });
+});
+
+describe("deleteStood", () => {
+  it("apaga o Stood com as Pastas e os Arquivos dele", async () => {
+    const ownerId = await createUser();
+    const stood = await createStoodRow(ownerId, "Cálculo I");
+    const folder = await createFolder(ownerId, stood.id, { name: "Aulas" });
+    await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "", folderId: folder.id });
+
+    const result = await deleteStood(ownerId, stood.id);
+
+    const [remainingFolders, remainingFiles] = await Promise.all([
+      db.select({ id: folders.id }).from(folders).where(eq(folders.stoodId, stood.id)),
+      db.select({ id: files.id }).from(files).where(eq(files.stoodId, stood.id)),
+    ]);
+    expect([result, remainingFolders, remainingFiles]).toEqual([{ ok: true }, [], []]);
+  });
+
+  it("não apaga o Stood de outro Usuário", async () => {
+    const ownerId = await createUser();
+    const stood = await createStoodRow(ownerId, "Cálculo I");
+
+    const result = await deleteStood(await createUser(), stood.id);
+
+    const [row] = await db.select({ id: stoods.id }).from(stoods).where(eq(stoods.id, stood.id));
+    expect([result, row]).toEqual([{ ok: false, reason: "stood-nao-encontrado" }, { id: stood.id }]);
+  });
+
+  it("trata id fora do formato como inexistente", async () => {
+    await expect(deleteStood(await createUser(), "nao-e-uuid")).resolves.toEqual({ ok: false, reason: "stood-nao-encontrado" });
   });
 });
 

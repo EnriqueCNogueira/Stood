@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
-import { type CreateStoodResult, type UpdateStoodResult, createStood, updateStood } from "@/lib/stood/stood";
+import {
+  type CreateStoodResult,
+  type DeleteStoodResult,
+  type UpdateStoodResult,
+  createStood,
+  deleteStood,
+  updateStood,
+} from "@/lib/stood/stood";
 import { type CreateStoodFromSubjectResult, createStoodFromSubject } from "@/lib/subject/subject";
 
 // Teto só para barrar entrada abusiva; o limite de Tags por Stood fica no Service
@@ -17,11 +24,13 @@ const tagsInputSchema = z.object({
 const detailsInputSchema = z.object({ name: z.string(), description: z.string(), tags: tagsInputSchema.optional() });
 const updateInputSchema = detailsInputSchema.extend({ stoodId: z.string() });
 const subjectInputSchema = detailsInputSchema.extend({ subjectSlug: z.string() });
+const deleteInputSchema = z.object({ stoodId: z.string() });
 
 type InvalidInput = { ok: false; reason: "entrada-invalida" };
 export type CreateStoodActionResult = CreateStoodResult | InvalidInput;
 export type UpdateStoodActionResult = UpdateStoodResult | InvalidInput;
 export type CreateStoodFromSubjectActionResult = CreateStoodFromSubjectResult | InvalidInput;
+export type DeleteStoodActionResult = DeleteStoodResult | InvalidInput;
 
 // Cria o Stood do Usuário da sessão e atualiza a Biblioteca, que passa a listá-lo; devolve o id para quem chamou
 export async function createStoodAction(input: unknown): Promise<CreateStoodActionResult> {
@@ -53,4 +62,15 @@ export async function updateStoodAction(input: unknown): Promise<UpdateStoodActi
 
   const { stoodId, ...details } = parsed.data;
   return updateStood(user.id, stoodId, details);
+}
+
+// O Quadro leva o Usuário de volta para a Biblioteca, que deixa de listar o Stood apagado
+export async function deleteStoodAction(input: unknown): Promise<DeleteStoodActionResult> {
+  const user = await requireSession();
+  const parsed = deleteInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
+
+  const result = await deleteStood(user.id, parsed.data.stoodId);
+  if (result.ok) revalidatePath("/biblioteca");
+  return result;
 }

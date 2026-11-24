@@ -1,16 +1,18 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { fileBlobs, files } from "@/db/schema";
+import { fileBlobs, files, stoods } from "@/db/schema";
 import { EMPTY_DRAWING_CONTENT, MAX_DRAWING_LENGTH, buildDrawingContent } from "@/lib/drawing/scene";
 import {
   createDrawingFile,
   createImageFile,
   createNoteFile,
   createVideoFile,
+  deleteFile,
   findImage,
   getStoodEditableContents,
   updateDrawingContent,
+  updateFileName,
   updateNoteContent,
 } from "@/lib/file/file";
 import { MAX_IMAGE_BYTES } from "@/lib/file/image";
@@ -270,6 +272,131 @@ describe("createNoteFile", () => {
       ok: false,
       reason: "stood-nao-encontrado",
     });
+  });
+});
+
+describe("createNoteFile: Pasta", () => {
+  it("cria a Nota dentro da Pasta escolhida", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const folder = await createFolder(ownerId, stood.id, { name: "Aulas" });
+
+    const result = await createNoteFile(ownerId, { stoodId: stood.id, folderId: folder.id, name: "Resumo" });
+
+    expect(result.ok && (await getFileRow(result.file.id))?.folderId).toBe(folder.id);
+  });
+
+  it("aceita na Pasta o nome que já existe na raiz", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const folder = await createFolder(ownerId, stood.id, { name: "Aulas" });
+    await createNoteFile(ownerId, { stoodId: stood.id, name: "Resumo" });
+
+    const result = await createNoteFile(ownerId, { stoodId: stood.id, folderId: folder.id, name: "Resumo" });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("recusa a Pasta de outro Stood como inexistente", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const other = await createStood(ownerId, "Física II");
+    const folder = await createFolder(ownerId, other.id, { name: "Aulas" });
+
+    await expect(createNoteFile(ownerId, { stoodId: stood.id, folderId: folder.id, name: "Resumo" })).resolves.toEqual({
+      ok: false,
+      reason: "pasta-nao-encontrada",
+    });
+  });
+});
+
+describe("updateFileName", () => {
+  it("troca o nome do Arquivo", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const file = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "" });
+
+    const result = await updateFileName(ownerId, { fileId: file.id, name: "Resumo da prova" });
+
+    expect([result, (await getFileRow(file.id))?.name]).toEqual([{ ok: true, name: "Resumo da prova" }, "Resumo da prova"]);
+  });
+
+  it("recusa o nome de outro Arquivo do mesmo tipo na mesma Pasta, sem diferenciar maiúsculas", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "" });
+    const file = await createFile(ownerId, stood.id, { type: "note", name: "Rascunho", content: "" });
+
+    await expect(updateFileName(ownerId, { fileId: file.id, name: "resumo" })).resolves.toEqual({
+      ok: false,
+      reason: "nome-repetido",
+    });
+  });
+
+  it("recusa o nome inválido sem gravar", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const file = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "" });
+
+    await expect(updateFileName(ownerId, { fileId: file.id, name: "a/b" })).resolves.toEqual({
+      ok: false,
+      reason: "nome-com-separador",
+    });
+  });
+
+  it("trata o Arquivo de outro Usuário como inexistente e não o altera", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const file = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "" });
+
+    const result = await updateFileName(await createUser(), { fileId: file.id, name: "Outro" });
+
+    expect([result, (await getFileRow(file.id))?.name]).toEqual([{ ok: false, reason: "arquivo-nao-encontrado" }, "Resumo"]);
+  });
+});
+
+describe("deleteFile", () => {
+  it("apaga a Imagem junto com os bytes", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const created = await createImageFile(ownerId, { stoodId: stood.id, name: "Gráfico", bytes: PNG_BYTES });
+    const fileId = created.ok ? created.file.id : "";
+
+    const result = await deleteFile(ownerId, fileId);
+
+    expect([result, await getFileRow(fileId), await findImage(ownerId, fileId)]).toEqual([{ ok: true }, undefined, undefined]);
+  });
+
+  it("tira a Janela do Arquivo apagado do Quadro salvo e mantém as outras", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const kept = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "" });
+    const deleted = await createFile(ownerId, stood.id, { type: "note", name: "Rascunho", content: "" });
+    const rect = { x: 0, y: 0, width: 300, height: 200 };
+    await db
+      .update(stoods)
+      .set({
+        boardWindows: [
+          { fileId: kept.id, rect, restoreRect: null, z: 1 },
+          { fileId: deleted.id, rect, restoreRect: null, z: 2 },
+        ],
+      })
+      .where(eq(stoods.id, stood.id));
+
+    await deleteFile(ownerId, deleted.id);
+
+    const [row] = await db.select({ boardWindows: stoods.boardWindows }).from(stoods).where(eq(stoods.id, stood.id));
+    expect(row.boardWindows.map((window) => window.fileId)).toEqual([kept.id]);
+  });
+
+  it("não apaga o Arquivo de outro Usuário", async () => {
+    const ownerId = await createUser();
+    const stood = await createStood(ownerId, "Cálculo I");
+    const file = await createFile(ownerId, stood.id, { type: "note", name: "Resumo", content: "" });
+
+    const result = await deleteFile(await createUser(), file.id);
+
+    expect([result, (await getFileRow(file.id))?.name]).toEqual([{ ok: false, reason: "arquivo-nao-encontrado" }, "Resumo"]);
   });
 });
 

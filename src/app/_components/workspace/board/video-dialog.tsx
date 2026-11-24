@@ -10,6 +10,7 @@ import {
   createVideoFileAction,
   fetchVideoPreviewAction,
 } from "@/app/_components/workspace/board/file-actions";
+import { FOLDER_NOT_FOUND_MESSAGE, FolderField, type FolderOption } from "@/app/_components/workspace/board/folder-field";
 import { MAX_NAME_LENGTH, buildSuggestedName, validateName } from "@/lib/stood/details";
 import type { StoodTreeFile } from "@/lib/stood/tree";
 import { parseYouTubeVideoId } from "@/lib/video/link";
@@ -35,8 +36,9 @@ const REASON_MESSAGES: Record<DialogReason, string> = {
   "nome-longo": `O nome pode ter até ${MAX_NAME_LENGTH} caracteres.`,
   "nome-com-separador": "O nome não pode ter / nem \\.",
   "nome-com-espaco-nas-pontas": "Tire o espaço do começo ou do fim do nome.",
-  "nome-repetido": "Este Stood já tem um Vídeo com esse nome.",
+  "nome-repetido": "Já existe um Vídeo com esse nome nesse lugar.",
   "stood-nao-encontrado": "Este Stood não existe mais.",
+  "pasta-nao-encontrada": FOLDER_NOT_FOUND_MESSAGE,
   "entrada-invalida": UNEXPECTED_MESSAGE,
   inesperado: UNEXPECTED_MESSAGE,
 };
@@ -49,12 +51,14 @@ type Preview =
 
 type VideoDialogProps = {
   stoodId: string;
-  onAdded: (file: StoodTreeFile) => void;
+  folders: FolderOption[];
+  onAdded: (file: StoodTreeFile, folderId: string | null) => void;
   onClose: () => void;
 };
 
 // Modal de "Novo Arquivo > Vídeo": monta já aberto e desmonta ao fechar, então cada abertura começa limpa
-export function VideoDialog({ stoodId, onAdded, onClose }: VideoDialogProps) {
+export function VideoDialog({ stoodId, folders, onAdded, onClose }: VideoDialogProps) {
+  const [folderId, setFolderId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -121,12 +125,12 @@ export function VideoDialog({ stoodId, onAdded, onClose }: VideoDialogProps) {
 
     startTransition(async () => {
       try {
-        const result = await createVideoFileAction({ stoodId, videoId: preview.video.id, name });
+        const result = await createVideoFileAction({ stoodId, folderId, videoId: preview.video.id, name });
         if (!result.ok) {
           setSubmitReason(result.reason);
           return;
         }
-        onAdded(result.file);
+        onAdded(result.file, folderId);
         dialogRef.current?.close();
       } catch {
         setSubmitReason("inesperado");
@@ -190,6 +194,8 @@ export function VideoDialog({ stoodId, onAdded, onClose }: VideoDialogProps) {
           </label>
         )}
 
+        <FolderField label="Pasta" folders={folders} value={folderId} onChange={setFolderId} />
+
         {submitReason && (
           <FormMessage tone="error" id={submitErrorId}>
             {REASON_MESSAGES[submitReason]}
@@ -209,7 +215,7 @@ export function VideoDialog({ stoodId, onAdded, onClose }: VideoDialogProps) {
             disabled={preview.status !== "ready" || isPending}
             className={`${BUTTON.base} ${BUTTON.md} ${BUTTON.primary}`}
           >
-            Adicionar
+            {isPending ? "Adicionando…" : "Adicionar"}
           </button>
         </div>
       </form>
