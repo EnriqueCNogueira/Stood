@@ -9,6 +9,8 @@ import {
   files,
   focuses,
   folders,
+  profilePhotos,
+  profiles,
   sessions,
   stoods,
   stoodTags,
@@ -205,6 +207,8 @@ async function createOwnedContent(userId: string) {
   await createTag(userId, "Prova", [stood.id]);
   await db.insert(focuses).values({ ownerId: userId, stoodId: stood.id, startedAt: new Date(), durationMinutes: 25 });
   await db.insert(weeklyGoals).values({ ownerId: userId, minutes: 60 });
+  await db.insert(profiles).values({ ownerId: userId, nickname: "Johny", mood: "calm", moodDay: "2026-11-24" });
+  await db.insert(profilePhotos).values({ ownerId: userId, data: Buffer.from([0xff, 0xd8, 0xff]) });
   const [appointment] = await db
     .insert(appointments)
     .values({ ownerId: userId, stoodId: stood.id, title: "Simulado", day: "2026-11-28", recurrence: "weekly", weekdays: [6] })
@@ -227,5 +231,7 @@ async function countOwnedRows(userId: string) {
     focuses: await db.$count(focuses, eq(focuses.ownerId, userId)),
     weeklyGoals: await db.$count(weeklyGoals, eq(weeklyGoals.ownerId, userId)),
     appointments: await db.$count(appointments, eq(appointments.ownerId, userId)),
+    profiles: await db.$count(profiles, eq(profiles.ownerId, userId)),
+    profilePhotos: await db.$count(profilePhotos, eq(profilePhotos.ownerId, userId)),
   };
 }
