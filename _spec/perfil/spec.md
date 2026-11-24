@@ -63,11 +63,11 @@ As ações que abrem ou destroem o acesso pedem um login recente, e as mudanças
 - **Conta antiga**: A Conta ligada antes desta etapa não tem e-mail guardado até o próximo login por ela. Até lá, aparece sem e-mail e não entra nas recusas por e-mail.
 - **Senha**: Só para quem já tem. Pede a atual, a nova e a confirmação da nova, aplica a regra de senha forte e encerra as outras Sessões, mantendo a atual. Quem não tem senha não a cria, como no [ADR 0002](../../docs/adr/0002-autenticacao.md).
 - **Sessões**: Mostra navegador, sistema, último uso por dia ("hoje", "ontem", "há 5 dias") e qual é a atual, sem IP. Sessão vencida não aparece. Encerra uma ou todas as outras; a atual se encerra por "Sair".
-- **Login recente**: Ligar ou desligar Conta e pedir para apagar exigem que a Sessão atual tenha até 1 dia de criada. Passado disso, o botão "Entrar de novo" encerra a Sessão, leva a `/entrar` e volta ao Perfil, e o Usuário repete a ação. Renovar a Sessão não conta como entrar de novo.
+- **Login recente**: Ligar ou desligar Conta e pedir para apagar exigem que a Sessão atual tenha até 1 dia de criada. Passado disso, o botão "Entrar de novo" encerra a Sessão, leva a `/entrar` e volta ao Perfil, e o Usuário repete a ação. Renovar a Sessão não conta como entrar de novo. Ao ligar uma Conta de e-mail diferente, a volta do provedor confere de novo a Sessão, válida, recente e do mesmo Usuário, porque ela pode ter sido encerrada no meio.
 - **Avisos**: Trocar a senha e ligar ou desligar uma Conta mandam um e-mail ao e-mail do Usuário com o que mudou, quando e o que fazer se não foi ele. Falha no envio não desfaz a mudança.
 - **Apagar**: O botão é "Apagar meu cadastro". O Usuário digita o próprio e-mail, sem diferenciar maiúsculas, e recebe um link de 1 hora e um uso; pedir outro invalida o anterior, e falha no envio aparece na tela. O link abre uma página com o botão final "Apagar tudo", só para o mesmo Usuário conectado; abrir o link não apaga nada. O botão apaga na hora e sem volta, inclusive um Foco em andamento, encerra todas as Sessões e volta à página inicial com "Seu cadastro foi apagado". O mesmo e-mail pode se cadastrar de novo.
 - **Apelido**: Opcional, de 1 a 30 caracteres aparado nas pontas, e pode ser igual ao de outro Usuário. A saudação da Biblioteca usa o Apelido inteiro; sem ele, o primeiro nome, como hoje.
-- **Bio**: Opcional, até 160 caracteres aparada nas pontas, numa linha só.
+- **Bio**: Opcional, até 160 caracteres aparada nas pontas, numa linha só. Como no Apelido, caractere invisível de controle é recusado com aviso.
 - **Humor**: Opcional, escolhido entre oito, cada um com emoji e palavra: 😎 Motivação, 🎯 Concentração, 🥳 Animação, 😌 Tranquilidade, 🤔 Dúvidas, 😴 Cansaço, 😬 Pressão e 😕 Desânimo. São substantivos para não supor o gênero de ninguém, sem texto livre, que poderia virar dado de saúde. Vale só no dia em que foi marcado, no horário de Brasília. Só o último é guardado, sem histórico: vencido, some da tela, e o registro só é trocado quando o Usuário marca outro, ou apagado quando ele tira.
 - **Foto**: Opcional, uma por Usuário. Aparece a enviada; sem ela, a do provedor; sem as duas, a inicial. Aceita PNG, JPEG ou WebP de até 5 MB, e o navegador recorta o quadrado do centro, reduz a 256 por 256 e envia um JPEG de até 200 KB. O formato e o tamanho são conferidos de novo, pelos bytes, no servidor e no banco. Remover a enviada volta para a do provedor, que não pode ser escondida nesta etapa.
 - **Quem vê**: Apelido, Bio, Humor e Foto são só do próprio Usuário. Nenhuma tela os mostra a outro.
@@ -81,7 +81,7 @@ As ações que abrem ou destroem o acesso pedem um login recente, e as mudanças
 - **Perfil**: Tabela própria, uma linha por Usuário, com Apelido, Bio, o Humor e o dia em que ele foi marcado, todos opcionais. O banco confere tamanhos, espaço nas pontas, quebra de linha na Bio, o Humor da lista e que Humor e dia andam juntos. Não são colunas da tabela de Usuários, que é da biblioteca de login.
 - **Foto**: Tabela própria, uma linha por Usuário, com os bytes e a data em que mudou. O banco confere o tamanho. Não usa a tabela das Imagens, que exige um Arquivo de um Stood.
 - **Migrations**: A `0010` traz o e-mail da Conta e o gatilho; a `0011`, o Perfil e a Foto. As duas tabelas novas apagam em cascata com o Usuário.
-- **Apagar**: Usa a cascata que já existe a partir do Usuário, sem tabela nova.
+- **Apagar**: Usa a cascata que já existe a partir do Usuário, sem tabela nova. Os links em andamento da biblioteca (trocar senha, ligar Conta) não têm ligação com o Usuário e são apagados na mesma transação.
 
 ### Login e Service
 
@@ -91,18 +91,18 @@ As ações que abrem ou destroem o acesso pedem um login recente, e as mudanças
 - **Rotas desligadas**: As rotas da biblioteca cuja regra fica no Stood, ou que ele não usa, deixam de responder.
 - **Leitura**: O Perfil lê Dados, Contas e Sessões pelo Service, no Server Component, depois de `requireSession()`. O client nunca recebe o token de uma Sessão nem os tokens do provedor: encerrar uma Sessão usa o id dela, e o Service confere que ela é do Usuário.
 - **Navegador e sistema**: Uma regra pura lê o texto que o navegador envia e devolve o nome dos dois, ou "Navegador desconhecido" quando não reconhece.
-- **Service do Perfil**: Um tema novo, fora do login, lê e grava Apelido, Bio, Humor e Foto. A confirmação da senha nova fica só na tela; as demais regras valem no servidor.
+- **Service do Perfil**: Um tema novo, fora do login, lê e grava Apelido, Bio, Humor e Foto. Nome, Apelido, Bio e Foto são gravados numa transação: um recusado não muda nenhum. A confirmação da senha nova fica só na tela; as demais regras valem no servidor.
 - **Foto no navegador**: O recorte e a redução reusam o jeito de redesenhar imagens da exportação, e o formato é conferido pela mesma regra das Imagens. Refazer a imagem costuma tirar os metadados da câmera.
 - **Rota da Foto**: Serve os bytes só ao próprio Usuário, com login, sem deixar o navegador adivinhar outro tipo, como a das Imagens. O endereço muda quando a Foto muda, para a nova aparecer na hora.
 - **Uma consulta a mais por página**: O cabeçalho lê o Perfil do Usuário uma vez por requisição, sem os bytes da Foto.
-- **Volta depois de entrar**: A tela de entrar passa a aceitar um destino, só entre os caminhos que o Stood conhece, para não mandar o Usuário a outro site.
+- **Volta depois de entrar**: A tela de entrar passa a aceitar um destino, só entre os caminhos que o Stood conhece, para não mandar o Usuário a outro site. O erro na volta do Google ou do GitHub mantém o destino.
 
 ### Telas
 
 - **Menu do cabeçalho**: Mostra a Foto, o Apelido (ou o nome, sem ele), o Humor do dia, a Bio e o e-mail, e ganha "Perfil", acima de "Sair". O nome completo fica só no Perfil.
 - **Rota**: `/perfil` e a página de confirmar o apagar ficam no grupo protegido e entram no `matcher` do middleware.
 - **Dados, visão**: Tudo centralizado: Foto, nome em destaque, Apelido, Bio, Humor do dia e, por último, o e-mail. Sem campos, descrições nem botão de salvar, e o que está vazio não aparece. O Humor salva ao escolher.
-- **Dados, edição**: Um lápis no canto abre a Foto, com prévia e remover, e os campos de nome, Apelido e Bio, com descrição e contador. Um "Salvar" grava tudo, primeiro os textos e depois a Foto; "Cancelar" ou o X descarta. Recusa mantém a edição aberta, com a mensagem no campo.
+- **Dados, edição**: Um lápis no canto abre a Foto, com prévia e remover, e os campos de nome, Apelido e Bio, com descrição e contador. Um "Salvar" grava tudo junto e espera o recorte da Foto ficar pronto; "Cancelar" ou o X descarta. Recusa mantém a edição aberta, com a mensagem no campo.
 - **Saudação da Biblioteca**: "Olá, Johny" seguido de um botão com o Humor do dia ou, sem ele, "Como você está hoje?". O botão abre a lista, com a opção de tirar. O leitor de tela lê a palavra do Humor, não o emoji.
 - **Senha**: Três campos, atual, nova e confirmação, cada um com um botão de mostrar e esconder. Confirmação diferente mostra a mensagem no campo e não envia nada; depois de trocar, os campos voltam vazios e escondidos.
 - **Contas**: Cada Conta numa linha, com o provedor e o e-mail, e os botões de ligar Google e GitHub. Quem tem uma só vê a sugestão de ligar outra, e o desligar dela aparece desativado com o motivo. Recusa ao ligar volta ao Perfil com a mensagem.
@@ -125,6 +125,7 @@ As ações que abrem ou destroem o acesso pedem um login recente, e as mudanças
   - Liga Google e GitHub com e-mail igual e diferente, guarda o e-mail da Conta e mantém o do Usuário.
   - Liga uma segunda Conta do mesmo provedor.
   - Recusa Conta que já entra em outro Usuário, e-mail de outro Usuário e provedor sem e-mail.
+  - Recusa a volta do provedor quando a Sessão que pediu foi encerrada, passou de 1 dia ou é de outro Usuário.
   - Recusa o cadastro, por senha e por provedor, com e-mail que está numa Conta de outro Usuário.
   - Desliga e encerra as outras Sessões, mantendo a atual; recusa a última, a Conta de senha e a Conta de outro Usuário.
   - Login por uma Conta antiga preenche o e-mail dela.
@@ -132,10 +133,10 @@ As ações que abrem ou destroem o acesso pedem um login recente, e as mudanças
 - **Sessões**: Lista só as do Usuário e válidas, marca a atual e não devolve token; encerra uma e todas as outras; não encerra a de outro Usuário. Regra pura do navegador e do sistema, inclusive o não reconhecido, e do último uso por dia.
 - **Login recente**: Ligar, desligar e pedir para apagar são recusados com Sessão de mais de 1 dia e aceitos com Sessão nova.
 - **Avisos**: Cada mudança manda o e-mail certo ao e-mail do Usuário; falha no envio não desfaz a mudança.
-- **Apagar**: Recusa e-mail digitado diferente; o link vence, vale uma vez e o novo invalida o anterior; abrir o link não apaga; recusa outro Usuário e quem não está conectado; apaga em cascata Stoods, Arquivos, Tags, Focos, Meta semanal, Compromissos, Contas e Sessões, sem tocar em outro Usuário; o mesmo e-mail se cadastra de novo.
-- **Apelido e Bio**: Grava aparando as pontas, junto com o nome; vazio apaga; recusa acima do limite e quebra de linha na Bio, sem gravar nada dos três; aceita Apelido igual ao de outro Usuário.
+- **Apagar**: Recusa e-mail digitado diferente; o link vence, vale uma vez e o novo invalida o anterior; abrir o link não apaga; recusa outro Usuário e quem não está conectado; apaga em cascata Stoods, Arquivos, Tags, Focos, Meta semanal, Compromissos, Perfil, Foto, Contas, Sessões e links em andamento, sem tocar em outro Usuário; o mesmo e-mail se cadastra de novo.
+- **Apelido e Bio**: Grava aparando as pontas, junto com o nome; vazio apaga; recusa acima do limite, quebra de linha e caractere de controle, sem gravar nada do que veio junto, inclusive a Foto; aceita Apelido igual ao de outro Usuário.
 - **Humor**: Marca, troca e tira; vale até o fim do dia de Brasília e some depois; recusa o que não está na lista; não muda o de outro Usuário.
-- **Foto**: Grava e troca a Foto do próprio Usuário; recusa arquivo vazio, acima do limite e que não é JPEG pelos bytes; remover volta à do provedor; não devolve a Foto de outro Usuário; o endereço muda quando ela muda.
+- **Foto**: Grava e troca a Foto do próprio Usuário; recusa arquivo vazio, acima do limite e que não é JPEG pelos bytes; remover volta à do provedor; salvar só os textos a mantém; não devolve a Foto de outro Usuário; o endereço muda quando ela muda.
 - **Saudação**: Usa o Apelido inteiro e, sem ele, o primeiro nome.
 - **Banco**: Recusa tamanho, Humor e dia fora das regras, e apaga o Perfil e a Foto em cascata com o Usuário, no mesmo teste de apagar o cadastro.
 - **Limite de tentativas**: A quarta tentativa em 10 segundos é recusada na troca de senha e no pedido do link.

@@ -67,7 +67,7 @@ paths: ["**/*.ts", "src/**/*.tsx"]
 - **Para o client**: A página passa ao `"use client"` só os campos que a tela usa.
 - **Exceções**: Não chamam `requireSession()`.
   - **`/ready`**: Checagem pública do CD, faz `SELECT 1` direto; não serve de modelo.
-  - **Páginas públicas**: Landing, `/privacidade` e `/termos` ficam fora do `matcher`, usam `findCurrentSessionUser()`, que não redireciona, e nunca leem dado do Usuário.
+  - **Páginas públicas**: Landing, `/privacidade` e `/termos` ficam fora do `matcher`, usam `findCurrentSessionUser()`, que não redireciona, e nunca leem dado do Usuário. O cabeçalho, igual em todas as páginas, lê nelas só o nome, a Foto e o Perfil de quem está conectado.
   - **Auth**: Telas de entrar, cadastro e senha chamam `/auth/*` pelo client da Better Auth, porque o rate limit só vale por HTTP; as regras do Stood ficam em `src/lib/auth/auth.ts`.
 
 ## Server e client
