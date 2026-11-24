@@ -156,6 +156,33 @@ describe("updateAppointment", () => {
     ]);
   });
 
+  it("leva para a Ocorrência mudada aberta no diálogo o que o Usuário mudou ao salvar em Todas", async () => {
+    const ownerId = await createUser();
+    const id = await createOwnedAppointment(ownerId, SATURDAY_MOCK);
+    await updateAppointment(ownerId, id, { kind: "one", originalDay: "2026-11-14" }, {
+      title: "Revisão",
+      day: "2026-11-14",
+      timeOfDay: "08:00",
+      stoodId: null,
+    });
+
+    // O diálogo abriu a Ocorrência de 14/11, trocou só o título e salvou em "Todas"
+    const form = { title: "Revisão geral", day: "2026-11-14", timeOfDay: "08:00", stoodId: null };
+    await updateAppointment(
+      ownerId,
+      id,
+      { kind: "all", editedOccurrence: { originalDay: "2026-11-14", ...form } },
+      { ...SATURDAY_MOCK, title: "Revisão geral" },
+    );
+
+    const month = await getAgendaMonth(ownerId, "2026-11", "2026-11-07", NOW);
+    expect(month.items.slice(0, 3).map((item) => [item.day, item.title, item.timeOfDay])).toEqual([
+      ["2026-11-07", "Revisão geral", "09:00"],
+      ["2026-11-14", "Revisão geral", "08:00"],
+      ["2026-11-21", "Revisão geral", "09:00"],
+    ]);
+  });
+
   it("descarta as Ocorrências mudadas quando a repetição muda", async () => {
     const ownerId = await createUser();
     const id = await createOwnedAppointment(ownerId, SATURDAY_MOCK);
