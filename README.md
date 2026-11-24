@@ -45,7 +45,7 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 - **Agenda**: Veja no mês quanto estudou em cada dia e anote Compromissos como provas e entregas, ligados ou não a um Stood. Um Compromisso pode se repetir todo dia, toda semana ou todo mês, e a Biblioteca mostra os próximos.
 - **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, Anotações e links do Youtube). E pode exportar um arquivo ou o Stood inteiro compactado (`.zip`).
 - **Conta**: Entrada por Google, GitHub ou e-mail e senha.
-- **Perfil**: Mude o seu nome, veja as Contas que usa para entrar e ligue outras, troque a senha, saia de outros navegadores e apague o seu cadastro quando quiser. A foto é a do Google ou do GitHub.
+- **Perfil**: Mude o seu nome, escolha um Apelido, escreva uma Bio, envie uma Foto, marque o Humor do dia, veja as Contas que usa para entrar e ligue outras, troque a senha, saia de outros navegadores e apague o seu cadastro quando quiser. Sem Foto enviada, aparece a do Google ou do GitHub.
 
 ## Como rodar
 

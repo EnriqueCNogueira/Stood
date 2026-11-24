@@ -32,6 +32,9 @@ export default function PrivacyPage() {
             <strong>Sessão:</strong> um cookie de sessão que mantém você conectado por até 30 dias, com o endereço IP e o navegador (user agent) de cada sessão.
           </li>
           <li>
+            <strong>Perfil, se você quiser:</strong> um Apelido, uma Bio, o Humor do dia e uma Foto. O seu navegador recorta e reduz a imagem escolhida antes de enviar, e guardamos só a versão reduzida.
+          </li>
+          <li>
             <strong>Conteúdo:</strong> os Stoods, Pastas e Arquivos que você cria ou importa, as Tags que você cria para agrupar os Stoods, os Compromissos da Agenda (título, dia, horário, Stood e repetição) e as Janelas abertas no Quadro de cada Stood, com posição e tamanho, para ele abrir como você deixou. As Imagens são guardadas como você envia, junto com os metadados que a câmera ou o celular gravou nelas, como a data e, se estava ligada, a localização.
           </li>
           <li>
@@ -49,6 +52,7 @@ export default function PrivacyPage() {
           <li>Identificar você ao entrar e manter a sua sessão.</li>
           <li>Enviar e-mails de confirmação de cadastro e de troca de senha, o link para apagar o cadastro e avisos quando a senha muda ou uma Conta é ligada ou desligada.</li>
           <li>Mostrar no seu Perfil os seus dados, as Contas que você usa para entrar e as sessões abertas, só para você.</li>
+          <li>Chamar você pelo Apelido e mostrar a sua Foto, o seu Humor do dia e a sua Bio na Biblioteca, no Perfil e no menu do cabeçalho, só para você.</li>
           <li>Guardar e mostrar os seus Stoods, só para você.</li>
           <li>Mostrar o seu Tempo estudado na semana e em cada dia da Agenda, no total e em cada Stood, e o progresso da Meta semanal.</li>
           <li>Guardar os seus Compromissos, mostrá-los na Agenda e lembrar os próximos na Biblioteca, só para você.</li>
@@ -64,13 +68,13 @@ export default function PrivacyPage() {
             <strong>Google Cloud (Cloud Run):</strong> hospedagem do site.
           </li>
           <li>
-            <strong>Neon:</strong> banco de dados PostgreSQL onde ficam a sua Conta e os seus Stoods.
+            <strong>Neon:</strong> banco de dados PostgreSQL onde ficam a sua Conta, o seu Perfil e os seus Stoods.
           </li>
           <li>
             <strong>Resend:</strong> envio dos e-mails de confirmação, de troca de senha, de apagar o cadastro e dos avisos.
           </li>
           <li>
-            <strong>Google e GitHub:</strong> quando você escolhe entrar por eles ou ligá-los ao seu cadastro. A sua foto de perfil carrega direto deles no seu navegador, e eles recebem o seu endereço IP.
+            <strong>Google e GitHub:</strong> quando você escolhe entrar por eles ou ligá-los ao seu cadastro. Se você não enviou uma Foto, a foto de perfil que eles têm carrega direto deles no seu navegador, e eles recebem o seu endereço IP.
           </li>
           <li>
             <strong>YouTube:</strong> ao adicionar um Vídeo, o Stood envia ao YouTube só o link do vídeo para mostrar o título, o canal e a miniatura. A miniatura e o player do Vídeo aberto no Quadro, no modo de privacidade aprimorada (youtube-nocookie.com), carregam direto do YouTube no seu navegador, e o YouTube recebe o seu endereço IP e trata o que você assiste pela política de privacidade dele.
@@ -81,7 +85,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="Por quanto tempo guardamos">
         <p>
-          Os dados ficam guardados enquanto você usar o Stood. A sessão expira em 30 dias, quando você sai ou quando a encerra no Perfil. Você mesmo apaga um Stood, com as Pastas e os Arquivos dele, ou um Arquivo sozinho, no Quadro. Você pode apagar o seu cadastro, com tudo o que é seu, no Perfil: os dados saem do Stood na hora. O banco de dados (Neon) ainda permite recuperá-los por até 6 horas, e o Resend guarda por 30 dias os e-mails que enviamos. O link de confirmar vale por 1 hora. Se preferir, escreva para <ContactEmail />.
+          Os dados ficam guardados enquanto você usar o Stood. A sessão expira em 30 dias, quando você sai ou quando a encerra no Perfil. Você mesmo apaga um Stood, com as Pastas e os Arquivos dele, ou um Arquivo sozinho, no Quadro. O Apelido, a Bio e a Foto ficam até você trocá-los ou apagá-los no Perfil. Do Humor, guardamos só o último: ele deixa de aparecer no fim do dia, mas fica guardado até você marcar outro ou tirá-lo. Você pode apagar o seu cadastro, com tudo o que é seu, no Perfil: os dados saem do Stood na hora. O banco de dados (Neon) ainda permite recuperá-los por até 6 horas, e o Resend guarda por 30 dias os e-mails que enviamos. O link de confirmar vale por 1 hora. Se preferir, escreva para <ContactEmail />.
         </p>
       </LegalSection>
 
