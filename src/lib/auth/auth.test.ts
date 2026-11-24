@@ -7,7 +7,6 @@ import { requireSessionFromHeaders } from "@/lib/auth/session";
 import {
   buildCookieHeaders,
   buildUniqueEmail,
-  buildUniqueProviderAccountId,
   createGitHubOnlyUser,
   createSignedInUser,
   createUnverifiedUser,
@@ -15,12 +14,9 @@ import {
   warmUpAuth,
 } from "@/test/auth";
 import { findLink, stubResend } from "@/test/email";
+import { GITHUB_ACCESS_TOKEN, type Provider, signInWithProvider } from "@/test/providers";
 
 beforeAll(warmUpAuth);
-
-type Provider = "github" | "google";
-
-type ProviderProfile = { email: string; providerEmailVerified: boolean; providerAccountId: number };
 
 describe("getAuth: login social", () => {
   it.each<Provider>(["github", "google"])(
@@ -137,6 +133,16 @@ describe("getAuth: cadastro por e-mail e senha", () => {
   });
 });
 
+describe("getAuth: troca de senha", () => {
+  it("recusa a senha nova fraca, com o código que a tela traduz", async () => {
+    const { headers } = await createSignedInUser();
+
+    await expect(changePassword(headers, "senha-sem-maiuscula-1")).rejects.toMatchObject({
+      body: { code: "PASSWORD_TOO_WEAK" },
+    });
+  });
+});
+
 // --- Funções auxiliares ---
 
 function signUp(email: string, password = TEST_PASSWORD) {
@@ -145,27 +151,12 @@ function signUp(email: string, password = TEST_PASSWORD) {
   });
 }
 
-function signIn(email: string) {
-  return getAuth().api.signInEmail({ body: { email, password: TEST_PASSWORD, callbackURL: "/biblioteca" } });
+function changePassword(headers: Headers, newPassword: string, currentPassword = TEST_PASSWORD) {
+  return getAuth().api.changePassword({ body: { currentPassword, newPassword }, headers });
 }
 
-// Exemplo de token da documentação do GitHub
-const GITHUB_ACCESS_TOKEN = "gho_16C7e42F292c6912E7710c838347Ae178B4a";
-
-// Faz o fluxo inteiro do OAuth: pede a URL do provedor e volta pelo callback com o state e os cookies
-async function signInWithProvider(provider: Provider, email: string, { providerEmailVerified = true } = {}) {
-  const { headers, response } = await getAuth().api.signInSocial({
-    body: { provider, callbackURL: "/biblioteca", errorCallbackURL: "/entrar" },
-    returnHeaders: true,
-  });
-  const state = new URL(response.url!).searchParams.get("state");
-
-  const providerAccountId = buildUniqueProviderAccountId();
-  const fetchFromProvider = provider === "github" ? fetchFromGitHub : fetchFromGoogle;
-  vi.stubGlobal("fetch", vi.fn(fetchFromProvider({ email, providerEmailVerified, providerAccountId })));
-
-  const callbackURL = `${process.env.BETTER_AUTH_URL}/auth/callback/${provider}?code=codigo-de-teste&state=${state}`;
-  return getAuth().handler(new Request(callbackURL, { headers: buildCookieHeaders(headers) }));
+function signIn(email: string) {
+  return getAuth().api.signInEmail({ body: { email, password: TEST_PASSWORD, callbackURL: "/biblioteca" } });
 }
 
 async function findAccount(email: string, provider: Provider) {
@@ -176,68 +167,4 @@ async function findAccount(email: string, provider: Provider) {
     .where(and(eq(users.email, email), eq(accounts.providerId, provider)))
     .limit(1);
   return account;
-}
-
-// Respostas copiadas do formato real do endpoint de token, de /user e de /user/emails do GitHub
-function fetchFromGitHub({ email, providerEmailVerified, providerAccountId }: ProviderProfile) {
-  return async (input: RequestInfo | URL) => {
-    const url = requestURL(input);
-    if (url.startsWith("https://github.com/login/oauth/access_token")) {
-      return Response.json({ access_token: GITHUB_ACCESS_TOKEN, token_type: "bearer", scope: "read:user,user:email" });
-    }
-    if (url === "https://api.github.com/user/emails") {
-      return Response.json([{ email, primary: true, verified: providerEmailVerified, visibility: "private" }]);
-    }
-    if (url === "https://api.github.com/user") {
-      return Response.json({
-        login: "anasouza",
-        id: providerAccountId,
-        node_id: "MDQ6VXNlcjEyOTYyNjk=",
-        avatar_url: `https://avatars.githubusercontent.com/u/${providerAccountId}?v=4`,
-        type: "User",
-        name: "Ana Souza",
-        email: null,
-      });
-    }
-    throw new Error(`unexpected fetch: ${url}`);
-  };
-}
-
-// Resposta do endpoint de token do Google; o id_token só é decodificado no callback, sem conferir a assinatura
-function fetchFromGoogle(profile: ProviderProfile) {
-  return async (input: RequestInfo | URL) => {
-    const url = requestURL(input);
-    if (url.startsWith("https://oauth2.googleapis.com/token")) {
-      return Response.json({
-        access_token: "ya29.a0AfH6SMBx-codigo-de-teste",
-        expires_in: 3599,
-        scope: "openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
-        token_type: "Bearer",
-        id_token: buildGoogleIdToken(profile),
-      });
-    }
-    throw new Error(`unexpected fetch: ${url}`);
-  };
-}
-
-function buildGoogleIdToken({ email, providerEmailVerified, providerAccountId }: ProviderProfile) {
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const header = { alg: "RS256", kid: "chave-de-teste", typ: "JWT" };
-  const payload = {
-    iss: "https://accounts.google.com",
-    aud: process.env.GOOGLE_CLIENT_ID,
-    sub: String(providerAccountId),
-    email,
-    email_verified: providerEmailVerified,
-    name: "Ana Souza",
-    picture: "https://lh3.googleusercontent.com/a/foto-de-teste",
-    iat: nowSeconds,
-    exp: nowSeconds + 3600,
-  };
-  const encode = (part: object) => Buffer.from(JSON.stringify(part)).toString("base64url");
-  return `${encode(header)}.${encode(payload)}.assinatura-de-teste`;
-}
-
-function requestURL(input: RequestInfo | URL) {
-  return input instanceof Request ? input.url : String(input);
 }

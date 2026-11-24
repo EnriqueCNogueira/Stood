@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { expect } from "vitest";
 import { db } from "@/db";
-import { accounts, users } from "@/db/schema";
+import { accounts, sessions, users } from "@/db/schema";
 import { getAuth } from "@/lib/auth/auth";
 
 export const TEST_PASSWORD = "Senha-de-teste-123";
@@ -48,13 +48,37 @@ export async function createUnverifiedUser(email = buildUniqueEmail()) {
 // Cadastro com e-mail confirmado e uma sessão aberta; devolve os cabeçalhos com o cookie da sessão
 export async function createSignedInUser() {
   const { email } = await createUnverifiedUser();
-  await db.update(users).set({ emailVerified: true }).where(eq(users.email, email));
+  const [user] = await db.update(users).set({ emailVerified: true }).where(eq(users.email, email)).returning({ id: users.id });
 
   const { headers } = await getAuth().api.signInEmail({
     body: { email, password: TEST_PASSWORD },
     returnHeaders: true,
   });
-  return { email, headers: buildCookieHeaders(headers) };
+  return { email, userId: user.id, headers: buildCookieHeaders(headers) };
+}
+
+// Outra Sessão do mesmo Usuário, como a de outro navegador
+export async function createOtherSession(email: string, userAgent = "", password = TEST_PASSWORD) {
+  const { headers } = await getAuth().api.signInEmail({
+    body: { email, password },
+    headers: new Headers({ "user-agent": userAgent }),
+    returnHeaders: true,
+  });
+  return buildCookieHeaders(headers);
+}
+
+// Muda a data de criação das Sessões do Usuário, para testar o login recente
+export async function setSessionsCreatedAt(userId: string, createdAt: Date) {
+  await db.update(sessions).set({ createdAt }).where(eq(sessions.userId, userId));
+}
+
+// Grava a validade direto no banco, que é como se controla o relógio do Postgres
+export async function setSessionsExpiresAt(email: string, expiresAt: Date) {
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  await db
+    .update(sessions)
+    .set({ expiresAt })
+    .where(eq(sessions.userId, user.id));
 }
 
 // Transforma os Set-Cookie de uma resposta no cabeçalho Cookie da próxima requisição

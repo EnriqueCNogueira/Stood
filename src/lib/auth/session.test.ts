@@ -1,10 +1,7 @@
-import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
-import { db } from "@/db";
-import { sessions, users } from "@/db/schema";
 import { getAuth } from "@/lib/auth/auth";
 import { findSessionUser, requireSessionFromHeaders, revokeSession } from "@/lib/auth/session";
-import { createSignedInUser, expectRedirectToSignIn, warmUpAuth } from "@/test/auth";
+import { createSignedInUser, expectRedirectToSignIn, setSessionsExpiresAt, warmUpAuth } from "@/test/auth";
 
 beforeAll(warmUpAuth);
 
@@ -74,12 +71,3 @@ const MS_PER_DAY = 24 * 60 * ONE_MINUTE_MS;
 
 // Validade de 30 dias renovada a cada dia: a 28 dias do fim, a sessão já passou do dia de renovar
 const DUE_FOR_RENEWAL_MS = 28 * MS_PER_DAY;
-
-// Grava a validade direto no banco, que é como se controla o relógio do Postgres
-async function setSessionsExpiresAt(email: string, expiresAt: Date) {
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  await db
-    .update(sessions)
-    .set({ expiresAt })
-    .where(eq(sessions.userId, user.id));
-}
