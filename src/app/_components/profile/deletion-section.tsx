@@ -19,20 +19,21 @@ export function DeletionSection({ email, isFresh }: { email: string; isFresh: bo
     event.preventDefault();
     setIsPending(true);
     setError(undefined);
-    const { error: requestError } = await authClient.$fetch(REQUEST_DELETION_PATH, { method: "POST", body: { email: typedEmail } });
-    setIsPending(false);
-    if (requestError) {
-      setError(buildAuthErrorMessage(requestError));
-      return;
+    try {
+      const { error: requestError } = await authClient.$fetch(REQUEST_DELETION_PATH, { method: "POST", body: { email: typedEmail } });
+      if (requestError) setError(buildAuthErrorMessage(requestError));
+      else setIsSent(true);
+    } catch {
+      setError(buildAuthErrorMessage({}));
     }
-    setIsSent(true);
+    setIsPending(false);
   }
 
   return (
     <ProfileSection
       id="profile-deletion"
       title="Apagar"
-      description="Apaga o seu cadastro com todos os seus Stoods, Arquivos, Tags, Focos e Compromissos. Não dá para desfazer."
+      description="Apaga o seu cadastro com tudo o que é seu: Perfil, Stoods, Arquivos, Tags, Focos, Meta semanal, Compromissos, Contas e sessões. Não dá para desfazer."
     >
       <p className="text-ui text-text-muted">
         Exporte antes os Stoods que quiser guardar, pelo botão Exportar Stood do Quadro. A permissão que você deu no Google ou no GitHub só sai por

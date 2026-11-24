@@ -5,6 +5,7 @@ import { FormMessage } from "@/app/_components/auth/auth-card";
 import { GithubLogo, GoogleLogo } from "@/app/_components/brand-icons";
 import { BUTTON, FIELD, FIELD_LABEL, INPUT, TEXT_LINK } from "@/app/_components/ui";
 import { authClient } from "@/lib/auth/client";
+import { buildSignInPath } from "@/lib/auth/destination";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 
 // destination já vem conferido pela página: só um caminho que o Stood conhece
@@ -17,7 +18,7 @@ export function SignInForm({ initialError, destination }: { initialError?: strin
     const { error: signInError } = await authClient.signIn.social({
       provider,
       callbackURL: destination,
-      errorCallbackURL: "/entrar",
+      errorCallbackURL: buildSignInPath(destination),
     });
     // Sem erro, o navegador já saiu para o Google ou o GitHub
     if (signInError) {

@@ -24,8 +24,8 @@ export default async function ConfirmDeletionPage({ searchParams }: ConfirmDelet
         {isValid ? (
           <>
             <p className="text-ui">
-              Isto apaga agora o cadastro de <strong className="font-medium wrap-anywhere">{user.email}</strong>, com todos os Stoods, Arquivos, Tags, Focos e
-              Compromissos. Não dá para desfazer.
+              Isto apaga agora o cadastro de <strong className="font-medium wrap-anywhere">{user.email}</strong>, com tudo o que é seu: Perfil, Stoods, Arquivos,
+              Tags, Focos, Meta semanal, Compromissos, Contas e sessões. Não dá para desfazer.
             </p>
             <ConfirmDeletion code={code} />
           </>

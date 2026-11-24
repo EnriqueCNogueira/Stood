@@ -7,7 +7,7 @@ import { PasswordField } from "@/app/_components/auth/password-field";
 import { BUTTON } from "@/app/_components/ui";
 import { authClient } from "@/lib/auth/client";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
-import { isStrongPassword, MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
+import { isStrongPassword, PASSWORD_HINT } from "@/lib/auth/password";
 
 const DIFFERENT_PASSWORDS_MESSAGE = "As senhas novas não são iguais.";
 
@@ -37,15 +37,19 @@ export function PasswordForm() {
     }
     setIsPending(true);
 
-    const { error: changeError } = await authClient.changePassword({ currentPassword: String(form.get("currentPassword")), newPassword });
-    setIsPending(false);
-    if (changeError) {
-      setError(buildAuthErrorMessage(changeError));
-      return;
+    try {
+      const { error: changeError } = await authClient.changePassword({ currentPassword: String(form.get("currentPassword")), newPassword });
+      if (changeError) {
+        setError(buildAuthErrorMessage(changeError));
+      } else {
+        setChangeCount((count) => count + 1);
+        // A lista de Sessões mudou: as outras foram encerradas
+        router.refresh();
+      }
+    } catch {
+      setError(buildAuthErrorMessage({}));
     }
-    setChangeCount((count) => count + 1);
-    // A lista de Sessões mudou: as outras foram encerradas
-    router.refresh();
+    setIsPending(false);
   }
 
   return (
@@ -58,7 +62,7 @@ export function PasswordForm() {
           label="Senha nova"
           name="newPassword"
           autoComplete="new-password"
-          hint={`Pelo menos ${MIN_PASSWORD_LENGTH} caracteres, com letra maiúscula, número e caractere especial.`}
+          hint={PASSWORD_HINT}
         />
         <PasswordField
           label="Confirmar senha nova"

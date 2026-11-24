@@ -36,12 +36,15 @@ export function AccountsSection({ accounts, userEmail, isFresh, linkError }: Acc
   async function link(provider: SocialProvider) {
     setIsPending(true);
     setError(undefined);
-    const { error: linkRefusal } = await authClient.linkSocial({ provider, callbackURL: PROFILE_PATH, errorCallbackURL: PROFILE_PATH });
-    // Sem erro, o navegador já saiu para o Google ou o GitHub
-    if (linkRefusal) {
+    try {
+      const { error: linkRefusal } = await authClient.linkSocial({ provider, callbackURL: PROFILE_PATH, errorCallbackURL: PROFILE_PATH });
+      // Sem erro, o navegador já saiu para o Google ou o GitHub
+      if (!linkRefusal) return;
       setError(buildAuthErrorMessage(linkRefusal));
-      setIsPending(false);
+    } catch {
+      setError(buildAuthErrorMessage({}));
     }
+    setIsPending(false);
   }
 
   async function unlink(accountId: string) {

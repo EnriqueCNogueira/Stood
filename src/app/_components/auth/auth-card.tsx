@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { BELOW_HEADER, CARD, FIELD, FIELD_LABEL, INPUT } from "@/app/_components/ui";
-import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
+import { MIN_PASSWORD_LENGTH, PASSWORD_HINT } from "@/lib/auth/password";
 
 // Moldura das telas de entrar, cadastro e senha
 export function AuthCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
@@ -20,7 +20,7 @@ export function NewPasswordField({ label }: { label: string }) {
       <span className={FIELD_LABEL}>{label}</span>
       <input name="password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} required aria-describedby="password-hint" className={INPUT} />
       <span id="password-hint" className="text-xs text-text-muted 2xl:text-sm">
-        Pelo menos {MIN_PASSWORD_LENGTH} caracteres, com letra maiúscula, número e caractere especial.
+        {PASSWORD_HINT}
       </span>
     </label>
   );

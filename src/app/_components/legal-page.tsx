@@ -4,7 +4,6 @@ import { CONTACT_EMAIL } from "@/lib/contact";
 
 // Controlador dos dados e canal do titular, citados em Privacidade e Termos
 export const DATA_CONTROLLER = "Enrique Nogueira";
-export { CONTACT_EMAIL };
 export const LEGAL_UPDATED_AT = "24 de novembro de 2026";
 
 export function ContactEmail() {
