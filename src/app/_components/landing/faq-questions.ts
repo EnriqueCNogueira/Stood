@@ -6,7 +6,7 @@ export const FAQ_QUESTIONS = [
   },
   {
     question: "Quais Arquivos posso abrir no Quadro?",
-    answer: "Vídeo do YouTube, Nota em markdown, Desenho, Imagem e PDF. Cada um abre numa Janela que você move e redimensiona.",
+    answer: "Vídeo do YouTube, Nota em markdown, Desenho e Imagem. Cada um abre numa Janela que você move e redimensiona.",
   },
   {
     question: "Quantas Janelas posso abrir ao mesmo tempo?",

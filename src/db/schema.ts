@@ -124,7 +124,7 @@ export const verifications = pgTable(
 
 // --- Domínio ---
 
-export const FILE_TYPES = ["note", "drawing", "image", "pdf", "video"] as const;
+export const FILE_TYPES = ["note", "drawing", "image", "video"] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 const TYPES_WITH_CONTENT: FileType[] = ["note", "drawing", "video"];
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -266,7 +266,7 @@ export const files = pgTable(
     folderId: uuid("folder_id"),
     type: text("type", { enum: FILE_TYPES }).notNull(),
     name: text("name").notNull(),
-    // Markdown da Nota, JSON da cena do Desenho ou id do Vídeo; nulo em Imagem e PDF
+    // Markdown da Nota, JSON da cena do Desenho ou id do Vídeo; nulo em Imagem
     content: text("content"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

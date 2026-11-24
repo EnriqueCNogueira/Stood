@@ -57,6 +57,20 @@
       "when": 1795397097501,
       "tag": "0007_create_agenda_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795477582988,
+      "tag": "0008_delete_pdf_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795477600677,
+      "tag": "0009_remove_pdf_file_type",
+      "breakpoints": true
     }
   ]
 }

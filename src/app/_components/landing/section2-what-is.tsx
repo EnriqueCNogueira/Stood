@@ -1,4 +1,4 @@
-import { File, FileText, Image, LayoutDashboard, PenTool } from "lucide-react";
+import { FileText, Image, LayoutDashboard, PenTool } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { GithubLogo, YoutubeIcon } from "@/app/_components/brand-icons";
 import { CARD_GRID, CONTAINER, EYEBROW, SECTION, SECTION_LEAD, SECTION_TITLE } from "@/app/_components/landing/sections";
@@ -11,7 +11,6 @@ const FILE_TYPES: { label: string; Icon: ComponentType<IconProps> }[] = [
   { label: "Nota em markdown", Icon: FileText },
   { label: "Desenho", Icon: PenTool },
   { label: "Imagem", Icon: Image },
-  { label: "PDF", Icon: File },
 ];
 
 export function WhatIsSection() {
@@ -29,7 +28,7 @@ export function WhatIsSection() {
             Arraste os Arquivos para o Quadro e abra cada um numa Janela que você move e redimensiona. O conteúdo salva sozinho.
           </Feature>
 
-          <Feature icon={<FileText size={20} strokeWidth={1.75} aria-hidden />} title="Cinco tipos de Arquivo" caption="Pastas e Arquivos de um Stood">
+          <Feature icon={<FileText size={20} strokeWidth={1.75} aria-hidden />} title="Quatro tipos de Arquivo" caption="Pastas e Arquivos de um Stood">
             <span className="flex flex-wrap gap-1.5">
               {FILE_TYPES.map(({ label, Icon }) => (
                 <span key={label} className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-ui text-text 2xl:h-8 2xl:px-3 2xl:text-sm">

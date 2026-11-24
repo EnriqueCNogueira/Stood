@@ -315,6 +315,8 @@ export function Board({ stood, editableContents, activeFocus, serverNow, allTags
         <BoardBar
           stoodId={stood.id}
           details={details}
+          tree={tree}
+          getContent={contents.getContent}
           tags={tags}
           allTags={knownTags}
           counts={buildWindowCounts(state)}

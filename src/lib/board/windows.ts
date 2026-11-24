@@ -17,7 +17,6 @@ export const DEFAULT_WINDOW_SIZES: Record<FileType, Size> = {
   // A barra de ferramentas ocupa uma linha, então o Desenho abre maior
   drawing: { width: 520, height: 400 },
   image: { width: 320, height: 240 },
-  pdf: { width: 340, height: 380 },
 };
 
 export type Point = { x: number; y: number };

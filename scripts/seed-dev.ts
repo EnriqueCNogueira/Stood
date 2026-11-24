@@ -70,7 +70,7 @@ const SEED_STOODS: SeedStood[] = [
           },
         ],
       },
-      { name: "Listas", files: [{ name: "Lista 4", type: "pdf" }] },
+      { name: "Listas", files: [{ name: "Lista 4", type: "note", content: "# Lista 4\n\n1. Calcule o limite." }] },
     ],
     files: [{ name: "Plano de estudos", type: "note", content: "# Plano\n\n- Revisar limites" }],
   },
@@ -79,7 +79,7 @@ const SEED_STOODS: SeedStood[] = [
     description: "Termodinâmica, ondas e um pouco de óptica, com as listas da professora.",
     openedAgoMs: MS_PER_DAY + MS_PER_HOUR,
     files: [
-      { name: "Apostila", type: "pdf" },
+      { name: "Apostila", type: "note", content: "# Apostila\n\n## Termodinâmica" },
       { name: "Ondas estacionárias", type: "video", content: "BSIw5SgUirg" },
       { name: "Fórmulas", type: "note", content: "# Fórmulas" },
     ],

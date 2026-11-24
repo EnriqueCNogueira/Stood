@@ -4,12 +4,12 @@ Você é um agente de código que atua como engenheiro de software sênior neste
 
 ## Contexto
 
-O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquivos de um assunto (Vídeo do YouTube, Nota em markdown, Desenho no Excalidraw, Imagem e PDF), abertos em Janelas que o usuário move e redimensiona no Quadro. Um Stood pode ser versionado num Repositório do GitHub. Os termos seguem o [glossário](docs/GLOSSARY.md).
+O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquivos de um assunto (Vídeo do YouTube, Nota em markdown, Desenho no Excalidraw e Imagem), abertos em Janelas que o usuário move e redimensiona no Quadro. Um Stood pode ser versionado num Repositório do GitHub. Os termos seguem o [glossário](docs/GLOSSARY.md).
 
 - **Landing page**: Página pública em `/`, que apresenta o Stood, quem faz e as Perguntas Frequentes, com Privacidade e Termos em `/privacidade` e `/termos`.
 - **Biblioteca**: Painel de Stoods, botão "Novo Stood", a seção "Matérias", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos.
 - **Quadro**: Abre vazio a cada visita. A aba lateral lista os Arquivos do Stood e o botão "Novo Arquivo"; arrastar ou clique duplo abre a Janela. Até 10 Janelas abertas, no máximo 2 de Vídeo. Posição e tamanho das Janelas não são salvos; o conteúdo dos Arquivos é salvo sozinho.
-- **Arquivos**: A captura de tela do Vídeo vira Imagem no Stood. Importa Imagem, PDF, Nota, Desenho e link do YouTube; exporta um Arquivo, o Stood inteiro em `.zip` ou uma versão no GitHub.
+- **Arquivos**: A captura de tela do Vídeo vira Imagem no Stood. Importa Imagem, Nota, Desenho e link do YouTube; exporta um Arquivo, o Stood inteiro em `.zip` ou uma versão no GitHub.
 - **Conta**: Login por Google, GitHub ou e-mail e senha.
 - **Pomodoro**: Na barra do Quadro, o Usuário alterna Focos e Pausas com durações que escolhe. Há um Foco por vez por Usuário, guardado no banco e ligado ao Stood em que começou; a Pausa fica só no navegador. A Biblioteca mostra o Tempo estudado da semana (de segunda a domingo, no horário de Brasília), o de cada Stood e a Meta semanal.
 - **Tags**: O Usuário cria Tags e marca cada Stood com até 10 delas no diálogo do Stood. Na Biblioteca, filtra a lista de Stoods por uma ou mais Tags (mostra quem tem qualquer uma) e gerencia as Tags em "Gerenciar Tags"; os cartões e o Quadro mostram as Tags de cada Stood.

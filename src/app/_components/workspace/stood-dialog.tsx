@@ -201,10 +201,12 @@ export function StoodDialog(props: StoodDialogProps) {
               name="description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              rows={3}
+              // Cresce com o texto e mostra a descrição inteira; rows é a altura no navegador sem field-sizing
+              rows={5}
               aria-invalid={isDescriptionError}
               aria-describedby={isDescriptionError ? errorId : undefined}
-              className={`${INPUT} h-auto resize-none py-2`}
+              // h-auto! vence o h-9 do INPUT, que prendia o campo numa linha
+              className={`${INPUT} h-auto! min-h-20 resize-none py-2 [field-sizing:content]`}
             />
             <Counter length={description.trim().length} max={MAX_DESCRIPTION_LENGTH} />
           </label>
