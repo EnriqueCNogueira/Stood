@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, like } from "drizzle-orm";
 import { db } from "@/db";
 import { users, verifications } from "@/db/schema";
 import { buildConfirmDeletionPath } from "@/lib/auth/destination";
@@ -55,11 +55,13 @@ export async function isDeletionCodeValid(userId: string, code: string, now = ne
   return found !== undefined;
 }
 
-// Gasta o código e apaga o Usuário; Stoods, Arquivos, Tags, Focos, Compromissos, Contas e Sessões saem em cascata
+// Gasta o código e apaga o Usuário; tudo o que tem FK para ele sai em cascata. Os links em andamento não têm:
+// a biblioteca guarda o id, e às vezes o e-mail, dentro do valor.
 export async function deleteUserWithCode(userId: string, code: string, now = new Date()): Promise<DeleteUserResult> {
   return db.transaction(async (tx): Promise<DeleteUserResult> => {
     const used = await tx.delete(verifications).where(buildCodeCondition(userId, code, now)).returning({ id: verifications.id });
     if (used.length === 0) return { ok: false, reason: "link-invalido" };
+    await tx.delete(verifications).where(like(verifications.value, `%${userId}%`));
     await tx.delete(users).where(eq(users.id, userId));
     return { ok: true };
   });

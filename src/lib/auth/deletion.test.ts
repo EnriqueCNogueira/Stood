@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db";
 import {
@@ -19,6 +19,7 @@ import {
   verifications,
   weeklyGoals,
 } from "@/db/schema";
+import { getAuth } from "@/lib/auth/auth";
 import { deleteUserWithCode, isDeletionCodeValid, requestUserDeletion } from "@/lib/auth/deletion";
 import { findSessionUser, requireCurrentSessionFromHeaders } from "@/lib/auth/session";
 import { createOtherSession, createSignedInUser, createUnverifiedUser, setSessionsCreatedAt, warmUpAuth } from "@/test/auth";
@@ -114,6 +115,18 @@ describe("deleteUserWithCode", () => {
     expect(Object.entries(await countOwnedRows(userId)).filter(([, count]) => count > 0)).toEqual([]);
     expect(await findDeletionRows(userId)).toEqual([]);
     expect(await db.select({ id: stoods.id }).from(stoods).where(eq(stoods.ownerId, other.userId))).toEqual([{ id: otherStood.id }]);
+  });
+
+  it("apaga o link de trocar a senha e o pedido de ligar Conta em andamento, só os dele", async () => {
+    const other = await createSignedInUser();
+    await createPendingVerifications(other);
+    const user = await createSignedInUser();
+    await createPendingVerifications(user);
+
+    await deleteUserWithCode(user.userId, await requestCode(user.headers));
+
+    expect(await countVerifications(user.userId)).toBe(0);
+    expect(await countVerifications(other.userId)).toBe(2);
   });
 
   it("encerra todas as Sessões, inclusive a de outro navegador", async () => {
@@ -214,6 +227,17 @@ async function createOwnedContent(userId: string) {
     .values({ ownerId: userId, stoodId: stood.id, title: "Simulado", day: "2026-11-28", recurrence: "weekly", weekdays: [6] })
     .returning({ id: appointments.id });
   await db.insert(appointmentChanges).values({ ownerId: userId, appointmentId: appointment.id, originalDay: "2026-12-05", isDeleted: true });
+}
+
+// A biblioteca guarda os dois sem FK para o Usuário, e o de ligar Conta traz o e-mail dele
+async function createPendingVerifications({ email, headers }: { email: string; headers: Headers }) {
+  stubResend();
+  await getAuth().api.requestPasswordReset({ body: { email, redirectTo: "/redefinir-senha" } });
+  await getAuth().api.linkSocialAccount({ body: { provider: "google", callbackURL: "/perfil", errorCallbackURL: "/perfil" }, headers });
+}
+
+async function countVerifications(userId: string) {
+  return db.$count(verifications, like(verifications.value, `%${userId}%`));
 }
 
 async function countOwnedRows(userId: string) {
