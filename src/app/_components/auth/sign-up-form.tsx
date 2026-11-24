@@ -5,6 +5,7 @@ import { FormMessage, NewPasswordField } from "@/app/_components/auth/auth-card"
 import { BUTTON, FIELD, FIELD_LABEL, INPUT, TEXT_LINK } from "@/app/_components/ui";
 import { authClient } from "@/lib/auth/client";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
+import { validateUserName } from "@/lib/auth/name";
 import { isStrongPassword } from "@/lib/auth/password";
 
 export function SignUpForm() {
@@ -17,6 +18,11 @@ export function SignUpForm() {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email"));
     const password = String(form.get("password"));
+    const name = String(form.get("name"));
+    if (!validateUserName(name).ok) {
+      setError(buildAuthErrorMessage({ code: "USER_NAME_INVALID" }));
+      return;
+    }
     if (!isStrongPassword(password)) {
       setError(buildAuthErrorMessage({ code: "PASSWORD_TOO_WEAK" }));
       return;
@@ -26,7 +32,7 @@ export function SignUpForm() {
 
     // Clicar no link de confirmação já abre a sessão e leva para a biblioteca
     const { error: signUpError } = await authClient.signUp.email({
-      name: String(form.get("name")),
+      name,
       email,
       password,
       callbackURL: "/biblioteca",

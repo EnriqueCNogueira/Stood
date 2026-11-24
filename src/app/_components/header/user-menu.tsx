@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useDismiss } from "@/app/_components/dismiss";
 import { signOut } from "@/app/_components/header/sign-out";
+import { UserAvatar } from "@/app/_components/user-avatar";
 import { FOCUS, MENU_ITEM, MENU_SEPARATOR, POPOVER } from "@/app/_components/ui";
 
 type UserMenuProps = { name: string; email: string; image: string | null };
@@ -21,9 +22,9 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
-        className={`grid size-8 cursor-pointer place-items-center overflow-hidden rounded-full border border-border bg-surface-2 text-ui font-semibold hover:brightness-110 ${FOCUS}`}
+        className={`cursor-pointer rounded-full hover:brightness-110 ${FOCUS}`}
       >
-        {image ? <img src={image} alt="" referrerPolicy="no-referrer" className="size-full object-cover" /> : buildInitial(name, email)}
+        <UserAvatar name={name} email={email} image={image} className="size-8 text-ui" />
       </button>
 
       {isOpen && (
@@ -33,6 +34,9 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
             <span className="truncate text-xs text-text-muted">{email}</span>
           </div>
           <div className={MENU_SEPARATOR} />
+          <a href="/perfil" role="menuitem" className={`${MENU_ITEM} hover:bg-surface-2 ${FOCUS}`}>
+            Perfil
+          </a>
           <form action={signOut}>
             <button type="submit" role="menuitem" className={`${MENU_ITEM} cursor-pointer hover:bg-surface-2 ${FOCUS}`}>
               Sair
@@ -42,9 +46,4 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
       )}
     </div>
   );
-}
-
-// Sem foto do provedor, o avatar mostra a inicial do nome (ou do e-mail, se o nome vier vazio)
-function buildInitial(name: string, email: string) {
-  return (name.trim() || email).charAt(0).toUpperCase();
 }
