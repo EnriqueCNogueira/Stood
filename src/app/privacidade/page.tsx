@@ -23,7 +23,7 @@ export default function PrivacyPage() {
       <LegalSection title="Quais dados coletamos">
         <LegalList>
           <li>
-            <strong>Ao entrar com Google ou GitHub:</strong> nome, e-mail e foto de perfil que o provedor envia, e os tokens de acesso dessa Conta, guardados cifrados.
+            <strong>Ao entrar com Google ou GitHub:</strong> nome, e-mail e o endereço da foto de perfil que o provedor envia, e os tokens de acesso dessa Conta, guardados cifrados. Guardamos o e-mail de cada Conta ligada ao seu cadastro, que pode ser diferente do seu.
           </li>
           <li>
             <strong>Ao criar Conta com e-mail e senha:</strong> nome, e-mail e senha. A senha é guardada só como hash, nunca em texto puro.
@@ -47,7 +47,8 @@ export default function PrivacyPage() {
       <LegalSection title="Para que usamos">
         <LegalList>
           <li>Identificar você ao entrar e manter a sua sessão.</li>
-          <li>Enviar e-mails de confirmação de cadastro e de troca de senha.</li>
+          <li>Enviar e-mails de confirmação de cadastro e de troca de senha, o link para apagar o cadastro e avisos quando a senha muda ou uma Conta é ligada ou desligada.</li>
+          <li>Mostrar no seu Perfil os seus dados, as Contas que você usa para entrar e as sessões abertas, só para você.</li>
           <li>Guardar e mostrar os seus Stoods, só para você.</li>
           <li>Mostrar o seu Tempo estudado na semana e em cada dia da Agenda, no total e em cada Stood, e o progresso da Meta semanal.</li>
           <li>Guardar os seus Compromissos, mostrá-los na Agenda e lembrar os próximos na Biblioteca, só para você.</li>
@@ -66,10 +67,10 @@ export default function PrivacyPage() {
             <strong>Neon:</strong> banco de dados PostgreSQL onde ficam a sua Conta e os seus Stoods.
           </li>
           <li>
-            <strong>Resend:</strong> envio dos e-mails de confirmação e de troca de senha.
+            <strong>Resend:</strong> envio dos e-mails de confirmação, de troca de senha, de apagar o cadastro e dos avisos.
           </li>
           <li>
-            <strong>Google e GitHub:</strong> quando você escolhe entrar por eles.
+            <strong>Google e GitHub:</strong> quando você escolhe entrar por eles ou ligá-los ao seu cadastro. A sua foto de perfil carrega direto deles no seu navegador, e eles recebem o seu endereço IP.
           </li>
           <li>
             <strong>YouTube:</strong> ao adicionar um Vídeo, o Stood envia ao YouTube só o link do vídeo para mostrar o título, o canal e a miniatura. A miniatura e o player do Vídeo aberto no Quadro, no modo de privacidade aprimorada (youtube-nocookie.com), carregam direto do YouTube no seu navegador, e o YouTube recebe o seu endereço IP e trata o que você assiste pela política de privacidade dele.
@@ -80,14 +81,14 @@ export default function PrivacyPage() {
 
       <LegalSection title="Por quanto tempo guardamos">
         <p>
-          Os dados ficam guardados enquanto você usar o Stood. A sessão expira em 30 dias ou quando você sai. Para apagar os seus dados, escreva para <ContactEmail />.
+          Os dados ficam guardados enquanto você usar o Stood. A sessão expira em 30 dias, quando você sai ou quando a encerra no Perfil. Você pode apagar o seu cadastro, com tudo o que é seu, no Perfil: os dados saem do Stood na hora. O banco de dados (Neon) ainda permite recuperá-los por até 6 horas, e o Resend guarda por 30 dias os e-mails que enviamos. O link de confirmar vale por 1 hora. Se preferir, escreva para <ContactEmail />.
         </p>
       </LegalSection>
 
       <LegalSection title="Seus direitos">
         <p>
           Pela LGPD (art. 18), você pode pedir a confirmação de que tratamos seus dados, o acesso a eles, a correção, a portabilidade, a eliminação e a
-          informação sobre com quem compartilhamos. Faça o pedido pelo e-mail <ContactEmail />.
+          informação sobre com quem compartilhamos. No Perfil, você vê e corrige os seus dados e apaga o seu cadastro; para os demais pedidos, escreva para <ContactEmail />.
         </p>
       </LegalSection>
 

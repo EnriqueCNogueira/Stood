@@ -46,7 +46,8 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 - **Pomodoro**: Na barra do quadro, você estuda em Focos com Pausas entre eles, com as durações que escolher. Na Biblioteca, você vê quanto estudou na semana, em cada Stood, e o progresso da sua meta semanal.
 - **Agenda**: Veja no mês quanto estudou em cada dia e anote Compromissos como provas e entregas, ligados ou não a um Stood. Um Compromisso pode se repetir todo dia, toda semana ou todo mês, e a Biblioteca mostra os próximos.
 - **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, Anotações e links do Youtube). E pode exportar para o Github ou Arquivo compactado (`.zip`).
-- **Conta**: Entrada por Google, GitHub ou e-mail e senha. O perfil tem só nome, e-mail e o avatar do provedor.
+- **Conta**: Entrada por Google, GitHub ou e-mail e senha.
+- **Perfil**: Mude o seu nome, veja as Contas que usa para entrar e ligue outras, troque a senha, saia de outros navegadores e apague o seu cadastro quando quiser. A foto é a do Google ou do GitHub.
 
 ## Como rodar
 

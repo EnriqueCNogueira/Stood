@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ContactEmail, DATA_CONTROLLER, LegalList, LegalPage, LegalSection } from "@/app/_components/legal-page";
+import { TEXT_LINK } from "@/app/_components/ui";
 
 export const metadata: Metadata = { title: "Termos · Stood" };
 
@@ -22,6 +23,7 @@ export default function TermsPage() {
         <LegalList>
           <li>Você entra com Google, GitHub ou e-mail e senha, e é responsável por manter o acesso a eles em segurança.</li>
           <li>As informações do cadastro devem ser verdadeiras.</li>
+          <li>Toda Conta do Google ou do GitHub que você liga ao seu cadastro passa a abrir o seu Stood. Ligue só as suas.</li>
           <li>Avise pelo e-mail de contato se perceber acesso indevido à sua Conta.</li>
         </LegalList>
       </LegalSection>
@@ -54,11 +56,30 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Apagar o cadastro">
+        <LegalList>
+          <li>
+            Você pode parar de usar o Stood quando quiser e apagar o seu cadastro no Perfil, depois de digitar o seu e-mail e confirmar pelo link enviado a ele. Também pode pedir por{" "}
+            <ContactEmail />.
+          </li>
+          <li>
+            Apagar o cadastro apaga todos os seus Stoods, com as Pastas e os Arquivos, e também as suas Tags, Focos, Meta semanal, Compromissos, Contas e sessões. Não dá para desfazer, e não
+            recuperamos o que foi apagado.
+          </li>
+          <li>Você é responsável por exportar antes os Stoods que quiser guardar e por proteger o acesso ao seu e-mail, que confirma o pedido.</li>
+          <li>O que está fora do Stood não é apagado: os arquivos que você exportou e a permissão que deu no Google ou no GitHub, que só você retira por lá.</li>
+          <li>
+            Na medida permitida pela lei, não respondemos pelo conteúdo apagado por essa escolha. Os serviços que usamos podem manter cópias temporárias, pelos prazos da{" "}
+            <a href="/privacidade" className={TEXT_LINK}>
+              Política de Privacidade
+            </a>
+            .
+          </li>
+        </LegalList>
+      </LegalSection>
+
       <LegalSection title="Encerramento">
-        <p>
-          Você pode parar de usar o Stood quando quiser e pedir que os seus dados sejam apagados pelo e-mail <ContactEmail />. Podemos suspender o acesso de quem descumprir estes
-          termos.
-        </p>
+        <p>Podemos suspender o acesso de quem descumprir estes termos.</p>
       </LegalSection>
 
       <LegalSection title="Lei aplicável e contato">
