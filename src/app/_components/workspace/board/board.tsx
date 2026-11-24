@@ -42,7 +42,16 @@ import {
 } from "@/lib/board/windows";
 import type { ActiveFocus } from "@/lib/pomodoro/pomodoro";
 import type { StoodDetails } from "@/lib/stood/details";
-import { type StoodTreeFile, type StoodWithTree, buildTreeFiles, buildTreeWithFile } from "@/lib/stood/tree";
+import {
+  type StoodTreeFile,
+  type StoodTreeNode,
+  type StoodWithTree,
+  buildTreeFiles,
+  buildTreeWithFile,
+  buildTreeWithFolder,
+  buildTreeWithRenamedFile,
+  buildTreeWithoutFile,
+} from "@/lib/stood/tree";
 import type { StoodTag } from "@/lib/tag/rules";
 
 // Distância mínima, em pixels, para um clique virar arrasto
@@ -74,10 +83,12 @@ type BoardProps = {
   activeFocus: ActiveFocus | null;
   serverNow: number;
   allTags: StoodTag[];
+  // Arquivo pedido pela Biblioteca (?arquivo=), aberto numa Janela assim que o Quadro monta
+  fileToOpen?: string;
 };
 
 // Raiz do Quadro: abre com as Janelas salvas, salva cada mudança e liga a barra, a lateral, a área e o Pomodoro
-export function Board({ stood, editableContents, activeFocus, serverNow, allTags }: BoardProps) {
+export function Board({ stood, editableContents, activeFocus, serverNow, allTags, fileToOpen }: BoardProps) {
   const [details, setDetails] = useState<StoodDetails>({ name: stood.name, description: stood.description });
   const [tags, setTags] = useState<StoodTag[]>(stood.tags);
   // Tags criadas no diálogo deste Quadro entram nas sugestões sem recarregar a página
@@ -125,7 +136,8 @@ export function Board({ stood, editableContents, activeFocus, serverNow, allTags
       if (result.state === stateRef.current) return;
       stateRef.current = result.state;
       setState(result.state);
-      // Prender as Janelas numa tela menor não salva: abrir de novo numa tela maior mantém o Quadro como estava
+      // Prender as Janelas numa tela menor não salva sozinho, mas a próxima ação no Quadro (focar, mover, abrir)
+      // grava todas as Janelas já presas à área menor
       if (action.type !== "fit-area") scheduleSave(buildStoredWindows(result.state));
     },
     [scheduleSave],
@@ -149,6 +161,17 @@ export function Board({ stood, editableContents, activeFocus, serverNow, allTags
   }, [dispatch, isCompact]);
 
   useEffect(() => () => stopDragRef.current?.(), []);
+
+  // Só na montagem: a área já tem tamanho, e o ?arquivo= sai da URL para o F5 não abrir de novo
+  const fileToOpenRef = useRef(fileToOpen);
+  useEffect(() => {
+    const fileId = fileToOpenRef.current;
+    if (!fileId) return;
+    fileToOpenRef.current = undefined;
+    const file = buildTreeFiles(stood.tree).find((treeFile) => treeFile.id === fileId);
+    if (file) dispatch({ type: "open", file: buildBoardFile(file) }, getContext());
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
 
   useEffect(() => {
     if (!isDrawerOpen) return;
@@ -286,6 +309,22 @@ export function Board({ stood, editableContents, activeFocus, serverNow, allTags
     setIsDrawerOpen(false);
   }
 
+  function addNode(node: StoodTreeNode, folderId: string | null) {
+    setTree((current) => (node.kind === "file" ? buildTreeWithFile(current, node, folderId) : buildTreeWithFolder(current, node, folderId)));
+  }
+
+  function renameFile(fileId: string, name: string) {
+    setTree((current) => buildTreeWithRenamedFile(current, fileId, name));
+    dispatch({ type: "rename", fileId, name }, getContext());
+  }
+
+  // O servidor já tirou a Janela do Quadro salvo; aqui ela fecha e o texto guardado na memória sai junto
+  function removeFile(fileId: string) {
+    setTree((current) => buildTreeWithoutFile(current, fileId));
+    dispatch({ type: "close", fileId }, getContext());
+    contentsRef.current.delete(fileId);
+  }
+
   function saveDetails(nextDetails: StoodDetails, nextTags: StoodTag[]) {
     setDetails(nextDetails);
     setTags(nextTags);
@@ -308,7 +347,9 @@ export function Board({ stood, editableContents, activeFocus, serverNow, allTags
         onCloseDrawer={() => setIsDrawerOpen(false)}
         onFilePointerDown={startOpenDrag}
         onOpenFile={openFile}
-        onFileCreated={(file) => setTree((current) => buildTreeWithFile(current, file))}
+        onNodeCreated={addNode}
+        onFileRenamed={renameFile}
+        onFileDeleted={removeFile}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">

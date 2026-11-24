@@ -8,24 +8,34 @@ import {
   type CreateImageFileResult,
   type CreateNoteFileResult,
   type CreateVideoFileResult,
+  type DeleteFileResult,
   type UpdateDrawingContentResult,
+  type UpdateFileNameResult,
   type UpdateNoteContentResult,
   createDrawingFile,
   createImageFile,
   createNoteFile,
   createVideoFile,
+  deleteFile,
   updateDrawingContent,
+  updateFileName,
   updateNoteContent,
 } from "@/lib/file/file";
+import { type CreateFolderResult, createFolder } from "@/lib/folder/folder";
 import { MAX_IMAGE_BYTES } from "@/lib/file/image";
 import { type FetchYouTubeVideoResult, fetchYouTubeVideo } from "@/lib/video/youtube";
 
 // As regras de nome e de id ficam no Service; aqui só se confere o formato da entrada
 const previewInputSchema = z.object({ videoId: z.string() });
-const createVideoInputSchema = z.object({ stoodId: z.string(), videoId: z.string(), name: z.string() });
-const createNamedFileInputSchema = z.object({ stoodId: z.string(), name: z.string() });
+// folderId nulo ou ausente cria na raiz do Stood
+const folderIdSchema = z.string().nullable().optional();
+const createVideoInputSchema = z.object({ stoodId: z.string(), folderId: folderIdSchema, videoId: z.string(), name: z.string() });
+const createNamedFileInputSchema = z.object({ stoodId: z.string(), folderId: folderIdSchema, name: z.string() });
+const createFolderInputSchema = z.object({ stoodId: z.string(), parentId: z.string().nullable(), name: z.string() });
+const updateNameInputSchema = z.object({ fileId: z.string(), name: z.string() });
+const deleteFileInputSchema = z.object({ fileId: z.string() });
 const updateContentInputSchema = z.object({ fileId: z.string(), content: z.string() });
-const createImageInputSchema = z.object({ stoodId: z.string(), name: z.string(), image: z.instanceof(File) });
+const createImageInputSchema = z.object({ stoodId: z.string(), folderId: folderIdSchema, name: z.string(), image: z.instanceof(File) });
 
 type InvalidInput = { ok: false; reason: "entrada-invalida" };
 export type CreateImageFileActionResult = CreateImageFileResult | InvalidInput;
@@ -35,6 +45,9 @@ export type CreateNoteFileActionResult = CreateNoteFileResult | InvalidInput;
 export type UpdateNoteContentActionResult = UpdateNoteContentResult | InvalidInput;
 export type CreateDrawingFileActionResult = CreateDrawingFileResult | InvalidInput;
 export type UpdateDrawingContentActionResult = UpdateDrawingContentResult | InvalidInput;
+export type CreateFolderActionResult = CreateFolderResult | InvalidInput;
+export type UpdateFileNameActionResult = UpdateFileNameResult | InvalidInput;
+export type DeleteFileActionResult = DeleteFileResult | InvalidInput;
 
 // Preview do modal de Vídeo: a sessão evita que o servidor vire proxy aberto do YouTube
 export async function fetchVideoPreviewAction(input: unknown): Promise<FetchVideoPreviewActionResult> {
@@ -81,15 +94,17 @@ export async function createImageFileAction(formData: unknown): Promise<CreateIm
   if (!(formData instanceof FormData)) return { ok: false, reason: "entrada-invalida" };
   const parsed = createImageInputSchema.safeParse({
     stoodId: formData.get("stoodId"),
+    // Sem o campo, a Imagem vai para a raiz
+    folderId: formData.get("folderId") || null,
     name: formData.get("name"),
     image: formData.get("image"),
   });
   if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
 
-  const { stoodId, name, image } = parsed.data;
+  const { stoodId, folderId, name, image } = parsed.data;
   // Recusa antes de ler os bytes para a memória
   if (image.size > MAX_IMAGE_BYTES) return { ok: false, reason: "imagem-grande" };
-  const result = await createImageFile(user.id, { stoodId, name, bytes: new Uint8Array(await image.arrayBuffer()) });
+  const result = await createImageFile(user.id, { stoodId, folderId, name, bytes: new Uint8Array(await image.arrayBuffer()) });
   if (result.ok) revalidatePath("/biblioteca");
   return result;
 }
@@ -111,4 +126,35 @@ export async function updateDrawingContentAction(input: unknown): Promise<Update
   if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
 
   return updateDrawingContent(user.id, parsed.data);
+}
+
+// A Biblioteca mostra a árvore de cada Stood; o Quadro põe a Pasta na barra lateral sem nova renderização
+export async function createFolderAction(input: unknown): Promise<CreateFolderActionResult> {
+  const user = await requireSession();
+  const parsed = createFolderInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
+
+  const result = await createFolder(user.id, parsed.data);
+  if (result.ok) revalidatePath("/biblioteca");
+  return result;
+}
+
+export async function updateFileNameAction(input: unknown): Promise<UpdateFileNameActionResult> {
+  const user = await requireSession();
+  const parsed = updateNameInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
+
+  const result = await updateFileName(user.id, parsed.data);
+  if (result.ok) revalidatePath("/biblioteca");
+  return result;
+}
+
+export async function deleteFileAction(input: unknown): Promise<DeleteFileActionResult> {
+  const user = await requireSession();
+  const parsed = deleteFileInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "entrada-invalida" };
+
+  const result = await deleteFile(user.id, parsed.data.fileId);
+  if (result.ok) revalidatePath("/biblioteca");
+  return result;
 }

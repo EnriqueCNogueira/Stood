@@ -4,18 +4,18 @@ Você é um agente de código que atua como engenheiro de software sênior neste
 
 ## Contexto
 
-O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquivos de um assunto (Vídeo do YouTube, Nota em markdown, Desenho no Excalidraw e Imagem), abertos em Janelas que o usuário move e redimensiona no Quadro. Um Stood pode ser versionado num Repositório do GitHub. Os termos seguem o [glossário](docs/GLOSSARY.md).
+O Stood é um site para organizar estudos. Cada Stood reúne em Pastas os Arquivos de um assunto (Vídeo do YouTube, Nota em markdown, Desenho e Imagem), abertos em Janelas que o usuário move e redimensiona no Quadro. Os termos seguem o [glossário](docs/GLOSSARY.md).
 
 - **Landing page**: Página pública em `/`, que apresenta o Stood, quem faz e as Perguntas Frequentes, com Privacidade e Termos em `/privacidade` e `/termos`.
-- **Biblioteca**: Painel de Stoods, botão "Novo Stood", a seção "Matérias", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos.
-- **Quadro**: Abre vazio a cada visita. A aba lateral lista os Arquivos do Stood e o botão "Novo Arquivo"; arrastar ou clique duplo abre a Janela. Até 10 Janelas abertas, no máximo 2 de Vídeo. Posição e tamanho das Janelas não são salvos; o conteúdo dos Arquivos é salvo sozinho.
-- **Arquivos**: A captura de tela do Vídeo vira Imagem no Stood. Importa Imagem, Nota, Desenho e link do YouTube; exporta um Arquivo, o Stood inteiro em `.zip` ou uma versão no GitHub.
+- **Biblioteca**: Painel de Stoods, botão "Novo Stood", a seção "Matérias", "Continuar de onde parou" e a lista de Stoods, cada um com a árvore de Pastas e Arquivos. Clicar num Arquivo da árvore abre o Quadro com ele numa Janela (`?arquivo=`).
+- **Quadro**: Abre com as Janelas como o Usuário deixou. A aba lateral lista os Arquivos do Stood e o botão "Novo Arquivo". Até 10 Janelas abertas, no máximo 2 de Vídeo. O conteúdo dos Arquivos é salvo sozinho.
+- **Arquivos**: Importa Imagem, Nota, Desenho e link do YouTube; exporta um Arquivo ou o Stood inteiro em `.zip`. O Desenho usa um editor próprio.
 - **Conta**: Login por Google, GitHub ou e-mail e senha.
 - **Perfil**: Página `/perfil`, aberta pelo menu do cabeçalho, em que o Usuário muda o nome, liga e desliga Contas do Google e do GitHub (inclusive com outro e-mail, nunca a última), troca a senha que já tem, encerra Sessões e apaga o próprio cadastro por um link enviado ao e-mail. Ligar, desligar e apagar pedem login de até 1 dia, e mudança de senha ou de Conta gera aviso por e-mail. A foto é só a do provedor.
 - **Pomodoro**: Na barra do Quadro, o Usuário alterna Focos e Pausas com durações que escolhe. Há um Foco por vez por Usuário, guardado no banco e ligado ao Stood em que começou; a Pausa fica só no navegador. A Biblioteca mostra o Tempo estudado da semana (de segunda a domingo, no horário de Brasília), o de cada Stood e a Meta semanal.
-- **Tags**: O Usuário cria Tags e marca cada Stood com até 10 delas no diálogo do Stood. Na Biblioteca, filtra a lista de Stoods por uma ou mais Tags (mostra quem tem qualquer uma) e gerencia as Tags em "Gerenciar Tags"; os cartões e o Quadro mostram as Tags de cada Stood.
+- **Tags**: O Usuário cria Tags e marca cada Stood com até 10 delas no diálogo do Stood. Na Biblioteca, filtra a lista de Stoods e "Continuar de onde parou" por uma ou mais Tags (mostra quem tem qualquer uma) e gerencia as Tags em "Gerenciar Tags"; os cartões e o Quadro mostram as Tags de cada Stood.
 - **Agenda**: Página `/agenda`, aberta pelo link do cabeçalho, com a grade do mês (de domingo a sábado, no horário de Brasília), o Tempo estudado de cada dia e os Compromissos do Usuário, ligados ou não a um Stood. Um Compromisso pode se repetir todo dia, toda semana ou todo mês, e cada Ocorrência pode ser mudada ou apagada sozinha. A Biblioteca mostra os próximos Compromissos; não há lembrete por e-mail.
-- **Fora do escopo inicial**: Flashcards, chat e sugestões por IA, marcações no vídeo, retomar o layout do quadro, upload de vídeo, salvar no Drive e rede de amigos. Desenvolveremos de houver tempo.
+- **Fora do escopo inicial**: Versão do Stood num Repositório do GitHub, captura de tela do Vídeo, flashcards, chat e sugestões por IA, marcações no vídeo, upload de vídeo e rede de amigos. Desenvolveremos se houver tempo.
 
 ## Mentalidade
 

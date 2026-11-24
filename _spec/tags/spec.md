@@ -17,7 +17,7 @@ Na Biblioteca, acima da lista de Stoods da barra lateral, o Usuário liga uma ou
 5. Como Usuário, eu quero que as Tags do Stood só mudem quando eu salvar, e que "Cancelar" descarte tudo, para que eu possa experimentar sem medo de mudar algo sem querer.
 6. Como Usuário, eu quero filtrar a lista de Stoods da Biblioteca ligando uma ou mais Tags, vendo os Stoods que têm qualquer uma delas, para que eu encontre um grupo de estudos de uma vez.
 7. Como Usuário, eu quero ver a lista inteira quando nenhuma Tag está ligada e um aviso quando nenhum Stood tem as Tags ligadas, para que eu entenda o que o filtro está mostrando.
-8. Como Usuário, eu quero que a Biblioteca abra sem filtro a cada visita, para que eu não ache que um Stood sumiu por causa de um filtro esquecido.
+8. Como Usuário, eu quero que a Biblioteca abra sem filtro quando eu chego por um link, mas mantenha o filtro ao recarregar a página, para que eu não ache que um Stood sumiu por causa de um filtro esquecido e não perca o filtro com um F5.
 9. Como Usuário, eu quero criar, renomear e apagar Tags num diálogo "Gerenciar Tags" na Biblioteca, para que eu organize minhas Tags num lugar só.
 10. Como Usuário, eu quero que renomear uma Tag para um nome que já existe seja recusado, para que duas Tags não acabem misturadas sem eu pedir.
 11. Como Usuário, eu quero que apagar uma Tag a tire de todos os Stoods sem apagar nenhum Stood, e que eu seja avisado de quantos Stoods ela marca, para que eu saiba o tamanho da mudança antes de confirmar.
@@ -63,7 +63,7 @@ Um tema novo de Service, sem nada da camada HTTP:
 ### Telas
 
 - **Diálogo do Stood**: Ganha o campo de Tags abaixo da descrição. Enquanto o Usuário digita, sugere as Tags do dono que casam com o texto. Enter escolhe a sugestão destacada ou cria a Tag nova, e as escolhidas aparecem embaixo com um "x". Tudo vai no "Salvar" junto com nome e descrição, e "Cancelar" descarta. A mensagem de limite aparece no próprio diálogo.
-- **Barra lateral da Biblioteca**: Acima da lista de Stoods, mostra como botões de ligar e desligar só as Tags que marcam algum Stood, mais o botão "Gerenciar Tags". O filtro roda no client sobre a lista que a página já carregou e não é guardado: cada visita começa sem filtro. Lista vazia pelo filtro mostra "Nenhum Stood com essas Tags".
+- **Barra lateral da Biblioteca**: Acima da lista de Stoods, mostra como botões de ligar e desligar só as Tags que marcam algum Stood, mais o botão "Gerenciar Tags". O filtro fica no endereço (`?tags=` com os ids das Tags), que a página lê para filtrar a lista e "Continuar de onde parou": o F5 e o voltar do navegador mantêm o filtro, e os links para a Biblioteca (cabeçalho e "Voltar" do Quadro) abrem sem filtro. Lista vazia pelo filtro mostra "Nenhum Stood com essas Tags", e "Continuar de onde parou" vazio pelo filtro mostra "Nenhum Stood recente com essas Tags".
 - **Gerenciar Tags**: Diálogo com a lista de Tags, um campo para criar, edição do nome de cada Tag e o botão de apagar. Clicar no nome de uma Tag abre, na própria linha, a lista de todos os Stoods em ordem alfabética com caixas de marcar, já marcadas para os Stoods que têm a Tag. Nada muda até o "Salvar", e "Cancelar" ou clicar de novo no nome fecha sem salvar. O Stood que já tem 10 Tags, sem esta, aparece com a caixa desativada e "já tem 10 Tags" ao lado. A lista usa os Stoods que a Biblioteca já carregou, sem consulta nova. Apagar uma Tag que marca Stoods pede confirmação com o número de Stoods ("A Tag Prova marca 3 Stoods. Apagar mesmo assim?"). Sem Stood marcado, apaga direto.
 - **Cartões e Quadro**: As Tags aparecem nos cartões de "Continuar de onde parou" e na barra do Quadro, junto da descrição, só para ver.
 - **Leitura e escrita**: As páginas leem as Tags pelo Service, no Server Component, depois de `requireSession()`, e passam ao componente interativo só os campos que ele usa. Criar, renomear e apagar Tag são Server Actions que validam a entrada com Zod, pegam o dono da sessão e revalidam a Biblioteca. As Actions de criar e editar Stood passam a aceitar as Tags. O dono nunca vem do formulário.
@@ -96,8 +96,7 @@ Um tema novo de Service, sem nada da camada HTTP:
 
 - Cor das Tags.
 - Tags em Pastas ou Arquivos.
-- Clicar numa Tag no cartão ou no Quadro para abrir a Biblioteca filtrada, e guardar o filtro no endereço ou no navegador.
-- Filtrar "Continuar de onde parou".
+- Clicar numa Tag no cartão ou no Quadro para abrir a Biblioteca filtrada.
 - Filtro que exige todas as Tags ligadas ao mesmo tempo.
 - Juntar duas Tags.
 - Editar Stood pela Biblioteca, que hoje só tem o diálogo de criar.

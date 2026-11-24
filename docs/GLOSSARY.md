@@ -1,6 +1,6 @@
 # Stood
 
-O Stood é um site para organizar estudos: cada Stood reúne em pastas os vídeos, notas, desenhos e imagens de um assunto, abertos lado a lado num quadro, e pode ser versionado no GitHub.
+O Stood é um site para organizar estudos: cada Stood reúne em pastas os vídeos, notas, desenhos e imagens de um assunto, abertos lado a lado num quadro.
 
 ## Linguagem
 
@@ -41,7 +41,7 @@ A tela que abre um Stood, em que os Arquivos aparecem em Janelas.
 _Evitar_: Board, canvas, workspace
 
 **Janela**:
-Um Arquivo aberto no Quadro, que o Usuário move, redimensiona e fecha.
+Um Arquivo aberto no Quadro, que o Usuário move, redimensiona e fecha. O Quadro guarda as Janelas abertas, com posição e tamanho.
 _Evitar_: Painel, aba
 
 **Pasta**:
@@ -63,11 +63,11 @@ Um Arquivo de texto em markdown.
 _Evitar_: Anotação, texto, md
 
 **Desenho**:
-Um Arquivo de desenho livre feito no Excalidraw.
+Um Arquivo de desenho livre, feito no editor de Desenho do Quadro.
 _Evitar_: Excalidraw, rabisco
 
 **Imagem**:
-Um Arquivo de foto ou print, que pode ser importado ou capturado de um Vídeo.
+Um Arquivo de foto ou print importado pelo Usuário.
 _Evitar_: Foto, print, captura
 
 **Vídeo**:

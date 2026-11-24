@@ -1,6 +1,7 @@
 "use client";
 
 import { Brain, CircleHelp, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { BELOW_HEADER, BUTTON, FOCUS, POPOVER } from "@/app/_components/ui";
 import { ManageTagsDialog } from "@/app/_components/workspace/library/manage-tags-dialog";
@@ -19,11 +20,14 @@ const VIEWPORT_MARGIN = 8;
 type LibrarySidebarProps = {
   stoods: StoodWithTree[];
   tags: { id: string; name: string; stoodCount: number }[];
+  // Tags ligadas no filtro, lidas de ?tags= pela página
+  selectedTagIds: string[];
 };
 
 // Barra lateral da Biblioteca: "Novo Stood", o filtro por Tag e a árvore dos Stoods; no celular vira um bloco acima do conteúdo
-export function LibrarySidebar({ stoods, tags }: LibrarySidebarProps) {
-  const [selectedTagIds, setSelectedTagIds] = useState<ReadonlySet<string>>(new Set());
+export function LibrarySidebar({ stoods, tags, selectedTagIds: initialTagIds }: LibrarySidebarProps) {
+  const router = useRouter();
+  const [selectedTagIds, setSelectedTagIds] = useState<ReadonlySet<string>>(() => new Set(initialTagIds));
   const allTags = useMemo(() => tags.map(({ id, name }) => ({ id, name })), [tags]);
   const filterTags = useMemo(() => buildFilterTags(stoods), [stoods]);
   // Tag ligada que deixou de marcar Stoods (apagada ou tirada) sai do filtro sozinha
@@ -38,13 +42,13 @@ export function LibrarySidebar({ stoods, tags }: LibrarySidebarProps) {
     [stoods],
   );
 
+  // O filtro vai para a URL: sobrevive ao F5 e à volta do Quadro, e a página filtra também os cartões
   function toggleTag(tagId: string) {
-    setSelectedTagIds((current) => {
-      const next = new Set(current);
-      if (next.has(tagId)) next.delete(tagId);
-      else next.add(tagId);
-      return next;
-    });
+    const next = new Set(activeTagIds);
+    if (next.has(tagId)) next.delete(tagId);
+    else next.add(tagId);
+    setSelectedTagIds(next);
+    router.replace(buildLibraryPath(next), { scroll: false });
   }
 
   return (
@@ -114,7 +118,7 @@ export function LibrarySidebar({ stoods, tags }: LibrarySidebarProps) {
   );
 }
 
-// A seta só abre e fecha a árvore; o resto da linha abre o Quadro
+// A seta só abre e fecha a árvore; o resto da linha abre o Quadro, e o Arquivo da árvore abre o Quadro com ele numa Janela
 function StoodItem({ stood }: { stood: StoodWithTree }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -145,9 +149,9 @@ function StoodItem({ stood }: { stood: StoodWithTree }) {
             <TreeList
               nodes={stood.tree}
               renderFile={(file) => (
-                <div className={TREE_ROW}>
+                <a href={`/stood/${stood.id}?arquivo=${file.id}`} className={`${TREE_ROW} hover:bg-surface-2 hover:text-text ${FOCUS}`}>
                   <FileLabel file={file} />
-                </div>
+                </a>
               )}
             />
           ) : (
@@ -212,6 +216,10 @@ function DescriptionHint({ name, description }: { name: string; description: str
       )}
     </>
   );
+}
+
+function buildLibraryPath(tagIds: ReadonlySet<string>) {
+  return tagIds.size > 0 ? `/biblioteca?tags=${[...tagIds].join(",")}` : "/biblioteca";
 }
 
 // Só as Tags que marcam algum Stood entram no filtro: ligar uma Tag sem Stood sempre esvaziaria a lista

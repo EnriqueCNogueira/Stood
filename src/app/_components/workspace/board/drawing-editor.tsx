@@ -17,7 +17,7 @@ import {
 import { type KeyboardEvent, type MouseEvent, type PointerEvent, useCallback, useRef, useState } from "react";
 import { useDismiss } from "@/app/_components/dismiss";
 import { FOCUS, ICON_BUTTON, POPOVER } from "@/app/_components/ui";
-import { useAutosave } from "@/app/_components/workspace/board/autosave";
+import { type AutosaveStatus, useAutosave } from "@/app/_components/workspace/board/autosave";
 import {
   type UpdateDrawingContentActionResult,
   updateDrawingContentAction,
@@ -29,6 +29,9 @@ import {
   type DrawingElement,
   type DrawingHistory,
   LINE_HEIGHT_RATIO,
+  MAX_DRAWING_ELEMENTS,
+  MAX_PEN_POINTS,
+  MAX_TEXT_LENGTH,
   type Point,
   STROKE_WIDTHS,
   type ShapeKind,
@@ -38,10 +41,12 @@ import {
   buildDrawingContent,
   buildDrawingHistory,
   buildElementBounds,
+  buildLimitedPan,
   buildMovedElement,
   buildPenPath,
   buildShapeElement,
   findElementAt,
+  isDrawingFull,
   parseDrawingScene,
 } from "@/lib/drawing/scene";
 
@@ -53,6 +58,7 @@ const PEN_MIN_STEP = 2;
 const MIN_SHAPE_SIZE = 3;
 const SELECTION_PADDING = 6;
 const RETRY_MESSAGE = "Não foi possível salvar. A próxima mudança tenta de novo.";
+const FULL_MESSAGE = `O Desenho chegou a ${MAX_DRAWING_ELEMENTS.toLocaleString("pt-BR")} elementos. Apague algum para desenhar mais.`;
 const TRAILING_WHITESPACE = /\s+$/;
 
 type Tool = "select" | "hand" | "pen" | ShapeKind | "text" | "eraser";
@@ -181,6 +187,8 @@ export function DrawingEditor({ fileId, name, initialContent, onContentChange }:
     const point = toScenePoint(event);
     const style = { color, strokeWidth };
     const hitId = findElementAt(historyRef.current.elements, point);
+    // Na cena cheia, o elemento novo sumiria ao soltar; o texto que já existe ainda pode ser editado
+    const isNewElementBlocked = isDrawingFull(historyRef.current.elements) && !(tool === "text" && hitId);
 
     if (tool === "hand") {
       setGesture({ kind: "pan", start: { x: event.clientX, y: event.clientY }, origin: pan });
@@ -189,6 +197,8 @@ export function DrawingEditor({ fileId, name, initialContent, onContentChange }:
       if (hitId) setGesture({ kind: "move", ids: [hitId], start: point, delta: { x: 0, y: 0 } });
     } else if (tool === "eraser") {
       setGesture({ kind: "erase", ids: hitId ? [hitId] : [] });
+    } else if (isNewElementBlocked) {
+      return;
     } else if (tool === "pen") {
       const element: DrawingElement = { kind: "pen", id: crypto.randomUUID(), points: [[point.x, point.y]], ...style };
       setGesture({ kind: "draw", element, start: point });
@@ -207,7 +217,9 @@ export function DrawingEditor({ fileId, name, initialContent, onContentChange }:
     if (!gesture) return;
     const point = toScenePoint(event);
     if (gesture.kind === "pan") {
-      setPan({ x: gesture.origin.x + event.clientX - gesture.start.x, y: gesture.origin.y + event.clientY - gesture.start.y });
+      setPan(
+        buildLimitedPan({ x: gesture.origin.x + event.clientX - gesture.start.x, y: gesture.origin.y + event.clientY - gesture.start.y }),
+      );
     } else if (gesture.kind === "move") {
       setGesture({ ...gesture, delta: { x: point.x - gesture.start.x, y: point.y - gesture.start.y } });
     } else if (gesture.kind === "erase") {
@@ -216,6 +228,13 @@ export function DrawingEditor({ fileId, name, initialContent, onContentChange }:
     } else if (gesture.element.kind === "pen") {
       const [lastX, lastY] = gesture.element.points.at(-1) ?? [point.x, point.y];
       if (Math.hypot(point.x - lastX, point.y - lastY) < PEN_MIN_STEP) return;
+      // Traço no limite de pontos da cena salva: confirma este e segue num traço novo a partir do último ponto
+      if (gesture.element.points.length >= MAX_PEN_POINTS) {
+        commit({ type: "add", element: gesture.element });
+        const points: [number, number][] = [[lastX, lastY], [point.x, point.y]];
+        setGesture({ kind: "draw", element: { ...gesture.element, id: crypto.randomUUID(), points }, start: point });
+        return;
+      }
       setGesture({ ...gesture, element: { ...gesture.element, points: [...gesture.element.points, [point.x, point.y]] } });
     } else if (gesture.element.kind !== "text") {
       const { kind, id, color: shapeColor, strokeWidth: shapeWidth } = gesture.element;
@@ -365,7 +384,7 @@ export function DrawingEditor({ fileId, name, initialContent, onContentChange }:
           onPointerUp={finishGesture}
           onPointerCancel={() => setGesture(null)}
           onDoubleClick={editTextOnDoubleClick}
-          onWheel={(event) => setPan((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY }))}
+          onWheel={(event) => setPan((current) => buildLimitedPan({ x: current.x - event.deltaX, y: current.y - event.deltaY }))}
           className={`size-full touch-none select-none ${gesture?.kind === "pan" ? "cursor-grabbing" : TOOL_CURSORS[tool]}`}
         >
           <g transform={`translate(${pan.x} ${pan.y})`}>
@@ -387,6 +406,7 @@ export function DrawingEditor({ fileId, name, initialContent, onContentChange }:
           <textarea
             autoFocus
             value={textEdit.value}
+            maxLength={MAX_TEXT_LENGTH}
             onChange={(event) => updateTextEdit({ ...textEdit, value: event.target.value })}
             onBlur={finishTextEdit}
             onKeyDown={(event) => {
@@ -415,7 +435,7 @@ export function DrawingEditor({ fileId, name, initialContent, onContentChange }:
           status.kind === "error" ? "text-danger" : "text-text-muted"
         }`}
       >
-        {status.kind === "error" ? FAILURE_MESSAGES[status.reason] : status.kind === "saving" ? "Salvando…" : "Salvo"}
+        {buildStatusMessage(status, isDrawingFull(history.elements))}
       </p>
     </div>
   );
@@ -556,6 +576,12 @@ function SelectionOutline({ element }: { element: DrawingElement }) {
 function buildArrowHeadPoints(start: Point, end: Point, strokeWidth: number) {
   const { left, right } = buildArrowHead(start, end, strokeWidth);
   return `${left.x},${left.y} ${end.x},${end.y} ${right.x},${right.y}`;
+}
+
+function buildStatusMessage(status: AutosaveStatus<SaveFailure>, isFull: boolean) {
+  if (status.kind === "error") return FAILURE_MESSAGES[status.reason];
+  if (status.kind === "saving") return "Salvando…";
+  return isFull ? FULL_MESSAGE : "Salvo";
 }
 
 function isLargeEnough(element: DrawingElement) {

@@ -30,7 +30,12 @@ const scopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("one"), originalDay: z.string() }),
 ]);
 const updateSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("all"), appointmentId: z.string(), input: appointmentSchema }),
+  z.object({
+    kind: z.literal("all"),
+    appointmentId: z.string(),
+    input: appointmentSchema,
+    editedOccurrence: occurrenceSchema.extend({ originalDay: z.string() }).optional(),
+  }),
   z.object({ kind: z.literal("one"), appointmentId: z.string(), originalDay: z.string(), input: occurrenceSchema }),
 ]);
 const deleteSchema = z.object({ appointmentId: z.string(), scope: scopeSchema });
@@ -59,7 +64,7 @@ export async function updateAppointmentAction(input: unknown): Promise<UpdateApp
   const data = parsed.data;
   const result =
     data.kind === "all"
-      ? await updateAppointment(user.id, data.appointmentId, { kind: "all" }, data.input)
+      ? await updateAppointment(user.id, data.appointmentId, { kind: "all", editedOccurrence: data.editedOccurrence }, data.input)
       : await updateAppointment(user.id, data.appointmentId, { kind: "one", originalDay: data.originalDay }, data.input);
   if (result.ok) revalidateAgenda();
   return result;

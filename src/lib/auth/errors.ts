@@ -31,5 +31,7 @@ const TOO_MANY_REQUESTS_MESSAGE = "Muitas tentativas. Espere um pouco e tente de
 
 export function buildAuthErrorMessage(error: { code?: string; status?: number }): string {
   if (error.status === TOO_MANY_REQUESTS_STATUS) return TOO_MANY_REQUESTS_MESSAGE;
-  return (error.code && MESSAGES_BY_CODE[error.code]) || GENERIC_MESSAGE;
+  // Só chave própria da tabela: o código vem da URL e "constructor" acharia a função herdada de Object
+  if (error.code && Object.hasOwn(MESSAGES_BY_CODE, error.code)) return MESSAGES_BY_CODE[error.code];
+  return GENERIC_MESSAGE;
 }
