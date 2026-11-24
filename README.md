@@ -22,7 +22,7 @@ Logo abaixo, "Continuar de onde parou" mostra seus Stoods: um clique e todo o co
 
 ### Quadro de estudo
 
-O quadro sempre abre vazio e você monta do seu jeito. Uma aba lateral lista as janelas que você já tem e pode adicionar, basta arrastar um deles para o quadro e ele abre numa janela própria, que você move, redimensiona e fecha quando quiser.
+O quadro abre como você deixou: as mesmas janelas, na mesma posição e no mesmo tamanho. Uma aba lateral lista os arquivos que você já tem e pode adicionar, basta arrastar um deles para o quadro e ele abre numa janela própria, que você move, redimensiona e fecha quando quiser.
 
 Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o bastante para uma aula inteira sem virar bagunça. Tudo é salvo sozinho enquanto você estuda.
 
@@ -32,7 +32,7 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 | --- | --- |
 | Vídeo | Vídeos do Youtube |
 | Nota | Arquivos `.md` para fazer suas anotações |
-| Desenho | Excalidraw para rabiscar fluxos, mapas mentais, cálculos ou desenhos |
+| Desenho | Editor de desenho para rabiscar fluxos, mapas mentais, cálculos ou desenhos |
 | Imagem | Fotos e Prints que complementam seus estudos |
 
 ### Funcionalidades
@@ -41,11 +41,9 @@ Cada quadro comporta no máximo 10 janelas e entre elas, até 2 vídeos, o basta
 - **Matérias**: Na Biblioteca, Stoods prontos de Cálculo 1, Programação Orientada a Objetos e Engenharia de Software, com videoaulas do conteúdo. Um clique cria a sua cópia, que você edita à vontade sem mudar a Matéria.
 - **Tags**: Marque seus Stoods com Tags como "Prova" ou "Semestre 1" e filtre a Biblioteca para ver só os de um grupo.
 - **Salvamento automático**: Notas e desenhos são salvos enquanto você escreve, sem botão de salvar.
-- **Captura de tela**: Um clique no vídeo guarda aquele momento da aula como imagem, junto dos outros arquivos do estudo.
-- **Publicação no GitHub**: Seu Stood vai inteiro para o GitHub com um clique, e cada publicação guarda uma versão dele.
 - **Pomodoro**: Na barra do quadro, você estuda em Focos com Pausas entre eles, com as durações que escolher. Na Biblioteca, você vê quanto estudou na semana, em cada Stood, e o progresso da sua meta semanal.
 - **Agenda**: Veja no mês quanto estudou em cada dia e anote Compromissos como provas e entregas, ligados ou não a um Stood. Um Compromisso pode se repetir todo dia, toda semana ou todo mês, e a Biblioteca mostra os próximos.
-- **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, Anotações e links do Youtube). E pode exportar para o Github ou Arquivo compactado (`.zip`).
+- **Importar e exportar**: Você pode importar qualquer arquivo compatível para o seu Stood (como Imagens, Anotações e links do Youtube). E pode exportar um arquivo ou o Stood inteiro compactado (`.zip`).
 - **Conta**: Entrada por Google, GitHub ou e-mail e senha. O perfil tem só nome, e-mail e o avatar do provedor.
 
 ## Como rodar
