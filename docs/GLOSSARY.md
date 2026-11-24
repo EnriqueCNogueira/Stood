@@ -22,6 +22,22 @@ _Evitar_: Aparelho, dispositivo, login
 A tela em que o Usuário vê e muda os próprios dados.
 _Evitar_: Minha conta, configurações
 
+**Apelido**:
+O nome pelo qual o Usuário prefere ser chamado no Stood, que pode ser igual ao de outro Usuário.
+_Evitar_: Nome de usuário, nickname, arroba
+
+**Bio**:
+Uma frase curta em que o Usuário se descreve.
+_Evitar_: Descrição, sobre mim
+
+**Humor**:
+Como o Usuário diz estar naquele dia, escolhido numa lista pronta.
+_Evitar_: Status, sentimento, estado
+
+**Foto**:
+O retrato que identifica o Usuário no Stood.
+_Evitar_: Imagem, avatar
+
 ### Stood
 
 **Stood**:
