@@ -6,7 +6,12 @@ export type Provider = "github" | "google";
 
 type ProviderProfile = { email: string; providerEmailVerified: boolean; providerAccountId: number };
 
-type ProviderOptions = { providerEmailVerified?: boolean; providerAccountId?: number };
+type ProviderOptions = {
+  providerEmailVerified?: boolean;
+  providerAccountId?: number;
+  // Roda entre a ida ao provedor e a volta
+  beforeCallback?: () => Promise<unknown>;
+};
 
 // Exemplo de token da documentação do GitHub
 export const GITHUB_ACCESS_TOKEN = "gho_16C7e42F292c6912E7710c838347Ae178B4a";
@@ -31,9 +36,10 @@ export async function linkProvider(sessionHeaders: Headers, provider: Provider, 
   return handleProviderCallback(provider, email, options, response.url!, new Headers({ cookie: cookies }));
 }
 
-function handleProviderCallback(provider: Provider, email: string, options: ProviderOptions, url: string, headers: Headers) {
+async function handleProviderCallback(provider: Provider, email: string, options: ProviderOptions, url: string, headers: Headers) {
   const state = new URL(url).searchParams.get("state");
   const { providerEmailVerified = true, providerAccountId = buildUniqueProviderAccountId() } = options;
+  await options.beforeCallback?.();
   const fetchFromProvider = provider === "github" ? fetchFromGitHub : fetchFromGoogle;
   vi.stubGlobal("fetch", vi.fn(fetchFromProvider({ email, providerEmailVerified, providerAccountId })));
 

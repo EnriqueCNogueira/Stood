@@ -104,8 +104,8 @@ function createAuth(env: Env) {
       },
       account: {
         create: {
-          before: async (account) => {
-            const email = await findNewAccountEmail(account);
+          before: async (account, ctx) => {
+            const email = await findNewAccountEmail(account, async () => (ctx ? (await getSessionFromCtx(ctx))?.session : undefined));
             return email === false ? false : { data: { ...account, email } };
           },
           after: sendAccountLinkedNotice,

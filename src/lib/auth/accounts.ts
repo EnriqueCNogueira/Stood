@@ -67,13 +67,24 @@ export async function isEmailRegistered(email: string) {
 
 type NewAccount = { providerId: string; accountId: string; userId: string };
 
+type RequestSession = { userId: string; createdAt: Date };
+
 // Gancho de antes de criar a Conta: devolve o e-mail a gravar, ou false para recusar a ligação.
-// Sem e-mail do provedor, a recusa por e-mail de outro Usuário não teria como ser conferida.
-export async function findNewAccountEmail(account: NewAccount): Promise<string | null | false> {
+// Sem e-mail do provedor, a recusa por e-mail de outro Usuário não teria como ser conferida. Com e-mail diferente do
+// Usuário, quem volta do provedor ainda precisa da Sessão recente dele: a ida pode ter sido antes de ela ser encerrada.
+export async function findNewAccountEmail(
+  account: NewAccount,
+  getSession: () => Promise<RequestSession | undefined>,
+): Promise<string | null | false> {
   if (account.providerId === CREDENTIAL_PROVIDER_ID) return null;
   const email = findProviderProfile(account.providerId)?.email;
-  if (!email || (await isEmailOfAnotherUser(email, account.userId))) return false;
-  return email;
+  if (!email) return false;
+
+  const [owner] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (owner) return owner.id === account.userId ? email : false;
+  const session = await getSession();
+  const canLink = session?.userId === account.userId && isFreshSession(session.createdAt);
+  return canLink ? email : false;
 }
 
 // Gancho de antes de atualizar a Conta num login: o e-mail novo, ou undefined para deixar como está.

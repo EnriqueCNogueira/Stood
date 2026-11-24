@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db";
-import { accounts, users } from "@/db/schema";
+import { accounts, sessions, users } from "@/db/schema";
 import { deleteAccount, getAccounts } from "@/lib/auth/accounts";
 import { getAuth } from "@/lib/auth/auth";
 import { findSessionUser, requireCurrentSessionFromHeaders } from "@/lib/auth/session";
@@ -84,6 +84,30 @@ describe("ligar uma Conta", () => {
     await setSessionsCreatedAt(userId, buildTwoDaysAgo());
 
     await expect(linkProvider(headers, "google", buildUniqueEmail())).rejects.toMatchObject({ body: { code: "SESSION_NOT_FRESH" } });
+  });
+
+  it.each([
+    ["foi encerrada", (userId: string) => db.delete(sessions).where(eq(sessions.userId, userId))],
+    ["passou de 1 dia", (userId: string) => setSessionsCreatedAt(userId, buildTwoDaysAgo())],
+  ])("recusa a volta do provedor quando a Sessão que pediu já %s", async (_case, endSession) => {
+    silenceLibraryLog();
+    const { userId, headers } = await createSignedInUser();
+
+    const response = await linkProvider(headers, "google", buildUniqueEmail(), { beforeCallback: () => endSession(userId) });
+
+    expect(response.headers.get("location")).toContain("/perfil?error=unable_to_link_account");
+    expect(await getAccounts(userId)).toHaveLength(1);
+  });
+
+  it("recusa a volta do provedor com a Sessão de outro Usuário", async () => {
+    silenceLibraryLog();
+    const other = await createSignedInUser();
+    const { userId, headers } = await createSignedInUser();
+
+    await linkProvider(headers, "google", buildUniqueEmail(), { beforeCallback: () => moveSessions(userId, other.userId) });
+
+    expect(await getAccounts(userId)).toHaveLength(1);
+    expect(await getAccounts(other.userId)).toHaveLength(1);
   });
 
   it("avisa o Usuário por e-mail, e a falha do envio não desfaz a ligação", async () => {
@@ -287,6 +311,11 @@ describe("rotas da biblioteca que o Stood não usa", () => {
 });
 
 // --- Funções auxiliares ---
+
+// O navegador passa a estar conectado como outro Usuário
+function moveSessions(fromUserId: string, toUserId: string) {
+  return db.update(sessions).set({ userId: toUserId }).where(eq(sessions.userId, fromUserId));
+}
 
 // A lib loga as recusas do login social
 function silenceLibraryLog() {
