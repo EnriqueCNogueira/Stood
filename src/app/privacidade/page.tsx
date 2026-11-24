@@ -85,7 +85,10 @@ export default function PrivacyPage() {
 
       <LegalSection title="Por quanto tempo guardamos">
         <p>
-          Os dados ficam guardados enquanto você usar o Stood. A sessão expira em 30 dias, quando você sai ou quando a encerra no Perfil. Você mesmo apaga um Stood, com as Pastas e os Arquivos dele, ou um Arquivo sozinho, no Quadro. O Apelido, a Bio e a Foto ficam até você trocá-los ou apagá-los no Perfil. Do Humor, guardamos só o último: ele deixa de aparecer no fim do dia, mas fica guardado até você marcar outro ou tirá-lo. Você pode apagar o seu cadastro, com tudo o que é seu, no Perfil: os dados saem do Stood na hora. O banco de dados (Neon) ainda permite recuperá-los por até 6 horas, e o Resend guarda por 30 dias os e-mails que enviamos. O link de confirmar vale por 1 hora. Se preferir, escreva para <ContactEmail />.
+          Os dados ficam guardados enquanto o seu cadastro existir, mesmo que você pare de usar o Stood. A sessão expira em 30 dias, quando você sai ou quando a encerra no Perfil. Você mesmo apaga um Stood, com as Pastas e os Arquivos dele, ou um Arquivo sozinho, no Quadro. O Apelido, a Bio e a Foto ficam até você trocá-los ou apagá-los no Perfil. Do Humor, guardamos só o último: ele deixa de aparecer no fim do dia, mas fica guardado até você marcar outro ou tirá-lo.
+        </p>
+        <p>
+          Quem apaga o cadastro é você: se quiser que os seus dados saiam do Stood, use Apagar meu cadastro, no Perfil, e confirme pelo link que enviamos ao seu e-mail, válido por 1 hora. Tudo o que é seu sai do Stood na hora. O banco de dados (Neon) ainda permite recuperá-lo por até 6 horas, e o Resend guarda por 30 dias os e-mails que enviamos. Só se não conseguir mais entrar no Stood ou no seu e-mail, escreva para <ContactEmail />.
         </p>
       </LegalSection>
 

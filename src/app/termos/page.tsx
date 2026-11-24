@@ -59,8 +59,8 @@ export default function TermsPage() {
       <LegalSection title="Apagar o cadastro">
         <LegalList>
           <li>
-            Você pode parar de usar o Stood quando quiser e apagar o seu cadastro no Perfil, depois de digitar o seu e-mail e confirmar pelo link enviado a ele. Também pode pedir por{" "}
-            <ContactEmail />.
+            Você pode parar de usar o Stood quando quiser, mas isso não apaga os seus dados: se quiser que eles saiam do Stood, você é responsável por apagar o seu cadastro no Perfil, digitando o seu
+            e-mail e confirmando pelo link enviado a ele. Só se não conseguir mais entrar no Stood ou no seu e-mail, peça por <ContactEmail />.
           </li>
           <li>
             Apagar o cadastro apaga todos os seus Stoods, com as Pastas e os Arquivos, e também o seu Perfil (Apelido, Bio, Humor e Foto), as suas Tags, Focos, Meta semanal, Compromissos, Contas e sessões. Não dá para desfazer, e não
