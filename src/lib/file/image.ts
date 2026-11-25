@@ -9,7 +9,7 @@ export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 // Valor do accept do campo de arquivo
 export const IMAGE_ACCEPT = IMAGE_TYPES.join(",");
 // O formato mais longo de reconhecer é o WebP: RIFF, 4 bytes de tamanho e WEBP
-export const IMAGE_HEADER_BYTES = 12;
+const IMAGE_HEADER_BYTES = 12;
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const JPEG_SIGNATURE = [0xff, 0xd8, 0xff];
@@ -24,6 +24,16 @@ export function parseImageType(bytes: Uint8Array): ImageType | undefined {
   if (hasBytesAt(bytes, JPEG_SIGNATURE, 0)) return "image/jpeg";
   if (hasBytesAt(bytes, RIFF, 0) && hasBytesAt(bytes, WEBP, WEBP_TAG_OFFSET)) return "image/webp";
   return undefined;
+}
+
+export type ImageFileReason = "imagem-vazia" | "imagem-grande" | "formato-nao-suportado";
+
+// Arquivo escolhido no navegador, antes de enviar; o servidor confere de novo os bytes que recebe
+export async function validateImageFile(file: Blob): Promise<{ ok: true } | { ok: false; reason: ImageFileReason }> {
+  if (file.size === 0) return { ok: false, reason: "imagem-vazia" };
+  if (file.size > MAX_IMAGE_BYTES) return { ok: false, reason: "imagem-grande" };
+  const header = new Uint8Array(await file.slice(0, IMAGE_HEADER_BYTES).arrayBuffer());
+  return parseImageType(header) ? { ok: true } : { ok: false, reason: "formato-nao-suportado" };
 }
 
 // Rota do route handler que serve os bytes, em src/app/(protected)/imagens/[id]/route.ts

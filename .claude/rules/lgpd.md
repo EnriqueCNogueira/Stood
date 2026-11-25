@@ -10,7 +10,7 @@ paths: ["src/lib/**", "src/db/**", "drizzle/**", "src/app/privacidade/**", "src/
 ## Contexto
 
 - **Lei**: A Lei Geral de Proteção de Dados (Lei nº 13.709/2018) regula o tratamento de dado pessoal, que é qualquer informação que identifica uma pessoa (nome, e-mail, foto, IP, conteúdo que ela cria). A fiscalização é da ANPD.
-- **Papéis**: O titular é o Usuário. O controlador decide o tratamento e atende o titular: hoje é `DATA_CONTROLLER`, com o canal `CONTACT_EMAIL`, ambos em `src/app/_components/legal-page.tsx`.
+- **Papéis**: O titular é o Usuário. O controlador decide o tratamento e atende o titular: hoje é `DATA_CONTROLLER`, em `src/app/_components/legal-page.tsx`, com o canal `CONTACT_EMAIL`, em `src/lib/contact.ts`.
 - **Base legal**: Todo tratamento precisa de uma (art. 7º). No Stood é a execução do serviço pedido pelo Usuário (art. 7º, V); finalidade nova fora disso pede outra base, como consentimento.
 - **Direitos do titular** (art. 18): Confirmar e acessar os dados, corrigir, apagar, portar e saber com quem são compartilhados.
 - **Transferência internacional** (art. 33): Hospedagem e banco ficam fora do Brasil, e a Política diz isso.

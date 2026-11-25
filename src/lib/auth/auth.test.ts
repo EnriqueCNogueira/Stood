@@ -3,24 +3,27 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db";
 import { accounts, users } from "@/db/schema";
 import { getAuth } from "@/lib/auth/auth";
-import { requireSessionFromHeaders } from "@/lib/auth/session";
+import { REQUEST_DELETION_PATH } from "@/lib/auth/destination";
+import { MAX_USER_NAME_LENGTH } from "@/lib/auth/name";
+import { findSessionUser, requireSessionFromHeaders } from "@/lib/auth/session";
+import { updateProfile } from "@/lib/profile/profile";
 import {
   buildCookieHeaders,
   buildUniqueEmail,
   buildUniqueProviderAccountId,
   createGitHubOnlyUser,
+  createOtherSession,
   createSignedInUser,
   createUnverifiedUser,
   TEST_PASSWORD,
   warmUpAuth,
 } from "@/test/auth";
 import { findLink, stubResend } from "@/test/email";
+import { GITHUB_ACCESS_TOKEN, type Provider, signInWithProvider } from "@/test/providers";
 
 beforeAll(warmUpAuth);
 
-type Provider = "github" | "google";
-
-type ProviderProfile = { email: string; providerEmailVerified: boolean; providerAccountId: number };
+const NEW_PASSWORD = "Senha-nova-456";
 
 describe("getAuth: login social", () => {
   it.each<Provider>(["github", "google"])(
@@ -138,48 +141,107 @@ describe("getAuth: cadastro por e-mail e senha", () => {
 });
 
 describe("getAuth: troca de senha", () => {
-  // A tela não troca senha, mas o endpoint /auth/change-password existe por HTTP para quem tem sessão
+  it("troca a senha, encerra as outras Sessões, mantém o Usuário conectado e avisa por e-mail", async () => {
+    const { email, headers } = await createSignedInUser();
+    const otherHeaders = await createOtherSession(email);
+    const outbox = stubResend();
+
+    const response = await changePassword(headers, NEW_PASSWORD);
+
+    expect((await findSessionUser(buildCookieHeaders(response.headers)))?.email).toBe(email);
+    expect(await findSessionUser(otherHeaders)).toBeUndefined();
+    expect(await createOtherSession(email, "", NEW_PASSWORD)).toBeDefined();
+    expect(outbox).toMatchObject([{ to: [email], subject: "A senha do seu Stood mudou" }]);
+  });
+
+  it("recusa a senha atual errada, sem encerrar Sessões nem avisar", async () => {
+    const { email, headers } = await createSignedInUser();
+    const otherHeaders = await createOtherSession(email);
+    const outbox = stubResend();
+
+    await expect(changePassword(headers, NEW_PASSWORD, "Senha-errada-123")).rejects.toMatchObject({ body: { code: "INVALID_PASSWORD" } });
+    expect(await findSessionUser(otherHeaders)).toBeDefined();
+    expect(outbox).toEqual([]);
+  });
+
+  it("mantém a senha trocada quando o aviso não pode ser enviado", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { email, headers } = await createSignedInUser();
+    vi.stubEnv("RESEND_API_KEY", "re_123456789_chave_de_teste");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
+
+    await changePassword(headers, NEW_PASSWORD);
+
+    expect(await createOtherSession(email, "", NEW_PASSWORD)).toBeDefined();
+  });
+
   it("recusa a senha nova fraca, com o código que a tela traduz", async () => {
     const { headers } = await createSignedInUser();
 
-    await expect(
-      getAuth().api.changePassword({
-        body: { currentPassword: TEST_PASSWORD, newPassword: "senha-sem-maiuscula-1" },
-        headers,
-      }),
-    ).rejects.toMatchObject({ body: { code: "PASSWORD_TOO_WEAK" } });
+    await expect(changePassword(headers, "senha-sem-maiuscula-1")).rejects.toMatchObject({
+      body: { code: "PASSWORD_TOO_WEAK" },
+    });
+  });
+});
+
+describe("getAuth: nome no login pelo provedor", () => {
+  it("não troca de volta o nome mudado no Perfil", async () => {
+    const email = buildUniqueEmail();
+    const providerAccountId = buildUniqueProviderAccountId();
+    await signInWithProvider("google", email, { providerAccountId });
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+
+    await updateProfile(user.id, { name: "Aninha", nickname: "", bio: "" });
+    const response = await signInWithProvider("google", email, { providerAccountId });
+
+    expect((await findSessionUser(buildCookieHeaders(response.headers)))?.name).toBe("Aninha");
+  });
+});
+
+describe("getAuth: nome no cadastro", () => {
+  it("grava o nome aparado", async () => {
+    const email = buildUniqueEmail();
+
+    await signUp(email, TEST_PASSWORD, "  Ana  ");
+
+    const [user] = await db.select({ name: users.name }).from(users).where(eq(users.email, email));
+    expect(user.name).toBe("Ana");
+  });
+
+  it.each(["   ", "a".repeat(MAX_USER_NAME_LENGTH + 1)])("recusa o nome %j, com o código que a tela traduz", async (name) => {
+    await expect(signUp(buildUniqueEmail(), TEST_PASSWORD, name)).rejects.toMatchObject({ body: { code: "USER_NAME_INVALID" } });
+  });
+});
+
+describe("getAuth: limite de tentativas", () => {
+  it.each([
+    ["trocar a senha", "/change-password", { currentPassword: "Senha-errada-123", newPassword: NEW_PASSWORD }],
+    ["pedir o link de apagar", REQUEST_DELETION_PATH, { email: "outra@stood.test" }],
+  ])("recusa a quarta tentativa de %s em 10 segundos", async (_case, path, body) => {
+    const { headers } = await createSignedInUser();
+    const handle = await buildProductionHandler();
+
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 4; attempt++) statuses.push((await handle(headers, path, body)).status);
+
+    expect(statuses.map((status) => status === 429)).toEqual([false, false, false, true]);
   });
 });
 
 // --- Funções auxiliares ---
 
-function signUp(email: string, password = TEST_PASSWORD) {
+function signUp(email: string, password = TEST_PASSWORD, name = "Ana Souza") {
   return getAuth().api.signUpEmail({
-    body: { name: "Ana Souza", email, password, callbackURL: "/biblioteca" },
+    body: { name, email, password, callbackURL: "/biblioteca" },
   });
+}
+
+function changePassword(headers: Headers, newPassword: string, currentPassword = TEST_PASSWORD) {
+  return getAuth().api.changePassword({ body: { currentPassword, newPassword }, headers, returnHeaders: true });
 }
 
 function signIn(email: string) {
   return getAuth().api.signInEmail({ body: { email, password: TEST_PASSWORD, callbackURL: "/biblioteca" } });
-}
-
-// Exemplo de token da documentação do GitHub
-const GITHUB_ACCESS_TOKEN = "gho_16C7e42F292c6912E7710c838347Ae178B4a";
-
-// Faz o fluxo inteiro do OAuth: pede a URL do provedor e volta pelo callback com o state e os cookies
-async function signInWithProvider(provider: Provider, email: string, { providerEmailVerified = true } = {}) {
-  const { headers, response } = await getAuth().api.signInSocial({
-    body: { provider, callbackURL: "/biblioteca", errorCallbackURL: "/entrar" },
-    returnHeaders: true,
-  });
-  const state = new URL(response.url!).searchParams.get("state");
-
-  const providerAccountId = buildUniqueProviderAccountId();
-  const fetchFromProvider = provider === "github" ? fetchFromGitHub : fetchFromGoogle;
-  vi.stubGlobal("fetch", vi.fn(fetchFromProvider({ email, providerEmailVerified, providerAccountId })));
-
-  const callbackURL = `${process.env.BETTER_AUTH_URL}/auth/callback/${provider}?code=codigo-de-teste&state=${state}`;
-  return getAuth().handler(new Request(callbackURL, { headers: buildCookieHeaders(headers) }));
 }
 
 async function findAccount(email: string, provider: Provider) {
@@ -192,66 +254,24 @@ async function findAccount(email: string, provider: Provider) {
   return account;
 }
 
-// Respostas copiadas do formato real do endpoint de token, de /user e de /user/emails do GitHub
-function fetchFromGitHub({ email, providerEmailVerified, providerAccountId }: ProviderProfile) {
-  return async (input: RequestInfo | URL) => {
-    const url = requestURL(input);
-    if (url.startsWith("https://github.com/login/oauth/access_token")) {
-      return Response.json({ access_token: GITHUB_ACCESS_TOKEN, token_type: "bearer", scope: "read:user,user:email" });
-    }
-    if (url === "https://api.github.com/user/emails") {
-      return Response.json([{ email, primary: true, verified: providerEmailVerified, visibility: "private" }]);
-    }
-    if (url === "https://api.github.com/user") {
-      return Response.json({
-        login: "anasouza",
-        id: providerAccountId,
-        node_id: "MDQ6VXNlcjEyOTYyNjk=",
-        avatar_url: `https://avatars.githubusercontent.com/u/${providerAccountId}?v=4`,
-        type: "User",
-        name: "Ana Souza",
-        email: null,
-      });
-    }
-    throw new Error(`unexpected fetch: ${url}`);
-  };
-}
-
-// Resposta do endpoint de token do Google; o id_token só é decodificado no callback, sem conferir a assinatura
-function fetchFromGoogle(profile: ProviderProfile) {
-  return async (input: RequestInfo | URL) => {
-    const url = requestURL(input);
-    if (url.startsWith("https://oauth2.googleapis.com/token")) {
-      return Response.json({
-        access_token: "ya29.a0AfH6SMBx-codigo-de-teste",
-        expires_in: 3599,
-        scope: "openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
-        token_type: "Bearer",
-        id_token: buildGoogleIdToken(profile),
-      });
-    }
-    throw new Error(`unexpected fetch: ${url}`);
-  };
-}
-
-function buildGoogleIdToken({ email, providerEmailVerified, providerAccountId }: ProviderProfile) {
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const header = { alg: "RS256", kid: "chave-de-teste", typ: "JWT" };
-  const payload = {
-    iss: "https://accounts.google.com",
-    aud: process.env.GOOGLE_CLIENT_ID,
-    sub: String(providerAccountId),
-    email,
-    email_verified: providerEmailVerified,
-    name: "Ana Souza",
-    picture: "https://lh3.googleusercontent.com/a/foto-de-teste",
-    iat: nowSeconds,
-    exp: nowSeconds + 3600,
-  };
-  const encode = (part: object) => Buffer.from(JSON.stringify(part)).toString("base64url");
-  return `${encode(header)}.${encode(payload)}.assinatura-de-teste`;
-}
-
-function requestURL(input: RequestInfo | URL) {
-  return input instanceof Request ? input.url : String(input);
+// A lib só limita tentativas em produção, então o caso monta uma instância nova como se estivesse nela
+async function buildProductionHandler() {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("RESEND_API_KEY", "re_123456789_chave_de_teste");
+  vi.resetModules();
+  const { getAuth: getProductionAuth } = await import("@/lib/auth/auth");
+  const ip = `203.0.113.${Math.floor(Math.random() * 254) + 1}`;
+  return (headers: Headers, path: string, body: object) =>
+    getProductionAuth().handler(
+      new Request(`${process.env.BETTER_AUTH_URL}/auth${path}`, {
+        method: "POST",
+        headers: {
+          cookie: headers.get("cookie")!,
+          "content-type": "application/json",
+          origin: process.env.BETTER_AUTH_URL!,
+          "x-forwarded-for": ip,
+        },
+        body: JSON.stringify(body),
+      }),
+    );
 }

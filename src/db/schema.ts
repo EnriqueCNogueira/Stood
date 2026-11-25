@@ -37,6 +37,7 @@ import {
   MIN_WEEKLY_GOAL_MINUTES,
   WEEKLY_GOAL_STEP_MINUTES,
 } from "../lib/pomodoro/limits.ts";
+import { MAX_BIO_LENGTH, MAX_NICKNAME_LENGTH, MAX_PHOTO_BYTES, MOOD_IDS } from "../lib/profile/rules.ts";
 import { MAX_TAG_NAME_LENGTH } from "../lib/tag/rules.ts";
 import { YOUTUBE_VIDEO_ID_PATTERN } from "../lib/video/link.ts";
 
@@ -93,6 +94,9 @@ export const accounts = pgTable(
     refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
     scope: text("scope"),
     password: text("password"),
+    // E-mail que o provedor envia, em minúsculas; nulo na Conta de e-mail e senha e nas ligadas antes desta coluna.
+    // Um gatilho escrito à mão na migration recusa o e-mail que é de outro Usuário, e o contrário em users.
+    email: text("email"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .$onUpdate(() => new Date())
@@ -100,6 +104,9 @@ export const accounts = pgTable(
   },
   (table) => [
     index("accounts_userId_idx").on(table.userId),
+    // Busca do e-mail no cadastro e no gatilho
+    index("accounts_email_idx").on(table.email),
+    check("accounts_email_check", sql`${table.email} = lower(${table.email})`),
     // A mesma conta do provedor nunca fica ligada a duas linhas, nem com dois callbacks ao mesmo tempo
     unique("accounts_provider_id_account_id_unique").on(table.providerId, table.accountId),
   ],
@@ -391,6 +398,57 @@ export const weeklyGoals = pgTable(
     ),
   ],
 );
+
+// --- Perfil ---
+
+// Apelido, Bio e Humor do Usuário, tudo opcional e visto só por ele. Fica fora de users, que é da biblioteca de login.
+export const profiles = pgTable(
+  "profiles",
+  {
+    ownerId: uuid("owner_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    nickname: text("nickname"),
+    bio: text("bio"),
+    // Só o último Humor, sem histórico; vale no dia de Brasília em que foi marcado
+    mood: text("mood", { enum: MOOD_IDS }),
+    moodDay: date("mood_day", { mode: "string" }),
+  },
+  (table) => [
+    buildShortTextCheck("profiles_nickname_check", table.nickname, MAX_NICKNAME_LENGTH),
+    buildShortTextCheck("profiles_bio_check", table.bio, MAX_BIO_LENGTH),
+    check("profiles_mood_check", sql`${table.mood} in (${buildSqlList(MOOD_IDS)})`),
+    check("profiles_mood_day_check", sql`(${table.mood} is null) = (${table.moodDay} is null)`),
+  ],
+);
+
+// Foto enviada pelo Usuário, em JPEG pequeno. Não usa file_blobs, que exige um Arquivo de um Stood.
+export const profilePhotos = pgTable(
+  "profile_photos",
+  {
+    ownerId: uuid("owner_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    data: bytea("data").notNull(),
+    // Entra no endereço da Foto, para a nova aparecer na hora
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // FF D8 FF é o começo de todo JPEG
+    check(
+      "profile_photos_data_check",
+      sql`octet_length(${table.data}) between 1 and ${sql.raw(String(MAX_PHOTO_BYTES))} and substring(${table.data} from 1 for 3) = '\\xffd8ff'::bytea`,
+    ),
+  ],
+);
+
+// Texto opcional de uma linha, sem espaço nas pontas
+function buildShortTextCheck(name: string, column: AnyPgColumn, maxLength: number) {
+  return check(
+    name,
+    sql`char_length(${column}) between 1 and ${sql.raw(String(maxLength))} and ${column} !~ ${sql.raw(`'${EDGE_WHITESPACE_PATTERN}'`)} and ${column} !~ '[\\r\\n]'`,
+  );
+}
 
 // --- Agenda ---
 

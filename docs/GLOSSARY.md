@@ -11,8 +11,32 @@ A pessoa que usa o Stood, identificada por um e-mail único e dona de tudo o que
 _Evitar_: Conta, perfil, cliente
 
 **Conta**:
-Uma forma de entrar ligada a um Usuário: Google, GitHub ou e-mail e senha. Um Usuário pode ter várias Contas.
+Uma forma de entrar ligada a um Usuário: Google, GitHub ou e-mail e senha. Um Usuário pode ter várias Contas, e o e-mail de uma Conta pode ser diferente do e-mail dele.
 _Evitar_: Login, provedor, credencial
+
+**Sessão**:
+Um navegador em que o Usuário está conectado ao Stood.
+_Evitar_: Aparelho, dispositivo, login
+
+**Perfil**:
+A tela em que o Usuário vê e muda os próprios dados.
+_Evitar_: Minha conta, configurações
+
+**Apelido**:
+O nome pelo qual o Usuário prefere ser chamado no Stood, que pode ser igual ao de outro Usuário.
+_Evitar_: Nome de usuário, nickname, arroba
+
+**Bio**:
+Uma frase curta em que o Usuário se descreve.
+_Evitar_: Descrição, sobre mim
+
+**Humor**:
+Como o Usuário diz estar naquele dia, escolhido numa lista pronta.
+_Evitar_: Status, sentimento, estado
+
+**Foto**:
+O retrato que identifica o Usuário no Stood.
+_Evitar_: Imagem, avatar
 
 ### Stood
 

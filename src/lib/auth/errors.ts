@@ -1,5 +1,6 @@
 // Mensagens de erro da Better Auth, traduzidas para português.
 
+import { MAX_USER_NAME_LENGTH } from "@/lib/auth/name";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
 
 const TOO_MANY_REQUESTS_STATUS = 429;
@@ -11,6 +12,16 @@ const MESSAGES_BY_CODE: Record<string, string> = {
   PASSWORD_TOO_SHORT: `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`,
   PASSWORD_TOO_WEAK: `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres, com letra maiúscula, número e caractere especial.`,
   VALIDATION_ERROR: "Confira o e-mail: ele precisa estar num formato válido, como nome@exemplo.com.",
+  USER_NAME_INVALID: `O nome precisa ter de 1 a ${MAX_USER_NAME_LENGTH} caracteres.`,
+  INVALID_PASSWORD: "A senha atual está incorreta.",
+  SESSION_NOT_FRESH: "Você entrou há mais de 1 dia. Entre de novo para continuar.",
+  account_already_linked_to_different_user: "Esta Conta já entra em outro cadastro do Stood.",
+  unable_to_link_account:
+    "Esta Conta não pode ser ligada: o e-mail dela é de outro cadastro do Stood, o provedor não o enviou ou a sua sessão terminou antes da volta.",
+  access_denied: "Você cancelou no Google ou no GitHub.",
+  "login-antigo": "Você entrou há mais de 1 dia. Entre de novo para continuar.",
+  "email-diferente": "Digite o e-mail do seu cadastro.",
+  "email-nao-enviado": "Não foi possível mandar o e-mail. Tente de novo.",
   INVALID_TOKEN: "Este link expirou ou já foi usado. Peça um novo.",
   account_not_linked:
     "Este e-mail já tem cadastro com senha e ainda não foi confirmado. Confirme o e-mail pelo link que mandamos ou redefina a senha para entrar com Google ou GitHub.",

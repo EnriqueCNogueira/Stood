@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildImageFileName, parseImageType } from "@/lib/file/image";
+import { buildImageFileName, MAX_IMAGE_BYTES, parseImageType, validateImageFile } from "@/lib/file/image";
 
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d];
 const JPEG = [0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01];
@@ -24,6 +24,22 @@ describe("parseImageType", () => {
     ["PDF", ascii("%PDF-1.7\n%âãÏÓ")],
   ])("recusa %s", (_case, bytes) => {
     expect(parseImageType(Uint8Array.from(bytes))).toBeUndefined();
+  });
+});
+
+describe("validateImageFile", () => {
+  it("aceita uma imagem até o limite", async () => {
+    const file = new Blob([Uint8Array.from(PNG), new Uint8Array(MAX_IMAGE_BYTES - PNG.length)]);
+
+    expect(await validateImageFile(file)).toEqual({ ok: true });
+  });
+
+  it.each([
+    ["vazio", new Blob([]), "imagem-vazia"],
+    ["acima do limite", new Blob([Uint8Array.from(PNG), new Uint8Array(MAX_IMAGE_BYTES)]), "imagem-grande"],
+    ["que é texto", new Blob(["não sou uma imagem"]), "formato-nao-suportado"],
+  ])("recusa o arquivo %s", async (_case, file, reason) => {
+    expect(await validateImageFile(file)).toEqual({ ok: false, reason });
   });
 });
 

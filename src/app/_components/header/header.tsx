@@ -4,11 +4,14 @@ import { BUTTON, FOCUS } from "@/app/_components/ui";
 import { UserMenu } from "@/app/_components/header/user-menu";
 import { StoodLogo } from "@/app/_components/logo";
 import { findCurrentSessionUser } from "@/lib/auth/session";
+import { getRequestProfile } from "@/lib/profile/profile";
+import { buildPhotoUrl } from "@/lib/profile/rules";
 
 // Cabeçalho de todas as páginas: o logo leva quem entrou à Biblioteca e o visitante ao Início da landing page;
 // quem entrou também tem o link da Agenda
 export async function Header() {
   const user = await findCurrentSessionUser();
+  const profile = user && (await getRequestProfile(user.id));
 
   return (
     <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-bg/80 px-3 backdrop-blur-md sm:px-5">
@@ -23,8 +26,15 @@ export async function Header() {
           </a>
         )}
         <ThemeMenu />
-        {user ? (
-          <UserMenu name={user.name} email={user.email} image={user.image} />
+        {user && profile ? (
+          <UserMenu
+            name={user.name}
+            email={user.email}
+            image={buildPhotoUrl({ photoVersion: profile.photoVersion, providerImage: user.image })}
+            nickname={profile.nickname}
+            bio={profile.bio}
+            mood={profile.mood}
+          />
         ) : (
           <a href="/entrar" className={`${BUTTON.base} ${BUTTON.sm} ${BUTTON.primary}`}>
             Entrar

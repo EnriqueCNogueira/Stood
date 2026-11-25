@@ -6,13 +6,7 @@ import { FormMessage } from "@/app/_components/auth/auth-card";
 import { BUTTON, FIELD, FIELD_LABEL, ICON_BUTTON, INPUT } from "@/app/_components/ui";
 import { type CreateImageFileActionResult, createImageFileAction } from "@/app/_components/workspace/board/file-actions";
 import { FOLDER_NOT_FOUND_MESSAGE, FolderField, type FolderOption } from "@/app/_components/workspace/board/folder-field";
-import {
-  IMAGE_ACCEPT,
-  IMAGE_HEADER_BYTES,
-  MAX_IMAGE_BYTES,
-  buildImageFileName,
-  parseImageType,
-} from "@/lib/file/image";
+import { buildImageFileName, IMAGE_ACCEPT, MAX_IMAGE_BYTES, validateImageFile } from "@/lib/file/image";
 import { MAX_NAME_LENGTH, validateName } from "@/lib/stood/details";
 import type { StoodTreeFile } from "@/lib/stood/tree";
 
@@ -75,10 +69,8 @@ export function ImageDialog({ stoodId, folders, onAdded, onClose }: ImageDialogP
   async function pickImage(file: File | undefined) {
     if (!file) return;
     setReason(null);
-    if (file.size === 0) return setReason("imagem-vazia");
-    if (file.size > MAX_IMAGE_BYTES) return setReason("imagem-grande");
-    const header = new Uint8Array(await file.slice(0, IMAGE_HEADER_BYTES).arrayBuffer());
-    if (!parseImageType(header)) return setReason("formato-nao-suportado");
+    const validation = await validateImageFile(file);
+    if (!validation.ok) return setReason(validation.reason);
 
     setPicked({ file, previewUrl: URL.createObjectURL(file) });
     setName(buildImageFileName(file.name));

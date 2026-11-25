@@ -71,6 +71,20 @@
       "when": 1795477600677,
       "tag": "0009_remove_pdf_file_type",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795557204240,
+      "tag": "0010_add_account_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795560757413,
+      "tag": "0011_create_profile_tables",
+      "breakpoints": true
     }
   ]
 }

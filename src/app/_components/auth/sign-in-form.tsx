@@ -5,11 +5,11 @@ import { FormMessage } from "@/app/_components/auth/auth-card";
 import { GithubLogo, GoogleLogo } from "@/app/_components/brand-icons";
 import { BUTTON, FIELD, FIELD_LABEL, INPUT, TEXT_LINK } from "@/app/_components/ui";
 import { authClient } from "@/lib/auth/client";
+import { buildSignInPath } from "@/lib/auth/destination";
 import { buildAuthErrorMessage } from "@/lib/auth/errors";
 
-const AFTER_SIGN_IN_PATH = "/biblioteca";
-
-export function SignInForm({ initialError }: { initialError?: string }) {
+// destination já vem conferido pela página: só um caminho que o Stood conhece
+export function SignInForm({ initialError, destination }: { initialError?: string; destination: string }) {
   const [error, setError] = useState(initialError);
   const [isPending, setIsPending] = useState(false);
 
@@ -17,8 +17,8 @@ export function SignInForm({ initialError }: { initialError?: string }) {
     setIsPending(true);
     const { error: signInError } = await authClient.signIn.social({
       provider,
-      callbackURL: AFTER_SIGN_IN_PATH,
-      errorCallbackURL: "/entrar",
+      callbackURL: destination,
+      errorCallbackURL: buildSignInPath(destination),
     });
     // Sem erro, o navegador já saiu para o Google ou o GitHub
     if (signInError) {
@@ -36,14 +36,14 @@ export function SignInForm({ initialError }: { initialError?: string }) {
     const { error: signInError } = await authClient.signIn.email({
       email: String(form.get("email")),
       password: String(form.get("password")),
-      callbackURL: AFTER_SIGN_IN_PATH,
+      callbackURL: destination,
     });
     if (signInError) {
       setError(buildAuthErrorMessage(signInError));
       setIsPending(false);
       return;
     }
-    window.location.assign(AFTER_SIGN_IN_PATH);
+    window.location.assign(destination);
   }
 
   return (

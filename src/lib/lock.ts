@@ -3,7 +3,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import type { db } from "@/db";
 
-type LockTopic = "focuses" | "tags" | "appointments";
+type LockTopic = "focuses" | "tags" | "appointments" | "accounts";
 
 // Serializa as escritas do tema para o mesmo Usuário até o fim da transação: duas abas não passam juntas de um limite
 // nem uma grava com o que a outra acabou de mudar
